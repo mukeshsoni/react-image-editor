@@ -80,6 +80,7 @@ function calculateImageStartOffsetAroundCenter(
   // By just multiplying by the zoomRatio
   const newOffsetXWithoutAdjustment = currentOffset.x * zoomRatio;
   const newOffsetYWithoutAdjustment = currentOffset.y * zoomRatio;
+
   // Adjustment around reference point
   // We adjust the x and y offset points by a slight bit based on the reference point
   // We want that the part of image below the reference point should stay whereever it is now
@@ -173,6 +174,12 @@ export function ReactImageEditor() {
     x: 0,
     y: 0,
   });
+  const [isDragging, setIsDragging] = useState(false);
+  // We will store the last mouse position when the user starts dragging the image
+  // We use it to pan the image on mouse move event
+  // Once we have panned the image from last mouse pos to the current one,
+  // we set the current mouse pos to current mouse pos
+  const lastMousePos = useRef({ x: 0, y: 0 });
 
   // Set canvas width and height
   useEffect(() => {
@@ -316,6 +323,32 @@ export function ReactImageEditor() {
       setZoomLevel(newZoomLevel);
     }
   }
+  // Panning the image
+  // When user holds the mouse down, we set isDragging to true
+  // We reset isDragging to false on onMouseUp and onMouseLeave events of the canvas
+  // If isDragging is true, and we receive a onMouseMove event, we pan the image
+  // We need to know how much the mouse has moved from the last position
+  // So we store the last mouse position in lastMousePos
+  function handleMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
+    setIsDragging(true);
+    lastMousePos.current = { x: event.clientX, y: event.clientY };
+  }
+  // We will pan the image if the mouse moves and the user is dragging the mouse
+  function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
+    if (canvasRef.current && imageRef.current && isDragging) {
+      const dx = event.clientX - lastMousePos.current.x;
+      const dy = event.clientY - lastMousePos.current.y;
+      const newOffset = {
+        x: imageStartOffset.x + dx,
+        y: imageStartOffset.y + dy,
+      };
+      lastMousePos.current = { x: event.clientX, y: event.clientY };
+      setImageStartOffset(newOffset);
+    }
+  }
+  function handleMouseUp(event: React.MouseEvent<HTMLCanvasElement>) {
+    setIsDragging(false);
+  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -346,7 +379,14 @@ export function ReactImageEditor() {
         </div>
       </div>
       <div className="flex-1 border-2">
-        <canvas ref={canvasRef} onWheel={handleWheel} />
+        <canvas
+          ref={canvasRef}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        />
       </div>
     </div>
   );
