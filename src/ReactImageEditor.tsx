@@ -73,26 +73,28 @@ function calculateImageStartOffsetAroundCenter(
   oldZoomLevel: number,
   newZoomLevel: number,
   currentOffset: { x: number; y: number },
-  zoomAroundPoint: { x: number; y: number },
+  zoomReferencePoint: { x: number; y: number }, // Point around which to zoom. This point shouldn't move from whereever it is now
 ) {
   const zoomRatio = newZoomLevel / oldZoomLevel;
-  // We find the distance between the point around where to zoom and  the current start offset
-  // And adjust it for the new zoom
-  // And then subtract that by the reference point around which to zoom
-  // So that the offset is adjusted a slight bit according to the new zoom and the mouse position
-  // Such that the object below the mouse cursor remains where it is
-  const offsetXAroundMousePos =
-    (zoomAroundPoint.x - currentOffset.x) * zoomRatio;
-  const offsetYAroundMousePos =
-    (zoomAroundPoint.y - currentOffset.y) * zoomRatio;
+  // If we didn't have to worry about the reference point around which to zoom, we can easily calculate the new offset
+  // By just multiplying by the zoomRatio
+  const newOffsetXWithoutAdjustment = currentOffset.x * zoomRatio;
+  const newOffsetYWithoutAdjustment = currentOffset.y * zoomRatio;
+  // Adjustment around reference point
+  // We adjust the x and y offset points by a slight bit based on the reference point
+  // We want that the part of image below the reference point should stay whereever it is now
+  const adjustAroundReferencePointX =
+    zoomReferencePoint.x - zoomReferencePoint.x * zoomRatio;
+  const adjustAroundRefernecePointY =
+    zoomReferencePoint.y - zoomReferencePoint.y * zoomRatio;
 
   // Adjust for where the mouse cursor is. So that the part of image below the mouse cursor
   // always remains below the cursor even when the image is zooming
   // If we would have zoomed in around the center, the image portion below the cursor
   // would have kept going away from the cursor, if we didn't adjust our x and y offset accordingly
   const newOffset = {
-    x: zoomAroundPoint.x - offsetXAroundMousePos,
-    y: zoomAroundPoint.y - offsetYAroundMousePos,
+    x: newOffsetXWithoutAdjustment + adjustAroundReferencePointX,
+    y: newOffsetYWithoutAdjustment + adjustAroundRefernecePointY,
   };
 
   return newOffset;
