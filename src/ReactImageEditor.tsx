@@ -1,11 +1,38 @@
 import React, { useEffect, useRef, useState } from "react";
 
+// Function to get relative mouse position in canvas
+const getMousePos = (
+  canvas: HTMLCanvasElement | null,
+  event: React.MouseEvent<HTMLCanvasElement>,
+) => {
+  if (!canvas) {
+    return { x: 0, y: 0 };
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+};
+
+// Function to get canvas center position
+function getCanvasCenter(canvas: HTMLCanvasElement | null) {
+  if (!canvas) return { x: 0, y: 0 };
+
+  return {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+  };
+}
+
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
 function renderImageToCanvas(
   canvasRef: HTMLCanvasElement | null,
   imageRef: HTMLImageElement,
   zoomLevel: number,
+  imageStarOffset: { x: number; y: number },
 ) {
   if (!canvasRef) return;
 
@@ -21,26 +48,87 @@ function renderImageToCanvas(
     const scaledImageWidth = zoomLevel * imageWidth;
     const scaledImageHeight = zoomLevel * imageHeight;
 
-    // x coordinate where to start drawing the image
-    // if canvas width is larger than the image width, we will try to center the image on the canvas
-    const imageX =
-      canvasWidth > scaledImageWidth ? (canvasWidth - scaledImageWidth) / 2 : 0;
-    const imageY =
-      canvasHeight > scaledImageHeight
-        ? (canvasHeight - scaledImageHeight) / 2
-        : 0;
-
     // y coordinate where to start drawing the image
     // For now we just draw the whole image to the canvas
     // If the canvas size is smaller than the image, a part of the image will be clipped
     ctx.drawImage(
       imageRef,
-      imageX,
-      imageY,
+      imageStarOffset.x,
+      imageStarOffset.y,
       scaledImageWidth,
       scaledImageHeight,
     );
   }
+}
+
+// This is the trickiest part of the whole zoom operation
+// I think i still don't understand how it works, but it does work
+// We adjust the current offset a slight bit
+//  1. Based on change of zoom level
+// And then adjust a slight bit more based on the point around which we want to zoom
+// The 2nd adjustment makes sure that the part of image below the reference point doesn't move from that point
+// We want to cement the position of that point
+function calculateImageStartOffsetAroundCenter(
+  canvas: HTMLCanvasElement | null,
+  oldZoomLevel: number,
+  newZoomLevel: number,
+  currentOffset: { x: number; y: number },
+  zoomAroundPoint: { x: number; y: number },
+) {
+  const zoomRatio = newZoomLevel / oldZoomLevel;
+  // We find the distance between the point around where to zoom and  the current start offset
+  // And adjust it for the new zoom
+  // And then subtract that by the reference point around which to zoom
+  // So that the offset is adjusted a slight bit according to the new zoom and the mouse position
+  // Such that the object below the mouse cursor remains where it is
+  const offsetXAroundMousePos =
+    (zoomAroundPoint.x - currentOffset.x) * zoomRatio;
+  const offsetYAroundMousePos =
+    (zoomAroundPoint.y - currentOffset.y) * zoomRatio;
+
+  // Adjust for where the mouse cursor is. So that the part of image below the mouse cursor
+  // always remains below the cursor even when the image is zooming
+  // If we would have zoomed in around the center, the image portion below the cursor
+  // would have kept going away from the cursor, if we didn't adjust our x and y offset accordingly
+  const newOffset = {
+    x: zoomAroundPoint.x - offsetXAroundMousePos,
+    y: zoomAroundPoint.y - offsetYAroundMousePos,
+  };
+
+  return newOffset;
+}
+
+function calculateInitialImageStartOffset(
+  canvas: HTMLCanvasElement | null,
+  image: HTMLImageElement,
+  zoomLevel: number,
+): { x: number; y: number } {
+  if (!canvas) {
+    return {
+      x: 0,
+      y: 0,
+    };
+  }
+
+  const canvasWidth = canvas.parentElement?.clientWidth || 800;
+  const canvasHeight = canvas.parentElement?.clientHeight || 600;
+
+  const imageWidth = image.width;
+  const imageHeight = image.height;
+  const scaledImageWidth = zoomLevel * imageWidth;
+  const scaledImageHeight = zoomLevel * imageHeight;
+
+  // x coordinate where to start drawing the image
+  // If the canvas is smaller than the image width, we start drawing the image from outside the canvas peripheries
+  // Which means a portion of the image will be clipped
+  // As user zoom in further, we start drawing the image ever further beyond the peripheries (say a bigger negative x coordinate)
+  // And so a smaller part of the image is inside the canvas and hence the zoom effect
+  // To give the effect of zooming around the mouse cursor, we adjust the start coordinates based on the mouse position
+  const imageX = (canvasWidth - scaledImageWidth) / 2;
+  // y coordinates on where the start drawing the image
+  const imageY = (canvasHeight - scaledImageHeight) / 2;
+
+  return { x: imageX, y: imageY };
 }
 
 // When we load the image for the first time, we want the image to fit inside the canvas
@@ -79,6 +167,10 @@ export function ReactImageEditor() {
   // When the user loads an image, we calculate the zoomLevel so that the image fits in the canvas
   // Users can then change the zoom level themselves
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [imageStartOffset, setImageStartOffset] = useState({
+    x: 0,
+    y: 0,
+  });
 
   // Set canvas width and height
   useEffect(() => {
@@ -102,16 +194,23 @@ export function ReactImageEditor() {
       // when the browser is done loading the image to our Image instance
       // we try to render it to the canvas
       img.onload = () => {
+        imageRef.current = img;
         const initialZoomLevel = calculateInitialZoomLevel(
           canvasRef.current,
           img,
         );
-        imageRef.current = img;
         setZoomLevel(initialZoomLevel);
+        const initialImageStartOffset = calculateInitialImageStartOffset(
+          canvasRef.current,
+          imageRef.current,
+          initialZoomLevel,
+        );
+        setImageStartOffset(initialImageStartOffset);
         renderImageToCanvas(
           canvasRef.current,
           imageRef.current,
           initialZoomLevel,
+          initialImageStartOffset,
         );
       };
     }
@@ -119,28 +218,100 @@ export function ReactImageEditor() {
   // rerender the image when the zoomLevel has changed
   useEffect(() => {
     if (imageRef.current) {
-      renderImageToCanvas(canvasRef.current, imageRef.current, zoomLevel);
+      renderImageToCanvas(
+        canvasRef.current,
+        imageRef.current,
+        zoomLevel,
+        imageStartOffset,
+      );
     }
-  }, [zoomLevel]);
+  }, [zoomLevel, imageStartOffset]);
   // When user clicks on the minus (-) button, we zoom out the image a bit
   // The zoom out is not absolute amount. It will depend on the existing zoomLevel
   // Otherwise, at lower zoom levels, it will feel like it's zooming out too fast
   // TODO: We are zooming from the center of the image always. We will fix it in the next iteration
   function handleZoomOutClick() {
-    // Decrease zoom by 5%
-    const newZoomLevel = zoomLevel - zoomLevel * 0.05;
-    setZoomLevel(newZoomLevel);
+    if (imageRef.current) {
+      // Decrease zoom by 5%
+      const newZoomLevel = zoomLevel - zoomLevel * 0.05;
+      const canvasCenter = getCanvasCenter(canvasRef.current);
+      const newOffset = calculateImageStartOffsetAroundCenter(
+        canvasRef.current,
+        zoomLevel,
+        newZoomLevel,
+        imageStartOffset,
+        canvasCenter,
+      );
+      setImageStartOffset(newOffset);
+      setZoomLevel(newZoomLevel);
+    }
   }
   function handleZoomInClick() {
     // Increase zoom by 5%
     const newZoomLevel = zoomLevel + zoomLevel * 0.05;
+    const canvasCenter = getCanvasCenter(canvasRef.current);
+    const newOffset = calculateImageStartOffsetAroundCenter(
+      canvasRef.current,
+      zoomLevel,
+      newZoomLevel,
+      imageStartOffset,
+      canvasCenter,
+    );
+    setImageStartOffset(newOffset);
     setZoomLevel(newZoomLevel);
   }
   function handleResetZoomClick() {
     if (imageRef.current) {
-      setZoomLevel(
-        calculateInitialZoomLevel(canvasRef.current, imageRef.current),
+      const newZoomLevel = calculateInitialZoomLevel(
+        canvasRef.current,
+        imageRef.current,
       );
+      setImageStartOffset(
+        calculateInitialImageStartOffset(
+          canvasRef.current,
+          imageRef.current,
+          newZoomLevel,
+        ),
+      );
+      setZoomLevel(newZoomLevel);
+    }
+  }
+  // User can zoom in and out of the image using the mouse wheel
+  // This event is also called when user tries to zoom in/out of the image
+  // from the trackpad using pinch zoom
+  // When a user scroll wheel when the mouse is over a particular part of the image
+  // they want to zoom into that part. We can't just zoom around the center of the image.
+  // What does that mean?
+  // When we zoom into an image which is larger than the canvas, we do so by start to draw the image
+  // from outside the canvas. So the portion of image we draw outside the canvas is clipped and we
+  // see a part of the image, which appear bigger than it was. When user zooms in further, we start drawing
+  // the image from even further outside the canvas. Now a bigger part of image is clipped and a smaller
+  // part is drawn inside the canvas and appear even bigger.
+  // Say we have a canvas of size 1000x800 and an image of size 4000x3000
+  // If our zoomLevel dictates that we can draw only 3000 pixels of the image on the x axis,
+  // we can start drawing from -500px ((canvasWidth - imageWidth)/2). Now image pixels on x axis from 500px to 3500px will show up on the canvas.
+  // This will always zoom the central part of the image
+  // To zoom into some other section of the image, we can change the starting coordinates where we render the image.
+  // E.g. in above case, if we start drawing from -200px, then the image pixels on x axis from 200px to 3200px will show up on the canvas.
+  // And it will feel like we are zooming on the top left quadrant of the image.
+  // Which means we need to store the offset where we start drawing the image,
+  // based on where the mouse is when the user starts zooming in/out of the image
+  function handleWheel(event: React.WheelEvent<HTMLCanvasElement>) {
+    if (imageRef.current) {
+      // negative deltaY means user is scrolling the wheel towards themselves and we
+      // want to zoom in
+      const newZoomLevel = zoomLevel - (event.deltaY * zoomLevel) / 5000;
+
+      const newStartOffset = calculateImageStartOffsetAroundCenter(
+        canvasRef.current,
+        zoomLevel,
+        newZoomLevel,
+        imageStartOffset,
+        getMousePos(canvasRef.current, event),
+      );
+
+      setImageStartOffset(newStartOffset);
+      setZoomLevel(newZoomLevel);
     }
   }
 
@@ -173,7 +344,7 @@ export function ReactImageEditor() {
         </div>
       </div>
       <div className="flex-1 border-2">
-        <canvas ref={canvasRef} />
+        <canvas ref={canvasRef} onWheel={handleWheel} />
       </div>
     </div>
   );
