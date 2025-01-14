@@ -34,9 +34,25 @@ function renderImageToCanvas(
     const scaledImageWidth = scale * imageWidth;
     const scaledImageHeight = scale * imageHeight;
 
+    // x coordinate where to start drawing the image
+    // if canvas width is larger than the image width, we will try to center the image on the canvas
+    const imageX =
+      canvasWidth > scaledImageWidth ? (canvasWidth - scaledImageWidth) / 2 : 0;
+    const imageY =
+      canvasHeight > scaledImageHeight
+        ? (canvasHeight - scaledImageHeight) / 2
+        : 0;
+
+    // y coordinate where to start drawing the image
     // For now we just draw the whole image to the canvas
     // If the canvas size is smaller than the image, a part of the image will be clipped
-    ctx.drawImage(imageRef, 0, 0, scaledImageWidth, scaledImageHeight);
+    ctx.drawImage(
+      imageRef,
+      imageX,
+      imageY,
+      scaledImageWidth,
+      scaledImageHeight,
+    );
   }
 }
 
