@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 
 // Function to get relative mouse position in canvas
-const getMousePos = (
-  canvas: HTMLCanvasElement | null,
-  event: React.MouseEvent<HTMLCanvasElement>,
-) => {
+const getMousePos = (canvas: HTMLCanvasElement | null, event: WheelEvent) => {
   if (!canvas) {
     return { x: 0, y: 0 };
   }
@@ -174,7 +172,7 @@ export function ReactImageEditor() {
     x: 0,
     y: 0,
   });
-  const [isDragging, setIsDragging] = useState(false);
+  const isDragging = useRef(false);
   // We will store the last mouse position when the user starts dragging the image
   // We use it to pan the image on mouse move event
   // Once we have panned the image from last mouse pos to the current one,
@@ -305,24 +303,33 @@ export function ReactImageEditor() {
   // And it will feel like we are zooming on the top left quadrant of the image.
   // Which means we need to store the offset where we start drawing the image,
   // based on where the mouse is when the user starts zooming in/out of the image
-  function handleWheel(event: React.WheelEvent<HTMLCanvasElement>) {
-    if (imageRef.current) {
-      // negative deltaY means user is scrolling the wheel towards themselves and we
-      // want to zoom in
-      const newZoomLevel = zoomLevel - (event.deltaY * zoomLevel) / 5000;
+  const handleWheel = useCallback(
+    (event: WheelEvent) => {
+      // We only want to zoom in/out of the image when the mouse is over the canvas
+      if (isMouseInCanvas(canvasRef.current, event)) {
+        event.preventDefault();
+        if (imageRef.current) {
+          // negative deltaY means user is scrolling the wheel towards themselves and we
+          // want to zoom in
+          const newZoomLevel = zoomLevel - (event.deltaY * zoomLevel) / 500;
 
-      const newStartOffset = calculateImageStartOffsetAroundCenter(
-        canvasRef.current,
-        zoomLevel,
-        newZoomLevel,
-        imageStartOffset,
-        getMousePos(canvasRef.current, event),
-      );
+          const newStartOffset = calculateImageStartOffsetAroundCenter(
+            canvasRef.current,
+            zoomLevel,
+            newZoomLevel,
+            imageStartOffset,
+            getMousePos(canvasRef.current, event),
+          );
 
-      setImageStartOffset(newStartOffset);
-      setZoomLevel(newZoomLevel);
-    }
-  }
+          setImageStartOffset(newStartOffset);
+          setZoomLevel(newZoomLevel);
+        }
+      }
+    },
+    // TODO: This is atrociuous. Recreating this function on every zoomLevel and imageStartOffset change is
+    // very expensive
+    [zoomLevel, imageStartOffset],
+  );
   // Panning the image
   // When user holds the mouse down, we set isDragging to true
   // We reset isDragging to false on onMouseUp and onMouseLeave events of the canvas
@@ -330,12 +337,13 @@ export function ReactImageEditor() {
   // We need to know how much the mouse has moved from the last position
   // So we store the last mouse position in lastMousePos
   function handleMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
-    setIsDragging(true);
+    // We don't need to rerender the view when we set dragging to true
+    isDragging.current = true;
     lastMousePos.current = { x: event.clientX, y: event.clientY };
   }
   // We will pan the image if the mouse moves and the user is dragging the mouse
   function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
-    if (canvasRef.current && imageRef.current && isDragging) {
+    if (canvasRef.current && imageRef.current && isDragging.current) {
       const dx = event.clientX - lastMousePos.current.x;
       const dy = event.clientY - lastMousePos.current.y;
       const newOffset = {
@@ -347,8 +355,15 @@ export function ReactImageEditor() {
     }
   }
   function handleMouseUp(event: React.MouseEvent<HTMLCanvasElement>) {
-    setIsDragging(false);
+    isDragging.current = false;
   }
+  useEffect(() => {
+    document.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel);
+    };
+  }, [handleWheel]);
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -381,7 +396,6 @@ export function ReactImageEditor() {
       <div className="flex-1 border-2">
         <canvas
           ref={canvasRef}
-          onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -389,5 +403,16 @@ export function ReactImageEditor() {
         />
       </div>
     </div>
+  );
+}
+function isMouseInCanvas(canvas: HTMLCanvasElement | null, event: WheelEvent) {
+  if (!canvas) return false;
+
+  const rect = canvas.getBoundingClientRect();
+  return (
+    event.clientX >= rect.left &&
+    event.clientX <= rect.right &&
+    event.clientY >= rect.top &&
+    event.clientY <= rect.bottom
   );
 }
