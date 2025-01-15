@@ -7,7 +7,7 @@ function renderImageToCanvas(
   canvasRef: HTMLCanvasElement | null,
   imageRef: HTMLImageElement,
   zoomLevel: number,
-  imageStarOffset: { x: number; y: number },
+  offset: { x: number; y: number },
 ) {
   if (!canvasRef) return;
 
@@ -28,8 +28,8 @@ function renderImageToCanvas(
     // If the canvas size is smaller than the image, a part of the image will be clipped
     ctx.drawImage(
       imageRef,
-      imageStarOffset.x,
-      imageStarOffset.y,
+      offset.x,
+      offset.y,
       scaledImageWidth,
       scaledImageHeight,
     );

@@ -60,6 +60,54 @@ export const useCanvasZoomPan = (
   // Once we have panned the image from last mouse pos to the current one,
   // we set the current mouse pos to current mouse pos
   const lastMousePos = useRef({ x: 0, y: 0 });
+  const velocity = useRef({ x: 0, y: 0 });
+  const animationFrameId = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
+
+  // requestAnimationFrame takes a callback. That callback is called with a timestamp.
+  // The timestamp indicates the endtime of previous frames rendering
+  // We keep calling this function with requestAnimationFrame. After the user has stopped dragging the image
+  // This will make it feel like the pan had inertia
+  const updatePosition = (
+    offset: { x: number; y: number },
+    timestamp: number,
+  ) => {
+    if (!lastTimeRef.current) {
+      lastTimeRef.current = timestamp;
+
+      animationFrameId.current = requestAnimationFrame(
+        updatePosition.bind(null, offset),
+      );
+      return;
+    }
+
+    const deltaTime = timestamp - lastTimeRef.current;
+    const friction = 0.8;
+    // The friction will slow down the velocity
+    velocity.current = {
+      x: velocity.current.x * friction,
+      y: velocity.current.y * friction,
+    };
+    // Update offset based on the velocity
+    const newOffset = {
+      x: offset.x + velocity.current.x * deltaTime,
+      y: offset.y + velocity.current.y * deltaTime,
+    };
+
+    lastTimeRef.current = timestamp;
+    // Only continue animating if the movement is significant
+    if (
+      Math.abs(velocity.current.x) > 0.2 ||
+      Math.abs(velocity.current.y) > 0.2
+    ) {
+      setOffset(newOffset);
+      animationFrameId.current = requestAnimationFrame(
+        // We need to bind the new offset to the callback because otherwise the updatePosition closure
+        // will keep using the old offset
+        updatePosition.bind(null, newOffset),
+      );
+    }
+  };
 
   // User can zoom in and out of the image using the mouse wheel
   // This event is also called when user tries to zoom in/out of the image
@@ -116,23 +164,70 @@ export const useCanvasZoomPan = (
     // We don't need to rerender the view when we set dragging to true
     isDragging.current = true;
     lastMousePos.current = { x: event.clientX, y: event.clientY };
+    lastTimeRef.current = performance.now();
+
+    // cancel any ongoing animation
+    if (animationFrameId.current) {
+      cancelAnimationFrame(animationFrameId.current);
+    }
+    velocity.current = { x: 0, y: 0 };
   }
   // We will pan the image if the mouse moves and the user is dragging the mouse
   function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
-    if (canvasRef.current && isDragging.current) {
-      const dx = event.clientX - lastMousePos.current.x;
-      const dy = event.clientY - lastMousePos.current.y;
-      const newOffset = {
-        x: offset.x + dx,
-        y: offset.y + dy,
-      };
-      lastMousePos.current = { x: event.clientX, y: event.clientY };
-      setOffset(newOffset);
+    if (!canvasRef.current || !isDragging.current) {
+      return;
     }
+
+    const dx = event.clientX - lastMousePos.current.x;
+    const dy = event.clientY - lastMousePos.current.y;
+    const newOffset = {
+      x: offset.x + dx,
+      y: offset.y + dy,
+    };
+    const currentTime = performance.now();
+    const deltaTime = currentTime - lastTimeRef.current;
+    // We keep track of the velocity of the mouse movement
+    // We will use it when the user stops. We will decellerate from the last velocity we record.
+    const newVelocity = {
+      x: dx / deltaTime,
+      y: dy / deltaTime,
+    };
+    setOffset(newOffset);
+    velocity.current = newVelocity;
+    lastMousePos.current = { x: event.clientX, y: event.clientY };
+    lastTimeRef.current = currentTime;
   }
   function handleMouseUp() {
     isDragging.current = false;
+
+    // cancel any existing animation
+    if (animationFrameId.current) {
+      cancelAnimationFrame(animationFrameId.current);
+    }
+    // We start our smooth stop of the pan after the user has stopped
+    animationFrameId.current = requestAnimationFrame(
+      updatePosition.bind(null, offset),
+    );
   }
+  function handleMouseLeave() {
+    isDragging.current = false;
+    // cancel any existing animation
+    if (animationFrameId.current) {
+      cancelAnimationFrame(animationFrameId.current);
+    }
+    velocity.current = { x: 0, y: 0 };
+    // We start our smooth stop of the pan after the user has stopped
+    // animationFrameId.current = requestAnimationFrame(updatePosition);
+  }
+
+  // stop any existing animations
+  useEffect(() => {
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, []);
   useEffect(() => {
     document.addEventListener("wheel", handleWheel, { passive: false });
 
@@ -185,7 +280,7 @@ export const useCanvasZoomPan = (
       onMouseDown: handleMouseDown,
       onMouseMove: handleMouseMove,
       onMouseUp: handleMouseUp,
-      onMouseLeave: handleMouseUp,
+      onMouseLeave: handleMouseLeave,
     },
   };
 };
