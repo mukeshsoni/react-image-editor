@@ -354,7 +354,7 @@ export function ReactImageEditor() {
       setImageStartOffset(newOffset);
     }
   }
-  function handleMouseUp(event: React.MouseEvent<HTMLCanvasElement>) {
+  function handleMouseUp() {
     isDragging.current = false;
   }
   useEffect(() => {
