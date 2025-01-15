@@ -153,16 +153,24 @@ export function ReactImageEditor() {
       };
     }
   }, [setZoomLevel, setOffset, imageFile]);
+  const renderRef = useRef<number | null>(null);
   // rerender the image when the zoomLevel has changed
   useEffect(() => {
-    if (imageRef.current) {
-      renderImageToCanvas(
-        canvasRef.current,
-        imageRef.current,
-        zoomLevel,
-        offset,
-      );
+    if (renderRef.current) {
+      cancelAnimationFrame(renderRef.current);
     }
+
+    // We try to render the image to the canvas at 60fps
+    renderRef.current = requestAnimationFrame(() => {
+      if (imageRef.current) {
+        renderImageToCanvas(
+          canvasRef.current,
+          imageRef.current,
+          zoomLevel,
+          offset,
+        );
+      }
+    });
   }, [zoomLevel, offset]);
   function handleResetZoomClick() {
     if (imageRef.current) {
