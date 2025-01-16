@@ -111,7 +111,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
     zoomOut,
     setOffset,
     listeners,
-  } = useCanvasZoomPan(canvasRef);
+  } = useCanvasZoomPan(canvasRef, imageRef);
   // Set canvas width and height
   useEffect(() => {
     if (canvasRef.current) {

@@ -6,6 +6,50 @@ import {
   getTouchDistance,
 } from "./dom-helpers";
 
+// When panning we don't allow any movement if image is smaller than the canvas
+// If image is larger than the canvas, then we stop the panning when the image is at the edge of the canvas
+function calculatePanBounds(
+  canvasWidth: number,
+  canvasHeight: number,
+  imageWidth: number,
+  imageHeight: number,
+  zoomLevel: number,
+) {
+  const scaledImageWidth = zoomLevel * imageWidth;
+  const scaledImageHeight = zoomLevel * imageHeight;
+
+  // if the image is smaller than the canvas, we don't allow any panning
+  if (scaledImageWidth <= canvasWidth) {
+    const x = (canvasWidth - scaledImageWidth) / 2;
+    return { minX: x, maxX: x, minY: 0, maxY: 0 };
+  }
+
+  // If the image is wider than the canvas, allow horizontal panning within bounds
+  // minX is negative. We start drawing the image from outside the canvas
+  // Once user reaches minX, by panning left, we stop the panning. The right edge
+  // of the image will be at the right edge of the canvas at this stage
+  const minX = canvasWidth - scaledImageWidth;
+  const maxX = 0; // We stop the pan once the image left edge reaches canvas left edge
+
+  // If the image is taller than the canvas, allow vertical panning within bounds
+  const minY = canvasHeight - scaledImageHeight;
+  const maxY = 0;
+
+  return { minX, maxX, minY, maxY };
+}
+
+// We calculate the offset normally during panning. But then clamp the offset by
+// the bounds we have set
+function clampOffset(
+  offset: { x: number; y: number },
+  bounds: { minX: number; maxX: number; minY: number; maxY: number },
+) {
+  return {
+    x: Math.min(Math.max(offset.x, bounds.minX), bounds.maxX),
+    y: Math.min(Math.max(offset.y, bounds.minY), bounds.maxY),
+  };
+}
+
 // This is the trickiest part of the whole zoom operation
 // I think i still don't understand how it works, but it does work
 // We adjust the current offset a slight bit
@@ -50,6 +94,7 @@ function calculateImageStartOffsetAroundAReferencePoint(
 // It will also expose the methods to zoom in and out and pan
 export const useCanvasZoomPan = (
   canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
+  imageRef: React.MutableRefObject<HTMLImageElement | null>,
 ) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   // The amount to which the image is scaled/zoomed
@@ -105,7 +150,22 @@ export const useCanvasZoomPan = (
       Math.abs(velocity.current.x) > 0.2 ||
       Math.abs(velocity.current.y) > 0.2
     ) {
-      setOffset(newOffset);
+      const canvasWidth = canvasRef.current?.width || 0;
+      const canvasHeight = canvasRef.current?.height || 0;
+      const imageWidth = imageRef.current?.width || 0;
+      const imageHeight = imageRef.current?.height || 0;
+      setOffset(
+        clampOffset(
+          newOffset,
+          calculatePanBounds(
+            canvasWidth,
+            canvasHeight,
+            imageWidth,
+            imageHeight,
+            zoomLevel,
+          ),
+        ),
+      );
       animationFrameId.current = requestAnimationFrame(
         // We need to bind the new offset to the callback because otherwise the updatePosition closure
         // will keep using the old offset
@@ -206,12 +266,26 @@ export const useCanvasZoomPan = (
         x: dx / deltaTime,
         y: dy / deltaTime,
       };
-      setOffset(newOffset);
+      const canvasWidth = canvasRef.current.width;
+      const canvasHeight = canvasRef.current.height;
+      const imageWidth = imageRef.current?.width || 0;
+      const imageHeight = imageRef.current?.height || 0;
+      const clampedOffset = clampOffset(
+        newOffset,
+        calculatePanBounds(
+          canvasWidth,
+          canvasHeight,
+          imageWidth,
+          imageHeight,
+          zoomLevel,
+        ),
+      );
+      setOffset(clampedOffset);
       velocity.current = newVelocity;
       lastMousePos.current = { x: pageX, y: pageY };
       lastTimeRef.current = currentTime;
     },
-    [canvasRef, offset.x, offset.y],
+    [canvasRef, imageRef, zoomLevel, offset.x, offset.y],
   );
 
   const handleTouchStart = useCallback(
@@ -269,7 +343,22 @@ export const useCanvasZoomPan = (
           canvasPoint,
         );
         setZoomLevel(newZoomLevel);
-        setOffset(newOffset);
+        const canvasWidth = canvasRef.current.width;
+        const canvasHeight = canvasRef.current.height;
+        const imageWidth = imageRef.current?.width || 0;
+        const imageHeight = imageRef.current?.height || 0;
+        const clampedOffset = clampOffset(
+          newOffset,
+          calculatePanBounds(
+            canvasWidth,
+            canvasHeight,
+            imageWidth,
+            imageHeight,
+            zoomLevel,
+          ),
+        );
+        setOffset(clampedOffset);
+        // In case the user wants to zoom in further, we need to adjust the startDistance
         touchState.current.startDistance = currentDistance;
       } else {
         handlePointerMove({
@@ -278,7 +367,7 @@ export const useCanvasZoomPan = (
         });
       }
     },
-    [canvasRef, handlePointerMove, offset, zoomLevel],
+    [canvasRef, imageRef, handlePointerMove, offset, zoomLevel],
   );
 
   function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
