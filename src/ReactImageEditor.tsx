@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 
 // Given a canvas element ref and an Image instance, render the
@@ -16,7 +16,6 @@ function renderImageToCanvas(
     // We restrict the canvas width to the canvas container width
     const canvasWidth = canvasRef.width;
     const canvasHeight = canvasRef.height;
-    console.log({ canvasWidth, canvasHeight });
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
     const imageWidth = imageRef.width;
@@ -98,9 +97,11 @@ function calculateInitialZoomLevel(
   return zoomLelvel;
 }
 
-export function ReactImageEditor() {
+type Props = {
+  imageSrc: string;
+};
+export function ReactImageEditor({ imageSrc }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const {
     zoomLevel,
@@ -120,40 +121,34 @@ export function ReactImageEditor() {
         canvasRef.current.parentElement?.clientHeight || 600;
     }
   }, []);
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    // Let's save the user selected file in a state variable
-    setImageFile(event.target.files ? event.target.files[0] : null);
-  }
   // On change of imageFile we will try to render the image pointed by that file
   useEffect(() => {
-    if (imageFile) {
-      const img = new Image();
-      img.src = URL.createObjectURL(imageFile);
+    const img = new Image();
+    img.src = imageSrc;
 
-      // when the browser is done loading the image to our Image instance
-      // we try to render it to the canvas
-      img.onload = () => {
-        imageRef.current = img;
-        const initialZoomLevel = calculateInitialZoomLevel(
-          canvasRef.current,
-          img,
-        );
-        setZoomLevel(initialZoomLevel);
-        const initialImageStartOffset = calculateInitialImageStartOffset(
-          canvasRef.current,
-          imageRef.current,
-          initialZoomLevel,
-        );
-        setOffset(initialImageStartOffset);
-        renderImageToCanvas(
-          canvasRef.current,
-          imageRef.current,
-          initialZoomLevel,
-          initialImageStartOffset,
-        );
-      };
-    }
-  }, [setZoomLevel, setOffset, imageFile]);
+    // when the browser is done loading the image to our Image instance
+    // we try to render it to the canvas
+    img.onload = () => {
+      imageRef.current = img;
+      const initialZoomLevel = calculateInitialZoomLevel(
+        canvasRef.current,
+        img,
+      );
+      setZoomLevel(initialZoomLevel);
+      const initialImageStartOffset = calculateInitialImageStartOffset(
+        canvasRef.current,
+        imageRef.current,
+        initialZoomLevel,
+      );
+      setOffset(initialImageStartOffset);
+      renderImageToCanvas(
+        canvasRef.current,
+        imageRef.current,
+        initialZoomLevel,
+        initialImageStartOffset,
+      );
+    };
+  }, [setZoomLevel, setOffset, imageSrc]);
   const renderRef = useRef<number | null>(null);
   // rerender the image when the zoomLevel has changed
   useEffect(() => {
@@ -194,7 +189,6 @@ export function ReactImageEditor() {
     <div className="w-full h-full flex flex-col">
       <div className="p-2">
         <div className="flex gap-4">
-          <input type="file" onChange={handleFileChange} />
           <div className="flex gap-4">
             <button
               className="px-2 rounded border border-indigo-600"
