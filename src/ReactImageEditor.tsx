@@ -14,8 +14,9 @@ function renderImageToCanvas(
   const ctx = canvasRef.getContext("2d");
   if (ctx) {
     // We restrict the canvas width to the canvas container width
-    const canvasWidth = canvasRef.parentElement?.clientWidth || 800;
-    const canvasHeight = canvasRef.parentElement?.clientHeight || 600;
+    const canvasWidth = canvasRef.width;
+    const canvasHeight = canvasRef.height;
+    console.log({ canvasWidth, canvasHeight });
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
     const imageWidth = imageRef.width;

@@ -160,10 +160,11 @@ export const useCanvasZoomPan = (
   // If isDragging is true, and we receive a onMouseMove event, we pan the image
   // We need to know how much the mouse has moved from the last position
   // So we store the last mouse position in lastMousePos
-  function handleMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
+  function startPan(eventCoords: { clientX: number; clientY: number }) {
     // We don't need to rerender the view when we set dragging to true
     isDragging.current = true;
-    lastMousePos.current = { x: event.clientX, y: event.clientY };
+    const { clientX, clientY } = eventCoords;
+    lastMousePos.current = { x: clientX, y: clientY };
     lastTimeRef.current = performance.now();
 
     // cancel any ongoing animation
@@ -172,14 +173,30 @@ export const useCanvasZoomPan = (
     }
     velocity.current = { x: 0, y: 0 };
   }
+  function handleMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
+    startPan({ clientX: event.clientX, clientY: event.clientY });
+  }
+  function handleTouchStart(event: React.TouchEvent<HTMLCanvasElement>) {
+    startPan({
+      clientX: event.touches[0].clientX,
+      clientY: event.touches[0].clientY,
+    });
+  }
+
   // We will pan the image if the mouse moves and the user is dragging the mouse
-  function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerMove({
+    clientX,
+    clientY,
+  }: {
+    clientX: number;
+    clientY: number;
+  }) {
     if (!canvasRef.current || !isDragging.current) {
       return;
     }
 
-    const dx = event.clientX - lastMousePos.current.x;
-    const dy = event.clientY - lastMousePos.current.y;
+    const dx = clientX - lastMousePos.current.x;
+    const dy = clientY - lastMousePos.current.y;
     const newOffset = {
       x: offset.x + dx,
       y: offset.y + dy,
@@ -194,8 +211,17 @@ export const useCanvasZoomPan = (
     };
     setOffset(newOffset);
     velocity.current = newVelocity;
-    lastMousePos.current = { x: event.clientX, y: event.clientY };
+    lastMousePos.current = { x: clientX, y: clientY };
     lastTimeRef.current = currentTime;
+  }
+  function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
+    handlePointerMove({ clientX: event.clientX, clientY: event.clientY });
+  }
+  function handleTouchMove(event: React.TouchEvent<HTMLCanvasElement>) {
+    handlePointerMove({
+      clientX: event.touches[0].clientX,
+      clientY: event.touches[0].clientY,
+    });
   }
   function handleMouseUp() {
     isDragging.current = false;
@@ -277,6 +303,9 @@ export const useCanvasZoomPan = (
     zoomOut,
     // event handlers to attach to the canvas element
     listeners: {
+      onTouchStart: handleTouchStart,
+      onTouchMove: handleTouchMove,
+      onTouchEnd: handleMouseUp,
       onMouseDown: handleMouseDown,
       onMouseMove: handleMouseMove,
       onMouseUp: handleMouseUp,
