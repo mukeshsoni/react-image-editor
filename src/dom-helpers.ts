@@ -1,7 +1,7 @@
 // Function to get relative mouse position in canvas
-export function getMousePos(
+export function getMousePosInCanvas(
   canvas: HTMLCanvasElement | null,
-  event: WheelEvent,
+  event: WheelEvent | MouseEvent,
 ) {
   if (!canvas) {
     return { x: 0, y: 0 };
@@ -16,16 +16,22 @@ export function getMousePos(
 
 export function isMouseInCanvas(
   canvas: HTMLCanvasElement | null,
-  event: WheelEvent,
+  event: WheelEvent | MouseEvent | TouchEvent,
 ) {
   if (!canvas) return false;
 
   const rect = canvas.getBoundingClientRect();
+  if (event.touches) {
+    return {
+      x: event.touches[0].pageX - rect.left,
+      y: event.touches[0].pageY - rect.top,
+    };
+  }
   return (
-    event.clientX >= rect.left &&
-    event.clientX <= rect.right &&
-    event.clientY >= rect.top &&
-    event.clientY <= rect.bottom
+    event.pageX >= rect.left &&
+    event.pageX <= rect.right &&
+    event.pageY >= rect.top &&
+    event.pageY <= rect.bottom
   );
 }
 
