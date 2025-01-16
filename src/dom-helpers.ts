@@ -21,18 +21,23 @@ export function isMouseInCanvas(
   if (!canvas) return false;
 
   const rect = canvas.getBoundingClientRect();
-  if (event.touches) {
-    return {
-      x: event.touches[0].pageX - rect.left,
-      y: event.touches[0].pageY - rect.top,
-    };
+  if (event instanceof TouchEvent) {
+    if (event.touches) {
+      return (
+        event.touches[0].pageX >= rect.left &&
+        event.touches[0].pageX <= rect.right &&
+        event.touches[0].pageY >= rect.top &&
+        event.touches[0].pageY <= rect.bottom
+      );
+    }
+  } else {
+    return (
+      event.pageX >= rect.left &&
+      event.pageX <= rect.right &&
+      event.pageY >= rect.top &&
+      event.pageY <= rect.bottom
+    );
   }
-  return (
-    event.pageX >= rect.left &&
-    event.pageX <= rect.right &&
-    event.pageY >= rect.top &&
-    event.pageY <= rect.bottom
-  );
 }
 
 // Function to get canvas center position

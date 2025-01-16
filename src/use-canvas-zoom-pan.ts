@@ -18,8 +18,8 @@ export function calculateInitialImageStartOffset(
     };
   }
 
-  const canvasWidth = canvas.parentElement?.clientWidth || 800;
-  const canvasHeight = canvas.parentElement?.clientHeight || 600;
+  const canvasWidth = canvas.width || 800;
+  const canvasHeight = canvas.height || 600;
 
   const imageWidth = image.width;
   const imageHeight = image.height;
@@ -260,9 +260,11 @@ export const useCanvasZoomPan = (
       // We only want to zoom in/out of the image when the mouse is over the canvas
       if (isMouseInCanvas(canvasRef.current, event)) {
         event.preventDefault();
+        const zoomAdjustment = Math.abs(event.deltaY) >= 1 ? 0.002 : 0.1;
         // negative deltaY means user is scrolling the wheel towards themselves and we
         // want to zoom in
-        const newZoomLevel = zoomLevel - (event.deltaY * zoomLevel) / 500;
+        const newZoomLevel =
+          zoomLevel - event.deltaY * zoomLevel * zoomAdjustment;
 
         const newStartOffset = calculateImageStartOffsetAroundAReferencePoint(
           zoomLevel,
@@ -477,7 +479,6 @@ export const useCanvasZoomPan = (
     setOffset(newOffset);
     setZoomLevel(newZoomLevel);
   }, [canvasRef, offset, zoomLevel]);
-  console.log({ zoomLevel });
   const resetZoom = useCallback(() => {
     if (canvasRef.current && imageRef.current) {
       const initialZoomLevel = calculateInitialZoomLevel(
@@ -485,18 +486,19 @@ export const useCanvasZoomPan = (
         imageRef.current,
       );
       setZoomLevel(initialZoomLevel);
-      const initialImageStartOffset = calculateInitialImageStartOffset(
+      const initialOffset = calculateInitialImageStartOffset(
         canvasRef.current,
         imageRef.current,
         initialZoomLevel,
       );
-      setOffset(initialImageStartOffset);
+
+      setOffset(initialOffset);
     }
   }, [canvasRef, imageRef]);
 
   const lastTapTime = useRef(0);
   const handleTouchEnd = useCallback(
-    (event: TouchEvent) => {
+    (event: React.TouchEvent<HTMLCanvasElement>) => {
       const currentTime = performance.now();
       const tapLength = currentTime - lastTapTime.current;
       if (
@@ -513,34 +515,35 @@ export const useCanvasZoomPan = (
             x: touch.pageX - rect.left,
             y: touch.pageY - rect.top,
           };
-          const defaultZoomLelvel = calculateInitialZoomLevel(
+          const defaultZoomLevel = calculateInitialZoomLevel(
             canvasRef.current,
             imageRef.current,
           );
           // If the current zoom level is the default zoom level, we will zoom in
           // Otherwise we will reset the zoom to the default zoom level, i.e.
           // the zoom which should have been when we load the image
-          const newZoomLevel =
-            defaultZoomLelvel === zoomLevel
-              ? defaultZoomLelvel * 2
-              : defaultZoomLelvel;
-          const newStartOffset = calculateImageStartOffsetAroundAReferencePoint(
-            zoomLevel,
-            newZoomLevel,
-            offset,
-            point,
-          );
+          if (defaultZoomLevel !== zoomLevel) {
+            resetZoom();
+          } else {
+            const newZoomLevel = defaultZoomLevel * 2;
+            const newStartOffset =
+              calculateImageStartOffsetAroundAReferencePoint(
+                zoomLevel,
+                newZoomLevel,
+                offset,
+                point,
+              );
 
-          setOffset(newStartOffset);
-          setZoomLevel(newZoomLevel);
+            setOffset(newStartOffset);
+            setZoomLevel(newZoomLevel);
+          }
         }
-        zoomIn();
       }
       lastTapTime.current = currentTime;
       // TODO
       handleMouseUp();
     },
-    [canvasRef, imageRef, zoomIn, handleMouseUp, offset, zoomLevel],
+    [resetZoom, canvasRef, imageRef, handleMouseUp, offset, zoomLevel],
   );
 
   function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
@@ -610,30 +613,32 @@ export const useCanvasZoomPan = (
         if (isMouseInCanvas(canvasRef.current, event)) {
           event.preventDefault();
 
-          const defaultZoomLelvel = calculateInitialZoomLevel(
+          const defaultZoomLevel = calculateInitialZoomLevel(
             canvasRef.current,
             imageRef.current,
           );
           // If the current zoom level is the default zoom level, we will zoom in
           // Otherwise we will reset the zoom to the default zoom level, i.e.
           // the zoom which should have been when we load the image
-          const newZoomLevel =
-            defaultZoomLelvel === zoomLevel
-              ? defaultZoomLelvel * 2
-              : defaultZoomLelvel;
-          const newStartOffset = calculateImageStartOffsetAroundAReferencePoint(
-            zoomLevel,
-            newZoomLevel,
-            offset,
-            getMousePosInCanvas(canvasRef.current, event),
-          );
+          if (defaultZoomLevel !== zoomLevel) {
+            resetZoom();
+          } else {
+            const newZoomLevel = defaultZoomLevel * 2;
+            const newStartOffset =
+              calculateImageStartOffsetAroundAReferencePoint(
+                zoomLevel,
+                newZoomLevel,
+                offset,
+                getMousePosInCanvas(canvasRef.current, event),
+              );
 
-          setOffset(newStartOffset);
-          setZoomLevel(newZoomLevel);
+            setOffset(newStartOffset);
+            setZoomLevel(newZoomLevel);
+          }
         }
       }
     },
-    [canvasRef, imageRef, offset, zoomLevel],
+    [resetZoom, canvasRef, imageRef, offset, zoomLevel],
   );
   useEffect(() => {
     document.addEventListener("dblclick", handleDoubleClick);
