@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { getCanvasCenter, getMousePos, isMouseInCanvas } from "./dom-helpers";
+import {
+  getCanvasCenter,
+  getMousePos,
+  isMouseInCanvas,
+  getTouchDistance,
+} from "./dom-helpers";
 
 // This is the trickiest part of the whole zoom operation
 // I think i still don't understand how it works, but it does work
@@ -160,82 +165,127 @@ export const useCanvasZoomPan = (
   // If isDragging is true, and we receive a onMouseMove event, we pan the image
   // We need to know how much the mouse has moved from the last position
   // So we store the last mouse position in lastMousePos
-  function startPan(eventCoords: { pageX: number; pageY: number }) {
-    // We don't need to rerender the view when we set dragging to true
-    isDragging.current = true;
-    const { pageX, pageY } = eventCoords;
-    lastMousePos.current = { x: pageX, y: pageY };
-    lastTimeRef.current = performance.now();
+  const startPan = useCallback(
+    (eventCoords: { pageX: number; pageY: number }) => {
+      // We don't need to rerender the view when we set dragging to true
+      isDragging.current = true;
+      const { pageX, pageY } = eventCoords;
+      lastMousePos.current = { x: pageX, y: pageY };
+      lastTimeRef.current = performance.now();
 
-    // cancel any ongoing animation
-    if (animationFrameId.current) {
-      cancelAnimationFrame(animationFrameId.current);
-    }
-    velocity.current = { x: 0, y: 0 };
-  }
+      // cancel any ongoing animation
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+      velocity.current = { x: 0, y: 0 };
+    },
+    [],
+  );
   function handleMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
     startPan({ pageX: event.pageX, pageY: event.pageY });
   }
-  function handleTouchStart(event: React.TouchEvent<HTMLCanvasElement>) {
-    startPan({
-      // To use pageX/pageY or clientX/clientY?
-      // pageX is the distance from the left edge of the viewport
-      // But if our component is used in a page which has been scrolled,
-      // pageX might give the wrong value
-      // pageX is the distance from the left edge of the document
-      // Only way to fix this is by putting the component in a page which has been scrolled
-      // https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
-      // Experiment done: Looks like pageX and pageY work fine even if the component is loaded in a page bigger than the
-      // viewport and has been scrolled
-      pageX: event.touches[0].pageX,
-      pageY: event.touches[0].pageY,
-    });
-  }
-
+  const touchState = useRef<{ startDistance?: number }>({});
   // We will pan the image if the mouse moves and the user is dragging the mouse
-  function handlePointerMove({
-    pageX,
-    pageY,
-  }: {
-    pageX: number;
-    pageY: number;
-  }) {
-    if (!canvasRef.current || !isDragging.current) {
-      return;
-    }
+  const handlePointerMove = useCallback(
+    ({ pageX, pageY }: { pageX: number; pageY: number }) => {
+      if (!canvasRef.current || !isDragging.current) {
+        return;
+      }
 
-    const dx = pageX - lastMousePos.current.x;
-    const dy = pageY - lastMousePos.current.y;
-    const newOffset = {
-      x: offset.x + dx,
-      y: offset.y + dy,
-    };
-    const currentTime = performance.now();
-    const deltaTime = currentTime - lastTimeRef.current;
-    // We keep track of the velocity of the mouse movement
-    // We will use it when the user stops. We will decellerate from the last velocity we record.
-    const newVelocity = {
-      x: dx / deltaTime,
-      y: dy / deltaTime,
-    };
-    setOffset(newOffset);
-    velocity.current = newVelocity;
-    lastMousePos.current = { x: pageX, y: pageY };
-    lastTimeRef.current = currentTime;
-  }
+      const dx = pageX - lastMousePos.current.x;
+      const dy = pageY - lastMousePos.current.y;
+      const newOffset = {
+        x: offset.x + dx,
+        y: offset.y + dy,
+      };
+      const currentTime = performance.now();
+      const deltaTime = currentTime - lastTimeRef.current;
+      // We keep track of the velocity of the mouse movement
+      // We will use it when the user stops. We will decellerate from the last velocity we record.
+      const newVelocity = {
+        x: dx / deltaTime,
+        y: dy / deltaTime,
+      };
+      setOffset(newOffset);
+      velocity.current = newVelocity;
+      lastMousePos.current = { x: pageX, y: pageY };
+      lastTimeRef.current = currentTime;
+    },
+    [canvasRef, offset.x, offset.y],
+  );
+
+  const handleTouchStart = useCallback(
+    (event: TouchEvent) => {
+      event.preventDefault();
+      // If user is using 2 fingers, it's probably for pinch and zoom
+      // We will store the original distance between the 2 fingers
+      if (event.touches.length === 2) {
+        touchState.current.startDistance = getTouchDistance(event.touches);
+      } else {
+        startPan({
+          // To use pageX/pageY or clientX/clientY?
+          // pageX is the distance from the left edge of the viewport
+          // But if our component is used in a page which has been scrolled,
+          // pageX might give the wrong value
+          // pageX is the distance from the left edge of the document
+          // Only way to fix this is by putting the component in a page which has been scrolled
+          // https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
+          // Experiment done: Looks like pageX and pageY work fine even if the component is loaded in a page bigger than the
+          // viewport and has been scrolled
+          pageX: event.touches[0].pageX,
+          pageY: event.touches[0].pageY,
+        });
+      }
+    },
+    [startPan],
+  );
+  const handleTouchMove = useCallback(
+    (event: TouchEvent) => {
+      event.preventDefault();
+
+      // if there are 2 fingers and we also have a startDistance, it's probably a pinch and zoom
+      if (
+        event.touches.length === 2 &&
+        touchState.current.startDistance &&
+        canvasRef.current
+      ) {
+        const currentDistance = getTouchDistance(event.touches);
+        const scale = currentDistance / touchState.current.startDistance;
+        const newZoomLevel = zoomLevel * scale;
+        const centerX = (event.touches[0].pageX + event.touches[1].pageX) / 2;
+        const centerY = (event.touches[0].pageY + event.touches[1].pageY) / 2;
+
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const canvasPoint = {
+          x: centerX - rect.left,
+          y: centerY - rect.top,
+        };
+
+        const newOffset = calculateImageStartOffsetAroundAReferencePoint(
+          zoomLevel,
+          newZoomLevel,
+          offset,
+          canvasPoint,
+        );
+        setZoomLevel(newZoomLevel);
+        setOffset(newOffset);
+        touchState.current.startDistance = currentDistance;
+      } else {
+        handlePointerMove({
+          pageX: event.touches[0].pageX,
+          pageY: event.touches[0].pageY,
+        });
+      }
+    },
+    [canvasRef, handlePointerMove, offset, zoomLevel],
+  );
+
   function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
     handlePointerMove({ pageX: event.pageX, pageY: event.pageY });
   }
-  // TODO: touchmove is also a passive event. The browser will not allow us to
-  // do a preventDefault on it. We need to bind that event on the document with passive: false option.
-  function handleTouchMove(event: React.TouchEvent<HTMLCanvasElement>) {
-    event.preventDefault();
-    handlePointerMove({
-      pageX: event.touches[0].pageX,
-      pageY: event.touches[0].pageY,
-    });
-  }
   function handleMouseUp() {
+    touchState.current.startDistance = undefined;
     isDragging.current = false;
 
     // cancel any existing animation
@@ -304,6 +354,18 @@ export const useCanvasZoomPan = (
     setZoomLevel(newZoomLevel);
   }, [canvasRef, offset, zoomLevel]);
 
+  useEffect(() => {
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [handleTouchMove, handleTouchStart]);
+
   return {
     // zoom state
     zoomLevel,
@@ -315,8 +377,8 @@ export const useCanvasZoomPan = (
     zoomOut,
     // event handlers to attach to the canvas element
     listeners: {
-      onTouchStart: handleTouchStart,
-      onTouchMove: handleTouchMove,
+      // onTouchStart: handleTouchStart,
+      // onTouchMove: handleTouchMove,
       onTouchEnd: handleMouseUp,
       onMouseDown: handleMouseDown,
       onMouseMove: handleMouseMove,

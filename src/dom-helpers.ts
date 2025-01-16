@@ -38,3 +38,9 @@ export function getCanvasCenter(canvas: HTMLCanvasElement | null) {
     y: canvas.height / 2,
   };
 }
+
+export const getTouchDistance = (touches: TouchList): number => {
+  const dx = touches[0].pageX - touches[1].pageX;
+  const dy = touches[0].pageY - touches[1].pageY;
+  return Math.sqrt(dx * dx + dy * dy);
+};
