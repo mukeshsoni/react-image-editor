@@ -36,82 +36,14 @@ function renderImageToCanvas(
   }
 }
 
-function calculateInitialImageStartOffset(
-  canvas: HTMLCanvasElement | null,
-  image: HTMLImageElement,
-  zoomLevel: number,
-): { x: number; y: number } {
-  if (!canvas) {
-    return {
-      x: 0,
-      y: 0,
-    };
-  }
-
-  const canvasWidth = canvas.parentElement?.clientWidth || 800;
-  const canvasHeight = canvas.parentElement?.clientHeight || 600;
-
-  const imageWidth = image.width;
-  const imageHeight = image.height;
-  const scaledImageWidth = zoomLevel * imageWidth;
-  const scaledImageHeight = zoomLevel * imageHeight;
-
-  // x coordinate where to start drawing the image
-  // If the canvas is smaller than the image width, we start drawing the image from outside the canvas peripheries
-  // Which means a portion of the image will be clipped
-  // As user zoom in further, we start drawing the image ever further beyond the peripheries (say a bigger negative x coordinate)
-  // And so a smaller part of the image is inside the canvas and hence the zoom effect
-  // To give the effect of zooming around the mouse cursor, we adjust the start coordinates based on the mouse position
-  const imageX = (canvasWidth - scaledImageWidth) / 2;
-  // y coordinates on where the start drawing the image
-  const imageY = (canvasHeight - scaledImageHeight) / 2;
-
-  return { x: imageX, y: imageY };
-}
-
-// When we load the image for the first time, we want the image to fit inside the canvas
-// If the canvas size is smaller than the image, we want to scale the image down to fit inside the canvas
-function calculateInitialZoomLevel(
-  canvas: HTMLCanvasElement | null,
-  image: HTMLImageElement,
-): number {
-  if (!canvas) {
-    return 1;
-  }
-
-  const canvasWidth = canvas.width;
-  const canvasHeight = canvas.height;
-  const imageWidth = image.width;
-  const imageHeight = image.height;
-
-  // How much do we need to scale the image on the x axis to fit inside the canvas
-  const zoomX = canvasWidth / imageWidth;
-  const zoomY = canvasHeight / imageHeight;
-  // We take the minimum of zoomX and zoomY so that both ends fit in the canvas
-  // If we took the bigger of zoomX and zoomY, the other end would be clipped
-  // And then we restrict the zoom level to 1. So that if zoomX and zoomY are > 1
-  // because the canvas is bigger than the image, we don't enlarge the image and
-  // in the process pixelate it
-  const zoomLelvel = Math.min(Math.min(zoomX, zoomY), 1);
-
-  return zoomLelvel;
-}
-
 type Props = {
   imageSrc: string;
 };
 export function ReactImageEditor({ imageSrc }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const {
-    zoomLevel,
-    offset,
-    setZoomLevel,
-    zoomIn,
-    zoomOut,
-    setOffset,
-    listeners,
-  } = useCanvasZoomPan(canvasRef, imageRef);
+  const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
+    useCanvasZoomPan(canvasRef, imageRef);
   // Set canvas width and height
   useEffect(() => {
     if (canvasRef.current) {
@@ -130,25 +62,9 @@ export function ReactImageEditor({ imageSrc }: Props) {
     // we try to render it to the canvas
     img.onload = () => {
       imageRef.current = img;
-      const initialZoomLevel = calculateInitialZoomLevel(
-        canvasRef.current,
-        img,
-      );
-      setZoomLevel(initialZoomLevel);
-      const initialImageStartOffset = calculateInitialImageStartOffset(
-        canvasRef.current,
-        imageRef.current,
-        initialZoomLevel,
-      );
-      setOffset(initialImageStartOffset);
-      renderImageToCanvas(
-        canvasRef.current,
-        imageRef.current,
-        initialZoomLevel,
-        initialImageStartOffset,
-      );
+      resetZoom();
     };
-  }, [setZoomLevel, setOffset, imageSrc]);
+  }, [imageSrc, resetZoom]);
   const renderRef = useRef<number | null>(null);
   // rerender the image when the zoomLevel has changed
   useEffect(() => {
@@ -169,20 +85,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
     });
   }, [zoomLevel, offset]);
   function handleResetZoomClick() {
-    if (imageRef.current) {
-      const newZoomLevel = calculateInitialZoomLevel(
-        canvasRef.current,
-        imageRef.current,
-      );
-      setOffset(
-        calculateInitialImageStartOffset(
-          canvasRef.current,
-          imageRef.current,
-          newZoomLevel,
-        ),
-      );
-      setZoomLevel(newZoomLevel);
-    }
+    resetZoom();
   }
 
   return (
