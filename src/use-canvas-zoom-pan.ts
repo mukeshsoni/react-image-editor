@@ -160,11 +160,11 @@ export const useCanvasZoomPan = (
   // If isDragging is true, and we receive a onMouseMove event, we pan the image
   // We need to know how much the mouse has moved from the last position
   // So we store the last mouse position in lastMousePos
-  function startPan(eventCoords: { clientX: number; clientY: number }) {
+  function startPan(eventCoords: { pageX: number; pageY: number }) {
     // We don't need to rerender the view when we set dragging to true
     isDragging.current = true;
-    const { clientX, clientY } = eventCoords;
-    lastMousePos.current = { x: clientX, y: clientY };
+    const { pageX, pageY } = eventCoords;
+    lastMousePos.current = { x: pageX, y: pageY };
     lastTimeRef.current = performance.now();
 
     // cancel any ongoing animation
@@ -174,29 +174,38 @@ export const useCanvasZoomPan = (
     velocity.current = { x: 0, y: 0 };
   }
   function handleMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
-    startPan({ clientX: event.clientX, clientY: event.clientY });
+    startPan({ pageX: event.pageX, pageY: event.pageY });
   }
   function handleTouchStart(event: React.TouchEvent<HTMLCanvasElement>) {
     startPan({
-      clientX: event.touches[0].clientX,
-      clientY: event.touches[0].clientY,
+      // To use pageX/pageY or clientX/clientY?
+      // pageX is the distance from the left edge of the viewport
+      // But if our component is used in a page which has been scrolled,
+      // pageX might give the wrong value
+      // pageX is the distance from the left edge of the document
+      // Only way to fix this is by putting the component in a page which has been scrolled
+      // https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
+      // Experiment done: Looks like pageX and pageY work fine even if the component is loaded in a page bigger than the
+      // viewport and has been scrolled
+      pageX: event.touches[0].pageX,
+      pageY: event.touches[0].pageY,
     });
   }
 
   // We will pan the image if the mouse moves and the user is dragging the mouse
   function handlePointerMove({
-    clientX,
-    clientY,
+    pageX,
+    pageY,
   }: {
-    clientX: number;
-    clientY: number;
+    pageX: number;
+    pageY: number;
   }) {
     if (!canvasRef.current || !isDragging.current) {
       return;
     }
 
-    const dx = clientX - lastMousePos.current.x;
-    const dy = clientY - lastMousePos.current.y;
+    const dx = pageX - lastMousePos.current.x;
+    const dy = pageY - lastMousePos.current.y;
     const newOffset = {
       x: offset.x + dx,
       y: offset.y + dy,
@@ -211,16 +220,19 @@ export const useCanvasZoomPan = (
     };
     setOffset(newOffset);
     velocity.current = newVelocity;
-    lastMousePos.current = { x: clientX, y: clientY };
+    lastMousePos.current = { x: pageX, y: pageY };
     lastTimeRef.current = currentTime;
   }
   function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
-    handlePointerMove({ clientX: event.clientX, clientY: event.clientY });
+    handlePointerMove({ pageX: event.pageX, pageY: event.pageY });
   }
+  // TODO: touchmove is also a passive event. The browser will not allow us to
+  // do a preventDefault on it. We need to bind that event on the document with passive: false option.
   function handleTouchMove(event: React.TouchEvent<HTMLCanvasElement>) {
+    event.preventDefault();
     handlePointerMove({
-      clientX: event.touches[0].clientX,
-      clientY: event.touches[0].clientY,
+      pageX: event.touches[0].pageX,
+      pageY: event.touches[0].pageY,
     });
   }
   function handleMouseUp() {
