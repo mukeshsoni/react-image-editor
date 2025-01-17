@@ -150,13 +150,32 @@ function calculateImageStartOffsetAroundAReferencePoint(
   return newOffset;
 }
 
+export type ZoomPanOptions = {
+  minZoom?: number; // minimum zoom level (e.g., 10%)
+  maxZoom?: number; // maximum zoom level (e.g., 400%)
+  zoomStep: number; // zoom increment/decrement amount
+  enableWheel: boolean; // enable mouse wheel zoom
+  enableTouch: boolean; // enable touch gestures
+};
+const defaultZoomPanConfig: ZoomPanOptions = {
+  minZoom: 0.1,
+  maxZoom: 4,
+  zoomStep: 0.1,
+  enableWheel: true,
+  enableTouch: true,
+};
+
 // Hook which maintains the zoom state of the image
 // And the offset coordinates from where to draw the image
 // It will also expose the methods to zoom in and out and pan
 export const useCanvasZoomPan = (
   canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
   imageRef: React.MutableRefObject<HTMLImageElement | null>,
+  config: Partial<ZoomPanOptions> = {},
 ) => {
+  const [zoomPanConfig] = useState<ZoomPanOptions>(() => {
+    return { ...defaultZoomPanConfig, ...config };
+  });
   const [zoomLevel, setZoomLevel] = useState(1);
   // The amount to which the image is scaled/zoomed
   // When the user loads an image, we calculate the zoomLevel so that the image fits in the canvas
@@ -455,7 +474,10 @@ export const useCanvasZoomPan = (
   // TODO: We are zooming from the center of the image always. We will fix it in the next iteration
   const zoomOut = useCallback(() => {
     // Decrease zoom by 5%
-    const newZoomLevel = zoomLevel - zoomLevel * 0.05;
+    let newZoomLevel = zoomLevel - zoomLevel * zoomPanConfig.zoomStep;
+    if (zoomPanConfig.minZoom && newZoomLevel < zoomPanConfig.minZoom) {
+      newZoomLevel = zoomPanConfig.minZoom;
+    }
     const canvasCenter = getCanvasCenter(canvasRef.current);
     const newOffset = calculateImageStartOffsetAroundAReferencePoint(
       zoomLevel,
@@ -465,10 +487,19 @@ export const useCanvasZoomPan = (
     );
     setOffset(newOffset);
     setZoomLevel(newZoomLevel);
-  }, [canvasRef, offset, zoomLevel]);
+  }, [
+    canvasRef,
+    offset,
+    zoomLevel,
+    zoomPanConfig.zoomStep,
+    zoomPanConfig.minZoom,
+  ]);
   const zoomIn = useCallback(() => {
     // Increase zoom by 5%
-    const newZoomLevel = zoomLevel + zoomLevel * 0.05;
+    let newZoomLevel = zoomLevel + zoomLevel * zoomPanConfig.zoomStep;
+    if (zoomPanConfig.maxZoom && newZoomLevel > zoomPanConfig.maxZoom) {
+      newZoomLevel = zoomPanConfig.maxZoom;
+    }
     const canvasCenter = getCanvasCenter(canvasRef.current);
     const newOffset = calculateImageStartOffsetAroundAReferencePoint(
       zoomLevel,
@@ -478,7 +509,13 @@ export const useCanvasZoomPan = (
     );
     setOffset(newOffset);
     setZoomLevel(newZoomLevel);
-  }, [canvasRef, offset, zoomLevel]);
+  }, [
+    canvasRef,
+    offset,
+    zoomLevel,
+    zoomPanConfig.zoomStep,
+    zoomPanConfig.maxZoom,
+  ]);
   const resetZoom = useCallback(() => {
     if (canvasRef.current && imageRef.current) {
       const initialZoomLevel = calculateInitialZoomLevel(
@@ -569,12 +606,14 @@ export const useCanvasZoomPan = (
     };
   }, []);
   useEffect(() => {
-    document.addEventListener("wheel", handleWheel, { passive: false });
+    if (zoomPanConfig.enableWheel) {
+      document.addEventListener("wheel", handleWheel, { passive: false });
+    }
 
     return () => {
       document.removeEventListener("wheel", handleWheel);
     };
-  }, [handleWheel]);
+  }, [handleWheel, zoomPanConfig.enableWheel]);
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey) {
@@ -648,16 +687,20 @@ export const useCanvasZoomPan = (
     };
   }, [handleDoubleClick]);
   useEffect(() => {
-    document.addEventListener("touchstart", handleTouchStart, {
-      passive: false,
-    });
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    if (zoomPanConfig.enableTouch) {
+      document.addEventListener("touchstart", handleTouchStart, {
+        passive: false,
+      });
+      document.addEventListener("touchmove", handleTouchMove, {
+        passive: false,
+      });
+    }
 
     return () => {
       document.removeEventListener("touchstart", handleTouchStart);
       document.removeEventListener("touchmove", handleTouchMove);
     };
-  }, [handleTouchMove, handleTouchStart]);
+  }, [handleTouchMove, handleTouchStart, zoomPanConfig.enableTouch]);
 
   return {
     // zoom state
