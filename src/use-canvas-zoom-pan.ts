@@ -79,22 +79,31 @@ function calculatePanBounds(
   const scaledImageWidth = zoomLevel * imageWidth;
   const scaledImageHeight = zoomLevel * imageHeight;
 
+  let minX = 0;
+  let maxX = 0;
+  let minY = 0;
+  let maxY = 0;
+
   // if the image is smaller than the canvas, we don't allow any panning
   if (scaledImageWidth <= canvasWidth) {
-    const x = (canvasWidth - scaledImageWidth) / 2;
-    return { minX: x, maxX: x, minY: 0, maxY: 0 };
+    minX = Math.max((canvasWidth - scaledImageWidth) / 2, 0);
+    maxX = minX; // minX = maxX will ensure that x remains constant and the image doesn't move horizontally
+  } else {
+    // If the image is wider than the canvas, allow horizontal panning within bounds
+    // minX is negative. We start drawing the image from outside the canvas
+    // Once user reaches minX, by panning left, we stop the panning. The right edge
+    // of the image will be at the right edge of the canvas at this stage
+    minX = canvasWidth - scaledImageWidth;
+    maxX = 0; // We stop the pan once the image left edge reaches canvas left edge
   }
-
-  // If the image is wider than the canvas, allow horizontal panning within bounds
-  // minX is negative. We start drawing the image from outside the canvas
-  // Once user reaches minX, by panning left, we stop the panning. The right edge
-  // of the image will be at the right edge of the canvas at this stage
-  const minX = canvasWidth - scaledImageWidth;
-  const maxX = 0; // We stop the pan once the image left edge reaches canvas left edge
-
-  // If the image is taller than the canvas, allow vertical panning within bounds
-  const minY = canvasHeight - scaledImageHeight;
-  const maxY = 0;
+  if (scaledImageHeight <= canvasHeight) {
+    minY = Math.max((canvasHeight - scaledImageHeight) / 2, 0);
+    maxY = minY;
+  } else {
+    // If the image is taller than the canvas, allow vertical panning within bounds
+    minY = canvasHeight - scaledImageHeight;
+    maxY = 0;
+  }
 
   return { minX, maxX, minY, maxY };
 }
@@ -150,6 +159,7 @@ function calculateImageStartOffsetAroundAReferencePoint(
   return newOffset;
 }
 
+type Coords = { x: number; y: number };
 export type ZoomPanOptions = {
   minZoom?: number; // minimum zoom level (e.g., 10%)
   maxZoom?: number; // maximum zoom level (e.g., 400%)
@@ -193,6 +203,7 @@ export const useCanvasZoomPan = (
   const velocity = useRef({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
+  const zoomAnimationId = useRef<number | null>(null);
 
   // requestAnimationFrame takes a callback. That callback is called with a timestamp.
   // The timestamp indicates the endtime of previous frames rendering
@@ -232,18 +243,15 @@ export const useCanvasZoomPan = (
         const canvasHeight = canvasRef.current?.height || 0;
         const imageWidth = imageRef.current?.width || 0;
         const imageHeight = imageRef.current?.height || 0;
-        setOffset(
-          clampOffset(
-            newOffset,
-            calculatePanBounds(
-              canvasWidth,
-              canvasHeight,
-              imageWidth,
-              imageHeight,
-              zoomLevel,
-            ),
-          ),
+        const panBounds = calculatePanBounds(
+          canvasWidth,
+          canvasHeight,
+          imageWidth,
+          imageHeight,
+          zoomLevel,
         );
+        const clampedOffset = clampOffset(offset, panBounds);
+        setOffset(clampedOffset);
         animationFrameId.current = requestAnimationFrame(
           // We need to bind the new offset to the callback because otherwise the updatePosition closure
           // will keep using the old offset
@@ -254,6 +262,56 @@ export const useCanvasZoomPan = (
     [canvasRef, imageRef, zoomLevel],
   );
 
+  const cancelZoomAnimation = useCallback(() => {
+    if (zoomAnimationId.current) {
+      cancelAnimationFrame(zoomAnimationId.current);
+    }
+  }, []);
+  const animateZoom = useCallback(
+    (
+      startZoom: number,
+      targetZoom: number,
+      startOffset: Coords,
+      targetOffset: Coords,
+      zoomPoint: Coords,
+      startTime: number,
+    ) => {
+      // cancel any existing zoom animations
+      cancelZoomAnimation();
+      const duration = 300;
+      const currentTime = performance.now();
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Easing function for smooth animation
+      const easeOutCubic = (x: number) => 1 - Math.pow(1 - x, 3);
+      const easedProgress = easeOutCubic(progress);
+
+      // Interpolate between start and target values
+      const currentZoom = startZoom + (targetZoom - startZoom) * easedProgress;
+      const currentOffset = {
+        x: startOffset.x + (targetOffset.x - startOffset.x) * easedProgress,
+        y: startOffset.y + (targetOffset.y - startOffset.y) * easedProgress,
+      };
+
+      setZoomLevel(currentZoom);
+      setOffset(currentOffset);
+
+      if (progress < 1) {
+        zoomAnimationId.current = requestAnimationFrame(() =>
+          animateZoom(
+            startZoom,
+            targetZoom,
+            startOffset,
+            targetOffset,
+            zoomPoint,
+            startTime,
+          ),
+        );
+      }
+    },
+    [cancelZoomAnimation],
+  );
   const zoomToPoint = useCallback(
     (newZoomLevel: number, point: { x: number; y: number }) => {
       const newOffset = calculateImageStartOffsetAroundAReferencePoint(
@@ -262,10 +320,16 @@ export const useCanvasZoomPan = (
         offset,
         point,
       );
-      setOffset(newOffset);
-      setZoomLevel(newZoomLevel);
+      animateZoom(
+        zoomLevel,
+        newZoomLevel,
+        offset,
+        newOffset,
+        point,
+        performance.now(),
+      );
     },
-    [offset, zoomLevel],
+    [animateZoom, offset, zoomLevel],
   );
   // User can zoom in and out of the image using the mouse wheel
   // This event is also called when user tries to zoom in/out of the image
@@ -292,7 +356,7 @@ export const useCanvasZoomPan = (
       // We only want to zoom in/out of the image when the mouse is over the canvas
       if (isMouseInCanvas(canvasRef.current, event)) {
         event.preventDefault();
-        const zoomAdjustment = Math.abs(event.deltaY) >= 1 ? 0.002 : 0.1;
+        const zoomAdjustment = Math.abs(event.deltaY) >= 1 ? 0.02 : 0.1;
         // negative deltaY means user is scrolling the wheel towards themselves and we
         // want to zoom in
         const newZoomLevel =
@@ -316,6 +380,7 @@ export const useCanvasZoomPan = (
   // So we store the last mouse position in lastMousePos
   const startPan = useCallback(
     (eventCoords: { pageX: number; pageY: number }) => {
+      cancelZoomAnimation();
       // We don't need to rerender the view when we set dragging to true
       isDragging.current = true;
       const { pageX, pageY } = eventCoords;
@@ -328,7 +393,7 @@ export const useCanvasZoomPan = (
       }
       velocity.current = { x: 0, y: 0 };
     },
-    [],
+    [cancelZoomAnimation],
   );
   function handleMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
     startPan({ pageX: event.pageX, pageY: event.pageY });
@@ -359,16 +424,14 @@ export const useCanvasZoomPan = (
       const canvasHeight = canvasRef.current.height;
       const imageWidth = imageRef.current?.width || 0;
       const imageHeight = imageRef.current?.height || 0;
-      const clampedOffset = clampOffset(
-        newOffset,
-        calculatePanBounds(
-          canvasWidth,
-          canvasHeight,
-          imageWidth,
-          imageHeight,
-          zoomLevel,
-        ),
+      const panBounds = calculatePanBounds(
+        canvasWidth,
+        canvasHeight,
+        imageWidth,
+        imageHeight,
+        zoomLevel,
       );
+      const clampedOffset = clampOffset(newOffset, panBounds);
       setOffset(clampedOffset);
       velocity.current = newVelocity;
       lastMousePos.current = { x: pageX, y: pageY };
@@ -480,7 +543,7 @@ export const useCanvasZoomPan = (
   // Otherwise, at lower zoom levels, it will feel like it's zooming out too fast
   // TODO: We are zooming from the center of the image always. We will fix it in the next iteration
   const zoomOut = useCallback(() => {
-    // Decrease zoom by 5%
+    // Decrease zoom by zoomStep
     let newZoomLevel = zoomLevel - zoomLevel * zoomPanConfig.zoomStep;
     if (zoomPanConfig.minZoom && newZoomLevel < zoomPanConfig.minZoom) {
       newZoomLevel = zoomPanConfig.minZoom;
@@ -495,7 +558,7 @@ export const useCanvasZoomPan = (
     zoomPanConfig.minZoom,
   ]);
   const zoomIn = useCallback(() => {
-    // Increase zoom by 5%
+    // Increase zoom by zoomStep
     let newZoomLevel = zoomLevel + zoomLevel * zoomPanConfig.zoomStep;
     if (zoomPanConfig.maxZoom && newZoomLevel > zoomPanConfig.maxZoom) {
       newZoomLevel = zoomPanConfig.maxZoom;
@@ -509,22 +572,39 @@ export const useCanvasZoomPan = (
     zoomPanConfig.zoomStep,
     zoomPanConfig.maxZoom,
   ]);
-  const resetZoom = useCallback(() => {
-    if (canvasRef.current && imageRef.current) {
-      const initialZoomLevel = calculateInitialZoomLevel(
-        canvasRef.current,
-        imageRef.current,
-      );
-      setZoomLevel(initialZoomLevel);
-      const initialOffset = calculateInitialImageStartOffset(
-        canvasRef.current,
-        imageRef.current,
-        initialZoomLevel,
-      );
 
-      setOffset(initialOffset);
-    }
-  }, [canvasRef, imageRef]);
+  const resetZoom = useCallback(
+    (animate = true) => {
+      if (canvasRef.current && imageRef.current) {
+        const initialZoomLevel = calculateInitialZoomLevel(
+          canvasRef.current,
+          imageRef.current,
+        );
+        const initialOffset = calculateInitialImageStartOffset(
+          canvasRef.current,
+          imageRef.current,
+          initialZoomLevel,
+        );
+        if (animate) {
+          animateZoom(
+            zoomLevel,
+            initialZoomLevel,
+            offset,
+            initialOffset,
+            getCanvasCenter(canvasRef.current),
+            performance.now(),
+          );
+        } else {
+          cancelZoomAnimation();
+          setZoomLevel(initialZoomLevel);
+          if (offset.x !== initialOffset.x && offset.y !== initialOffset.y) {
+            setOffset(initialOffset);
+          }
+        }
+      }
+    },
+    [cancelZoomAnimation, animateZoom, zoomLevel, offset, canvasRef, imageRef],
+  );
 
   const lastTapTime = useRef(0);
   const handleTouchEnd = useCallback(
@@ -584,11 +664,12 @@ export const useCanvasZoomPan = (
   // stop any existing animations
   useEffect(() => {
     return () => {
+      cancelZoomAnimation();
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, []);
+  }, [cancelZoomAnimation]);
   useEffect(() => {
     if (zoomPanConfig.enableWheel) {
       document.addEventListener("wheel", handleWheel, { passive: false });
@@ -647,21 +728,32 @@ export const useCanvasZoomPan = (
             resetZoom();
           } else {
             const newZoomLevel = defaultZoomLevel * 2;
-            const newStartOffset =
-              calculateImageStartOffsetAroundAReferencePoint(
-                zoomLevel,
-                newZoomLevel,
-                offset,
-                getMousePosInCanvas(canvasRef.current, event),
-              );
+            const mousePosInCanvas = getMousePosInCanvas(
+              canvasRef.current,
+              event,
+            );
+            const newOffset = calculateImageStartOffsetAroundAReferencePoint(
+              zoomLevel,
+              newZoomLevel,
+              offset,
+              mousePosInCanvas,
+            );
 
-            setOffset(newStartOffset);
-            setZoomLevel(newZoomLevel);
+            animateZoom(
+              zoomLevel,
+              newZoomLevel,
+              offset,
+              newOffset,
+              mousePosInCanvas,
+              performance.now(),
+            );
+            // setOffset(newOffset);
+            // setZoomLevel(newZoomLevel);
           }
         }
       }
     },
-    [resetZoom, canvasRef, imageRef, offset, zoomLevel],
+    [animateZoom, resetZoom, canvasRef, imageRef, offset, zoomLevel],
   );
   useEffect(() => {
     document.addEventListener("dblclick", handleDoubleClick);
@@ -685,6 +777,25 @@ export const useCanvasZoomPan = (
       document.removeEventListener("touchmove", handleTouchMove);
     };
   }, [handleTouchMove, handleTouchStart, zoomPanConfig.enableTouch]);
+  useEffect(() => {
+    if (canvasRef.current && imageRef.current) {
+      // This is the same as resetZoom functions content
+      // But if i call resetZoom here, i have to add it as a dependency to dependency array
+      // And calling resetZoom changes the offset, which changes resetZoom itself and that
+      // causes this useEffect to run again and again in an infinite loop
+      const initialZoomLevel = calculateInitialZoomLevel(
+        canvasRef.current,
+        imageRef.current,
+      );
+      const initialOffset = calculateInitialImageStartOffset(
+        canvasRef.current,
+        imageRef.current,
+        initialZoomLevel,
+      );
+      setZoomLevel(initialZoomLevel);
+      setOffset(initialOffset);
+    }
+  }, [canvasRef, imageRef]);
 
   return {
     // zoom state

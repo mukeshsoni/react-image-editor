@@ -1,0 +1,1 @@
+- [X] Bug in vertical panning. Vertical panning does not work until the image is also ready for horizontal panning. Only once the image goes out of left and right viewport edges, does vertical panning work.

@@ -62,7 +62,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
     // we try to render it to the canvas
     img.onload = () => {
       imageRef.current = img;
-      resetZoom();
     };
   }, [imageSrc, resetZoom]);
   const renderRef = useRef<number | null>(null);
