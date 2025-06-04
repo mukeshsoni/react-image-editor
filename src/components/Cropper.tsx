@@ -168,7 +168,7 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
       onMouseLeave={handleMouseUp}
     >
       {/* Semi-transparent overlay */}
-      <div className="absolute inset-0 bg-black bg-opacity-50" />
+      <div className="absolute bg-black bg-opacity-50" />
 
       {/* Clear crop region */}
       <div

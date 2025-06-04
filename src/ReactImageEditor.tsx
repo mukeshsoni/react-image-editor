@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper } from "./components/Cropper";
+import { Button } from "@/components/ui/button";
 
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
@@ -130,26 +131,18 @@ export function ReactImageEditor({ imageSrc }: Props) {
               +
             </button>
             <div className="flex gap-2">
-              <button
-                className={
-                  mode === "edit"
-                    ? `px-2 border border-indigo-600 bg-red-200`
-                    : `px-2 border border-indigo-600`
-                }
+              <Button
+                variant={mode == "edit" ? "default" : "secondary"}
                 onClick={() => setMode("edit")}
               >
                 Edit
-              </button>
-              <button
-                className={
-                  mode === "crop"
-                    ? `px-2 border border-indigo-600 bg-red-200`
-                    : `px-2 border border-indigo-600`
-                }
+              </Button>
+              <Button
+                variant={mode == "crop" ? "default" : "secondary"}
                 onClick={() => setMode("crop")}
               >
                 Crop
-              </button>
+              </Button>
             </div>
           </div>
         </div>
