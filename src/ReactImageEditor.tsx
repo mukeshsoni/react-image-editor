@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
+import { Cropper } from "./components/Cropper";
 
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
@@ -42,8 +43,17 @@ type Props = {
 export function ReactImageEditor({ imageSrc }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const [mode, setMode] = useState<"edit" | "crop">("crop");
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
-    useCanvasZoomPan(canvasRef, imageRef);
+    useCanvasZoomPan(canvasRef, imageRef, mode === "edit");
+
+  // Reset zoom when in crop mode
+  useEffect(() => {
+    if (mode == "crop") {
+      resetZoom();
+    }
+  }, [mode, resetZoom]);
+
   // Set canvas width and height
   useEffect(() => {
     if (canvasRef.current) {
@@ -53,6 +63,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
         canvasRef.current.parentElement?.clientHeight || 600;
     }
   }, []);
+
   // On change of imageFile we will try to render the image pointed by that file
   useEffect(() => {
     const img = new Image();
@@ -62,8 +73,14 @@ export function ReactImageEditor({ imageSrc }: Props) {
     // we try to render it to the canvas
     img.onload = () => {
       imageRef.current = img;
+      // We trigger a recalculation of zoomLevel and image offset by calling resetZoom
+      // Otherwise the useEffect which renders the image on change on zoom level might not be called
+      // the first time. Or, it is called, but the imageRef.current is still null so we render nothing
+      // Once the image is loaded, we need to calculate the zoom level and image offset once more
+      resetZoom();
     };
   }, [imageSrc, resetZoom]);
+
   const renderRef = useRef<number | null>(null);
   // rerender the image when the zoomLevel has changed
   useEffect(() => {
@@ -83,6 +100,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
       }
     });
   }, [zoomLevel, offset]);
+
   function handleResetZoomClick() {
     resetZoom();
   }
@@ -111,11 +129,52 @@ export function ReactImageEditor({ imageSrc }: Props) {
             >
               +
             </button>
+            <div className="flex gap-2">
+              <button
+                className={
+                  mode === "edit"
+                    ? `px-2 border border-indigo-600 bg-red-200`
+                    : `px-2 border border-indigo-600`
+                }
+                onClick={() => setMode("edit")}
+              >
+                Edit
+              </button>
+              <button
+                className={
+                  mode === "crop"
+                    ? `px-2 border border-indigo-600 bg-red-200`
+                    : `px-2 border border-indigo-600`
+                }
+                onClick={() => setMode("crop")}
+              >
+                Crop
+              </button>
+            </div>
           </div>
         </div>
       </div>
-      <div className="flex-1 border-2">
-        <canvas ref={canvasRef} {...listeners} />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+        }}
+        className="p-2"
+      >
+        <div className="flex-1 border-2 relative">
+          <canvas ref={canvasRef} {...listeners} />
+          {mode === "crop" && imageRef.current ? (
+            <Cropper
+              cropBounds={{
+                minX: offset.x,
+                minY: offset.y,
+                maxX: offset.x + imageRef.current.width * zoomLevel,
+                maxY: offset.y + imageRef.current.height * zoomLevel,
+              }}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  MutableRefObject,
+  MouseEvent,
+  TouchEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   getCanvasCenter,
   getMousePosInCanvas,
@@ -26,6 +34,7 @@ export function calculateInitialImageStartOffset(
   const scaledImageWidth = zoomLevel * imageWidth;
   const scaledImageHeight = zoomLevel * imageHeight;
 
+  console.log({ zoomLevel, canvasWidth, imageWidth, scaledImageWidth });
   // x coordinate where to start drawing the image
   // If the canvas is smaller than the image width, we start drawing the image from outside the canvas peripheries
   // Which means a portion of the image will be clipped
@@ -171,7 +180,7 @@ const defaultZoomPanConfig: ZoomPanOptions = {
   minZoom: 0.1,
   maxZoom: 4,
   zoomStep: 0.1,
-  enableWheel: true,
+  enableWheel: false,
   enableTouch: true,
 };
 
@@ -179,8 +188,9 @@ const defaultZoomPanConfig: ZoomPanOptions = {
 // And the offset coordinates from where to draw the image
 // It will also expose the methods to zoom in and out and pan
 export const useCanvasZoomPan = (
-  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
-  imageRef: React.MutableRefObject<HTMLImageElement | null>,
+  canvasRef: MutableRefObject<HTMLCanvasElement | null>,
+  imageRef: MutableRefObject<HTMLImageElement | null>,
+  enabled: boolean,
   config: Partial<ZoomPanOptions> = {},
 ) => {
   const [zoomPanConfig] = useState<ZoomPanOptions>(() => {
@@ -395,7 +405,7 @@ export const useCanvasZoomPan = (
     },
     [cancelZoomAnimation],
   );
-  function handleMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
+  function handleMouseDown(event: MouseEvent<HTMLCanvasElement>) {
     startPan({ pageX: event.pageX, pageY: event.pageY });
   }
   const touchState = useRef<{ startDistance?: number }>({});
@@ -573,42 +583,33 @@ export const useCanvasZoomPan = (
     zoomPanConfig.maxZoom,
   ]);
 
-  const resetZoom = useCallback(
-    (animate = true) => {
-      if (canvasRef.current && imageRef.current) {
-        const initialZoomLevel = calculateInitialZoomLevel(
-          canvasRef.current,
-          imageRef.current,
-        );
-        const initialOffset = calculateInitialImageStartOffset(
-          canvasRef.current,
-          imageRef.current,
-          initialZoomLevel,
-        );
-        if (animate) {
-          animateZoom(
-            zoomLevel,
-            initialZoomLevel,
-            offset,
-            initialOffset,
-            getCanvasCenter(canvasRef.current),
-            performance.now(),
-          );
-        } else {
-          cancelZoomAnimation();
-          setZoomLevel(initialZoomLevel);
-          if (offset.x !== initialOffset.x && offset.y !== initialOffset.y) {
-            setOffset(initialOffset);
-          }
-        }
-      }
-    },
-    [cancelZoomAnimation, animateZoom, zoomLevel, offset, canvasRef, imageRef],
-  );
+  const resetZoom = useCallback(() => {
+    if (canvasRef.current && imageRef.current) {
+      const initialZoomLevel = calculateInitialZoomLevel(
+        canvasRef.current,
+        imageRef.current,
+      );
+      const initialOffset = calculateInitialImageStartOffset(
+        canvasRef.current,
+        imageRef.current,
+        initialZoomLevel,
+      );
+      console.log({
+        canvasWidth: canvasRef.current.width,
+        canvasHeight: canvasRef.current.height,
+        imageWidth: imageRef.current.width * initialZoomLevel,
+        imageHeight: imageRef.current.height * initialZoomLevel,
+        initialOffset,
+      });
+      cancelZoomAnimation();
+      setZoomLevel(initialZoomLevel);
+      setOffset(initialOffset);
+    }
+  }, [cancelZoomAnimation, canvasRef, imageRef]);
 
   const lastTapTime = useRef(0);
   const handleTouchEnd = useCallback(
-    (event: React.TouchEvent<HTMLCanvasElement>) => {
+    (event: TouchEvent<HTMLCanvasElement>) => {
       const currentTime = performance.now();
       const tapLength = currentTime - lastTapTime.current;
       if (
@@ -647,7 +648,7 @@ export const useCanvasZoomPan = (
     [zoomToPoint, resetZoom, canvasRef, imageRef, handleMouseUp, zoomLevel],
   );
 
-  function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>) {
+  function handleMouseMove(event: MouseEvent<HTMLCanvasElement>) {
     handlePointerMove({ pageX: event.pageX, pageY: event.pageY });
   }
   function handleMouseLeave() {
