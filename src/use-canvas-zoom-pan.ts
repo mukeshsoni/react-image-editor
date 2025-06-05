@@ -34,7 +34,6 @@ export function calculateInitialImageStartOffset(
   const scaledImageWidth = zoomLevel * imageWidth;
   const scaledImageHeight = zoomLevel * imageHeight;
 
-  console.log({ zoomLevel, canvasWidth, imageWidth, scaledImageWidth });
   // x coordinate where to start drawing the image
   // If the canvas is smaller than the image width, we start drawing the image from outside the canvas peripheries
   // Which means a portion of the image will be clipped
@@ -585,6 +584,7 @@ export const useCanvasZoomPan = (
 
   const resetZoom = useCallback(() => {
     if (canvasRef.current && imageRef.current) {
+      console.log("resetZoom");
       const initialZoomLevel = calculateInitialZoomLevel(
         canvasRef.current,
         imageRef.current,
@@ -594,13 +594,6 @@ export const useCanvasZoomPan = (
         imageRef.current,
         initialZoomLevel,
       );
-      console.log({
-        canvasWidth: canvasRef.current.width,
-        canvasHeight: canvasRef.current.height,
-        imageWidth: imageRef.current.width * initialZoomLevel,
-        imageHeight: imageRef.current.height * initialZoomLevel,
-        initialOffset,
-      });
       cancelZoomAnimation();
       setZoomLevel(initialZoomLevel);
       setOffset(initialOffset);

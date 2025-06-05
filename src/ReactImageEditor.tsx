@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
-import { Cropper } from "./components/Cropper";
+import { Cropper } from "@/components/Cropper";
 import { Button } from "@/components/ui/button";
+import {
+  ResizablePanel,
+  ResizableHandle,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { getPanelGroupElement } from "react-resizable-panels";
 
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
@@ -42,6 +48,7 @@ type Props = {
   imageSrc: string;
 };
 export function ReactImageEditor({ imageSrc }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const [mode, setMode] = useState<"edit" | "crop">("crop");
@@ -105,6 +112,29 @@ export function ReactImageEditor({ imageSrc }: Props) {
   function handleResetZoomClick() {
     resetZoom();
   }
+  function handleImagePanelResize(panelWidth: number) {
+    const CONTAINER_PADDING = 32;
+    // We have to manually resize the canvas when the panel width changes
+    if (canvasRef.current && containerRef.current) {
+      // The onResize callback returns the percentage of the container width this panel occupies
+      // We have to find the actual width by calculating it as percentage of the parent element's width
+      // And it's not straightfoward to get hold of the panel group element in react-resizable-panel
+      // Have to use getPanelGroupElement which is not documented anywhere
+      // https://github.com/bvaughn/react-resizable-panels/tree/main/packages/react-resizable-panels/src/utils/dom
+      const containerEl = getPanelGroupElement("container-panel");
+      if (containerEl) {
+        const containerWidth = containerEl.clientWidth;
+        const newCanvasWidth =
+          containerWidth * panelWidth * 0.01 - CONTAINER_PADDING;
+        const ctx = canvasRef.current.getContext("2d");
+        if (ctx) {
+          ctx.canvas.width = newCanvasWidth;
+          ctx.canvas.height = canvasRef.current.height;
+          resetZoom();
+        }
+      }
+    }
+  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -147,28 +177,46 @@ export function ReactImageEditor({ imageSrc }: Props) {
           </div>
         </div>
       </div>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-        }}
-        className="p-2"
+      <ResizablePanelGroup
+        id="container-panel"
+        direction="horizontal"
+        className="flex flex-1"
+        ref={containerRef}
       >
-        <div className="flex-1 border-2 relative">
-          <canvas ref={canvasRef} {...listeners} />
-          {mode === "crop" && imageRef.current ? (
-            <Cropper
-              cropBounds={{
-                minX: offset.x,
-                minY: offset.y,
-                maxX: offset.x + imageRef.current.width * zoomLevel,
-                maxY: offset.y + imageRef.current.height * zoomLevel,
-              }}
-            />
-          ) : null}
-        </div>
-      </div>
+        <ResizablePanel
+          className="flex"
+          defaultSize={75}
+          onResize={handleImagePanelResize}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              flex: 1,
+            }}
+            className="p-2"
+          >
+            <div className="flex-1 border-2 relative">
+              <canvas ref={canvasRef} {...listeners} />
+              {mode === "crop" && imageRef.current ? (
+                <Cropper
+                  key={JSON.stringify(offset)}
+                  cropBounds={{
+                    minX: offset.x,
+                    minY: offset.y,
+                    maxX: offset.x + imageRef.current.width * zoomLevel,
+                    maxY: offset.y + imageRef.current.height * zoomLevel,
+                  }}
+                />
+              ) : null}
+            </div>
+          </div>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={25}>
+          <div>abcd</div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }
