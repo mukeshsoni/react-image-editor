@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper } from "@/components/Cropper";
-import { Button } from "@/components/ui/button";
 import {
   ResizablePanel,
   ResizableHandle,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPanelGroupElement } from "react-resizable-panels";
 
 // Given a canvas element ref and an Image instance, render the
@@ -48,7 +48,6 @@ type Props = {
   imageSrc: string;
 };
 export function ReactImageEditor({ imageSrc }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const [mode, setMode] = useState<"edit" | "crop">("crop");
@@ -115,7 +114,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
   function handleImagePanelResize(panelWidth: number) {
     const CONTAINER_PADDING = 32;
     // We have to manually resize the canvas when the panel width changes
-    if (canvasRef.current && containerRef.current) {
+    if (canvasRef.current) {
       // The onResize callback returns the percentage of the container width this panel occupies
       // We have to find the actual width by calculating it as percentage of the parent element's width
       // And it's not straightfoward to get hold of the panel group element in react-resizable-panel
@@ -135,56 +134,23 @@ export function ReactImageEditor({ imageSrc }: Props) {
       }
     }
   }
+  function handleTabChange(value: string) {
+    if (value === "edit") {
+      setMode("edit");
+    } else if (value === "crop") {
+      setMode("crop");
+    }
+  }
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="p-2">
-        <div className="flex gap-4">
-          <div className="flex gap-4">
-            <button
-              className="px-2 rounded border border-indigo-600"
-              onClick={zoomOut}
-            >
-              -
-            </button>
-            <button
-              className="px-2 rounded border border-indigo-600"
-              onClick={handleResetZoomClick}
-              title="Reset"
-            >
-              {Math.round(zoomLevel * 100)}%
-            </button>
-            <button
-              className="px-2 rounded border border-indigo-600"
-              onClick={zoomIn}
-            >
-              +
-            </button>
-            <div className="flex gap-2">
-              <Button
-                variant={mode == "edit" ? "default" : "secondary"}
-                onClick={() => setMode("edit")}
-              >
-                Edit
-              </Button>
-              <Button
-                variant={mode == "crop" ? "default" : "secondary"}
-                onClick={() => setMode("crop")}
-              >
-                Crop
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
       <ResizablePanelGroup
         id="container-panel"
         direction="horizontal"
         className="flex flex-1"
-        ref={containerRef}
       >
         <ResizablePanel
-          className="flex"
+          className="flex flex-col"
           defaultSize={75}
           onResize={handleImagePanelResize}
         >
@@ -211,10 +177,53 @@ export function ReactImageEditor({ imageSrc }: Props) {
               ) : null}
             </div>
           </div>
+          <div className="flex flex-row-reverse w-full py-2 px-4">
+            <div
+              className="flex gap-4"
+              style={{ display: mode == "edit" ? "flex" : "none" }}
+            >
+              <button
+                className="px-2 rounded border border-indigo-600"
+                onClick={zoomOut}
+              >
+                -
+              </button>
+              <button
+                className="px-2 rounded border border-indigo-600"
+                onClick={handleResetZoomClick}
+                title="Reset"
+              >
+                {Math.round(zoomLevel * 100)}%
+              </button>
+              <button
+                className="px-2 rounded border border-indigo-600"
+                onClick={zoomIn}
+              >
+                +
+              </button>
+            </div>
+          </div>
         </ResizablePanel>
-        <ResizableHandle />
+        <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
         <ResizablePanel defaultSize={25}>
-          <div>abcd</div>
+          <Tabs
+            value={mode}
+            className="w-[400px]"
+            onValueChange={handleTabChange}
+          >
+            <div className="w-full bg-gray-100">
+              <TabsList>
+                <TabsTrigger value="edit">Edit</TabsTrigger>
+                <TabsTrigger value="crop">Crop</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="edit" className="p-2">
+              TODO - Implement basic image editing features here.
+            </TabsContent>
+            <TabsContent value="crop" className="p-2">
+              TODO: Crop settings
+            </TabsContent>
+          </Tabs>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
