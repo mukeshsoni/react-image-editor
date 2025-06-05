@@ -584,7 +584,6 @@ export const useCanvasZoomPan = (
 
   const resetZoom = useCallback(() => {
     if (canvasRef.current && imageRef.current) {
-      console.log("resetZoom");
       const initialZoomLevel = calculateInitialZoomLevel(
         canvasRef.current,
         imageRef.current,

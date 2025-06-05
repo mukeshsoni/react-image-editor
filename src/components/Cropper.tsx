@@ -1,4 +1,5 @@
 import {
+  Fragment,
   MouseEvent,
   useCallback,
   useEffect,
@@ -6,6 +7,19 @@ import {
   useRef,
   useState,
 } from "react";
+import { Muted } from "@/components/ui/typography";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { LockOpen1Icon, LockClosedIcon } from "@radix-ui/react-icons";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+  SelectGroup,
+  SelectSeparator,
+} from "@/components/ui/select";
 
 type Bounds = {
   minX: number;
@@ -392,4 +406,148 @@ function getResizedRect(
     default:
       return rect;
   }
+}
+
+export function CropSettings() {
+  const aspectRatioOptions = [
+    {
+      label: "1",
+      items: [
+        {
+          label: "Original",
+          value: "original",
+        },
+        {
+          label: "Custom",
+          value: "custom",
+        },
+      ],
+    },
+    {
+      label: "Horizontal crops",
+      items: [
+        {
+          label: "1x1",
+          value: "1x1",
+        },
+        {
+          label: "4x5/8x10",
+          value: "4x5",
+        },
+        {
+          label: "8.5x11",
+          value: "8.5x11",
+        },
+        {
+          label: "5x7",
+          value: "5x7",
+        },
+        {
+          label: "2x3/4x6",
+          value: "2x3",
+        },
+      ],
+    },
+    {
+      label: "Vertical crops",
+      items: [
+        {
+          label: "4x3",
+          value: "4x3",
+        },
+        {
+          label: "16x9",
+          value: "16x9",
+        },
+        {
+          label: "16x10",
+          value: "16x10",
+        },
+      ],
+    },
+  ];
+
+  function handleAspectRatioOptionChange(value: string) {
+    console.log({ value });
+    switch (value) {
+      case "custom":
+        // Handle custom aspect ratio input
+        break;
+      case "1x1":
+      case "4x5":
+      case "8.5x11":
+      case "5x7":
+      case "2x3":
+        // TODO: Handle horizontal crops
+        break;
+      case "4x3":
+      case "16x9":
+      case "16x10":
+        // TODO: Handle vertical crops
+        break;
+      default:
+        // Handle predefined aspect ratios
+        break;
+    }
+  }
+  const [aspectRatioLocked, setAspectRatioLocked] = useState(false);
+  function handleAspectRatioLockClick() {
+    setAspectRatioLocked((lock) => !lock);
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between">
+        <Muted>Tool:</Muted>
+        <Muted>Crop and straighten</Muted>
+      </div>
+      <Separator className="my-2" />
+
+      <div className="flex items-center gap-2">
+        <label className="text-xs">Aspect Ratio</label>
+        <Select onValueChange={handleAspectRatioOptionChange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select a fruit" />
+          </SelectTrigger>
+          <SelectContent>
+            {aspectRatioOptions.map((group, index) => {
+              if (index < aspectRatioOptions.length - 1) {
+                return (
+                  <Fragment key={group.label}>
+                    <SelectGroup>
+                      {group.items.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectSeparator />
+                  </Fragment>
+                );
+              } else {
+                return (
+                  <SelectGroup key={group.label}>
+                    {group.items.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                );
+              }
+            })}
+          </SelectContent>
+        </Select>
+        <Button
+          size="icon"
+          variant="secondary"
+          className="size-8"
+          style={{ cursor: "pointer" }}
+          onClick={handleAspectRatioLockClick}
+        >
+          {aspectRatioLocked ? <LockOpen1Icon /> : <LockClosedIcon />}
+        </Button>
+      </div>
+    </div>
+  );
 }

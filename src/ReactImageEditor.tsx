@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
-import { Cropper } from "@/components/Cropper";
+import { Cropper, CropSettings } from "@/components/Cropper";
 import {
   ResizablePanel,
   ResizableHandle,
@@ -48,7 +48,7 @@ type Props = {
   imageSrc: string;
 };
 export function ReactImageEditor({ imageSrc }: Props) {
-  const [cropMode, setCropMode] = useState(false);
+  const [cropMode, setCropMode] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
@@ -199,14 +199,20 @@ export function ReactImageEditor({ imageSrc }: Props) {
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
         <ResizablePanel defaultSize={25}>
-          <div className="w-full bg-gray-100">
+          <div className="w-full bg-gray-100 py-1 px-2">
             <Button
               onClick={() => setCropMode(!cropMode)}
               variant={cropMode ? "default" : "outline"}
+              size="sm"
             >
               Crop
             </Button>
           </div>
+          {cropMode ? (
+            <div className="m-2">
+              <CropSettings />
+            </div>
+          ) : null}
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
