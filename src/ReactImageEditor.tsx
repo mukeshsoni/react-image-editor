@@ -6,7 +6,7 @@ import {
   ResizableHandle,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { getPanelGroupElement } from "react-resizable-panels";
 
 // Given a canvas element ref and an Image instance, render the
@@ -48,18 +48,18 @@ type Props = {
   imageSrc: string;
 };
 export function ReactImageEditor({ imageSrc }: Props) {
+  const [cropMode, setCropMode] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const [mode, setMode] = useState<"edit" | "crop">("crop");
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
-    useCanvasZoomPan(canvasRef, imageRef, mode === "edit");
+    useCanvasZoomPan(canvasRef, imageRef, !cropMode);
 
   // Reset zoom when in crop mode
   useEffect(() => {
-    if (mode == "crop") {
+    if (cropMode) {
       resetZoom();
     }
-  }, [mode, resetZoom]);
+  }, [cropMode, resetZoom]);
 
   // Set canvas width and height
   useEffect(() => {
@@ -134,13 +134,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
       }
     }
   }
-  function handleTabChange(value: string) {
-    if (value === "edit") {
-      setMode("edit");
-    } else if (value === "crop") {
-      setMode("crop");
-    }
-  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -164,7 +157,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
           >
             <div className="flex-1 border-2 relative">
               <canvas ref={canvasRef} {...listeners} />
-              {mode === "crop" && imageRef.current ? (
+              {cropMode && imageRef.current ? (
                 <Cropper
                   key={JSON.stringify(offset)}
                   cropBounds={{
@@ -180,7 +173,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
           <div className="flex flex-row-reverse w-full py-2 px-4">
             <div
               className="flex gap-4"
-              style={{ display: mode == "edit" ? "flex" : "none" }}
+              style={{ display: !cropMode ? "flex" : "none" }}
             >
               <button
                 className="px-2 rounded border border-indigo-600"
@@ -206,24 +199,14 @@ export function ReactImageEditor({ imageSrc }: Props) {
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
         <ResizablePanel defaultSize={25}>
-          <Tabs
-            value={mode}
-            className="w-[400px]"
-            onValueChange={handleTabChange}
-          >
-            <div className="w-full bg-gray-100">
-              <TabsList>
-                <TabsTrigger value="edit">Edit</TabsTrigger>
-                <TabsTrigger value="crop">Crop</TabsTrigger>
-              </TabsList>
-            </div>
-            <TabsContent value="edit" className="p-2">
-              TODO - Implement basic image editing features here.
-            </TabsContent>
-            <TabsContent value="crop" className="p-2">
-              TODO: Crop settings
-            </TabsContent>
-          </Tabs>
+          <div className="w-full bg-gray-100">
+            <Button
+              onClick={() => setCropMode(!cropMode)}
+              variant={cropMode ? "default" : "outline"}
+            >
+              Crop
+            </Button>
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

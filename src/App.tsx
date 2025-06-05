@@ -1,12 +1,18 @@
-import React, { useEffect, useState } from "react";
-import "./App.css";
+import { useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
 import { ReactImageEditor } from "./ReactImageEditor";
+import { Input } from "@/components/ui/input";
+import "./App.css";
 
+const tempImageSource =
+  "https://fastly.picsum.photos/id/111/1200/800.jpg?hmac=oz1sjdq1Wzml77GI8gkQVi4nKElWzI1edJnvlPXIBrs";
 function App() {
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageSource, setImageSource] = useState<string | null>(null);
+  const [imageSource, setImageSource] = useState<string | null>(
+    tempImageSource,
+  );
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     // Let's save the user selected file in a state variable
     setImageFile(event.target.files ? event.target.files[0] : null);
   }
@@ -21,7 +27,7 @@ function App() {
     <div className="h-screen flex flex-col">
       <div className="flex flex-col flex-1">
         <div>
-          <input type="file" onChange={handleFileChange} />
+          <Input type="file" onChange={handleFileChange} />
         </div>
         <div className="flex-1">
           {imageSource ? <ReactImageEditor imageSrc={imageSource} /> : null}
