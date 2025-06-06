@@ -29,7 +29,7 @@ type Bounds = {
 };
 
 // The rectangle we calculate on mouse movement should not go outside the bounds of the image
-function clampRect(rect: Rect, bounds: Bounds): Rect {
+function clampRect(rect: CropRect, bounds: Bounds): CropRect {
   return {
     x: Math.max(bounds.minX, Math.min(bounds.maxX - rect.width, rect.x)),
     y: Math.max(bounds.minY, Math.min(bounds.maxY - rect.height, rect.y)),
@@ -39,10 +39,11 @@ function clampRect(rect: Rect, bounds: Bounds): Rect {
 }
 type CropperProps = {
   cropBounds: Bounds;
-  onChange?: (cropRect: Rect) => void;
+  cropSettings: CropSettings;
+  onChange: (cropRect: CropRect) => void;
 };
-export function Cropper({ cropBounds, onChange }: CropperProps) {
-  const [cropRect, setCropRect] = useState<Rect>({
+export function Cropper({ cropBounds, cropSettings, onChange }: CropperProps) {
+  const [cropRect, setCropRect] = useState<CropRect>({
     x: cropBounds.minX,
     y: cropBounds.minY,
     width: cropBounds.maxX - cropBounds.minX,
@@ -53,6 +54,86 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   const [dragType, setDragType] = useState<"move" | "resize" | null>(null);
   const [activeHandle, setActiveHandle] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // update cropRect when cropSettings change
+  useEffect(() => {
+    return;
+    switch (cropSettings.aspectRatio) {
+      case "original":
+        // Set to full image dimensions
+        setCropRect({
+          x: cropBounds.minX,
+          y: cropBounds.minY,
+          width: cropBounds.maxX - cropBounds.minX,
+          height: cropBounds.maxY - cropBounds.minY,
+        });
+        break;
+      case "custom":
+        // Do nothing - user can freely resize
+        break;
+      default: {
+        // Handle predefined aspect ratios like "2x3", "16x9", etc.
+        const [widthRatio, heightRatio] = cropSettings.aspectRatio
+          .split("x")
+          .map(Number);
+        if (widthRatio && heightRatio) {
+          const targetAspectRatio = widthRatio / heightRatio;
+
+          // Get current crop rect center
+          const centerX = cropRect.x + cropRect.width / 2;
+          const centerY = cropRect.y + cropRect.height / 2;
+
+          // Calculate available space
+          const maxWidth = cropBounds.maxX - cropBounds.minX;
+          const maxHeight = cropBounds.maxY - cropBounds.minY;
+
+          // Calculate new dimensions maintaining aspect ratio
+          let newWidth, newHeight;
+
+          if (maxWidth / maxHeight > targetAspectRatio) {
+            // Height is the limiting factor
+            newHeight = Math.min(maxHeight, cropRect.height);
+            newWidth = newHeight * targetAspectRatio;
+          } else {
+            // Width is the limiting factor
+            newWidth = Math.min(maxWidth, cropRect.width);
+            newHeight = newWidth / targetAspectRatio;
+          }
+
+          // Try to center the new crop rect around the current center
+          let newX = centerX - newWidth / 2;
+          let newY = centerY - newHeight / 2;
+
+          // Clamp to bounds
+          newX = Math.max(
+            cropBounds.minX,
+            Math.min(cropBounds.maxX - newWidth, newX),
+          );
+          newY = Math.max(
+            cropBounds.minY,
+            Math.min(cropBounds.maxY - newHeight, newY),
+          );
+
+          setCropRect({
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight,
+          });
+        }
+        break;
+      }
+    }
+  }, [
+    cropSettings,
+    cropBounds,
+    // I don't want to recalcuate the cropRect when cropRect itself changes
+    // Only when cropSettings change
+    // cropRect.x,
+    // cropRect.y,
+    // cropRect.height,
+    // cropRect.width,
+  ]);
 
   // We check where in the box is the user clicked down on
   // If it's on a handle, we set the active handle and start resizing
@@ -214,7 +295,7 @@ type Point = {
   y: number;
 };
 
-type Rect = {
+export type CropRect = {
   x: number;
   y: number;
   width: number;
@@ -229,7 +310,7 @@ function DragHandle({
   cropRect,
 }: {
   position: string;
-  cropRect: Rect;
+  cropRect: CropRect;
 }) {
   const handleRect = getHandleRect(position, cropRect);
   return (
@@ -246,7 +327,7 @@ function DragHandle({
   );
 }
 
-function getHandleRect(position: string, cropRect: Rect): Rect {
+function getHandleRect(position: string, cropRect: CropRect): CropRect {
   const { x, y, width, height } = cropRect;
   switch (position) {
     case "top-left":
@@ -335,7 +416,7 @@ function getHandleCursor(position: string): string {
   }
 }
 
-function isPointInRect(point: Point, rect: Rect): boolean {
+function isPointInRect(point: Point, rect: CropRect): boolean {
   return (
     point.x >= rect.x &&
     point.x <= rect.x + rect.width &&
@@ -345,11 +426,11 @@ function isPointInRect(point: Point, rect: Rect): boolean {
 }
 
 function getResizedRect(
-  rect: Rect,
+  rect: CropRect,
   handle: string,
   currentPoint: Point,
   startPoint: Point,
-): Rect {
+): CropRect {
   const deltaX = currentPoint.x - startPoint.x;
   const deltaY = currentPoint.y - startPoint.y;
 
@@ -408,7 +489,23 @@ function getResizedRect(
   }
 }
 
-export function CropSettings() {
+export type CropSettings = {
+  aspectRatio: string;
+  aspectRatioLocked: boolean;
+};
+
+export function CropOptions({
+  onChange,
+  onReset,
+}: {
+  onChange: (settings: CropSettings) => void;
+  onReset: () => void;
+}) {
+  const [cropSettings, setCropSettings] = useState<CropSettings>({
+    aspectRatio: "original",
+    aspectRatioLocked: false,
+  });
+
   const aspectRatioOptions = [
     {
       label: "1",
@@ -424,7 +521,7 @@ export function CropSettings() {
       ],
     },
     {
-      label: "Horizontal crops",
+      label: "Vertical crops",
       items: [
         {
           label: "1x1",
@@ -449,7 +546,7 @@ export function CropSettings() {
       ],
     },
     {
-      label: "Vertical crops",
+      label: "Horizontal crops",
       items: [
         {
           label: "4x3",
@@ -478,21 +575,36 @@ export function CropSettings() {
       case "8.5x11":
       case "5x7":
       case "2x3":
-        // TODO: Handle horizontal crops
-        break;
       case "4x3":
       case "16x9":
-      case "16x10":
-        // TODO: Handle vertical crops
+      case "16x10": {
+        const newCropSettings = {
+          ...cropSettings,
+          aspectRatio: value,
+        };
+        setCropSettings(newCropSettings);
+        onChange(newCropSettings);
         break;
+      }
       default:
         // Handle predefined aspect ratios
         break;
     }
   }
-  const [aspectRatioLocked, setAspectRatioLocked] = useState(false);
   function handleAspectRatioLockClick() {
-    setAspectRatioLocked((lock) => !lock);
+    const newCropSettings = {
+      ...cropSettings,
+      aspectRatioLocked: !cropSettings.aspectRatioLocked,
+    };
+    setCropSettings(newCropSettings);
+    onChange(newCropSettings);
+  }
+  function handleResetClick() {
+    onReset();
+    setCropSettings({
+      aspectRatio: "original",
+      aspectRatioLocked: false,
+    });
   }
 
   return (
@@ -545,8 +657,13 @@ export function CropSettings() {
           style={{ cursor: "pointer" }}
           onClick={handleAspectRatioLockClick}
         >
-          {aspectRatioLocked ? <LockOpen1Icon /> : <LockClosedIcon />}
+          {cropSettings.aspectRatioLocked ? (
+            <LockOpen1Icon />
+          ) : (
+            <LockClosedIcon />
+          )}
         </Button>
+        <Button onClick={handleResetClick}>Reset</Button>
       </div>
     </div>
   );

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
-import { Cropper, CropSettings } from "@/components/Cropper";
+import {
+  Cropper,
+  CropOptions,
+  type CropSettings,
+  type CropRect,
+} from "./Cropper";
 import {
   ResizablePanel,
   ResizableHandle,
@@ -134,6 +139,31 @@ export function ReactImageEditor({ imageSrc }: Props) {
       }
     }
   }
+  const [cropSettings, setCropSettings] = useState<CropSettings>({
+    aspectRatio: "original",
+    aspectRatioLocked: false,
+  });
+  const [cropRect, setCropRect] = useState<CropRect>({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+
+  function handleCropSettingsChange(newCropSettings: CropSettings) {
+    setCropSettings(newCropSettings);
+  }
+  function handleCropRectChange(newCropRect: CropRect) {
+    setCropRect(newCropRect);
+  }
+  function handleCropReset() {
+    // setCropRect({
+    //   x: 0,
+    //   y: 0,
+    //   width: 0,
+    //   height: 0,
+    // });
+  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -166,6 +196,8 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     maxX: offset.x + imageRef.current.width * zoomLevel,
                     maxY: offset.y + imageRef.current.height * zoomLevel,
                   }}
+                  cropSettings={cropSettings}
+                  onChange={handleCropRectChange}
                 />
               ) : null}
             </div>
@@ -210,7 +242,10 @@ export function ReactImageEditor({ imageSrc }: Props) {
           </div>
           {cropMode ? (
             <div className="m-2">
-              <CropSettings />
+              <CropOptions
+                onChange={handleCropSettingsChange}
+                onReset={handleCropReset}
+              />
             </div>
           ) : null}
         </ResizablePanel>
