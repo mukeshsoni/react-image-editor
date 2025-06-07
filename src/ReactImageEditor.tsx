@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
-import { useCropStore } from "./store/cropStore";
+import { useCropStore, type CropRect } from "./store/cropStore";
 import {
   ResizablePanel,
   ResizableHandle,
@@ -147,6 +147,22 @@ export function ReactImageEditor({ imageSrc }: Props) {
       });
     }
   }
+  const [appliedCrop, setAppliedCrop] = useState<{
+    cropRect: CropRect;
+    zoomLevel: number;
+  } | null>(null);
+  function handleCropApplication(cropRect: CropRect) {
+    // TODO
+    // Applying the crop for further processing is super tricky
+    // The zoom in and zoom out stuff should work correctly on the cropped image, as if the
+    // image was already cropped. But in reality the crop would  be applied non destructively.
+    // We also have to store the zoom level at which the crop was applied. And then adjust the cropRect according to the
+    // zoom level.
+    setAppliedCrop({
+      cropRect,
+      zoomLevel,
+    });
+  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -223,7 +239,10 @@ export function ReactImageEditor({ imageSrc }: Props) {
           </div>
           {cropMode ? (
             <div className="m-2">
-              <CropOptions onReset={handleCropReset} />
+              <CropOptions
+                onReset={handleCropReset}
+                onApply={handleCropApplication}
+              />
             </div>
           ) : null}
         </ResizablePanel>

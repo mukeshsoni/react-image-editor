@@ -296,7 +296,13 @@ function isPointInRect(point: Point, rect: CropRect): boolean {
   );
 }
 
-export function CropOptions({ onReset }: { onReset: () => void }) {
+export function CropOptions({
+  onReset,
+  onApply,
+}: {
+  onReset: () => void;
+  onApply: (cropRect: CropRect) => void;
+}) {
   const { cropSettings, updateCropSettings, resetCropSettings } =
     useCropStore();
 
@@ -386,6 +392,9 @@ export function CropOptions({ onReset }: { onReset: () => void }) {
     onReset();
     resetCropSettings();
   }
+  function handleApplyClick() {
+    onApply(cropRect);
+  }
 
   return (
     <div>
@@ -443,7 +452,12 @@ export function CropOptions({ onReset }: { onReset: () => void }) {
             <LockOpen1Icon />
           )}
         </Button>
-        <Button onClick={handleResetClick}>Reset</Button>
+      </div>
+      <div className="flex flex-row-reverse mt-2 gap-1">
+        <Button onClick={handleApplyClick}>Apply</Button>
+        <Button onClick={handleResetClick} variant="outline">
+          Reset
+        </Button>
       </div>
     </div>
   );
