@@ -87,7 +87,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
     const { cropSettings, cropRect, cropBounds } = get();
     const newCropSettings = { ...cropSettings, ...updates };
     let newCropRect = cropRect;
-    switch (cropSettings.aspectRatio) {
+    switch (newCropSettings.aspectRatio) {
       case "original":
         // Set to full image dimensions
         newCropRect = {
@@ -102,7 +102,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
         break;
       default: {
         // Handle predefined aspect ratios like "2x3", "16x9", etc.
-        const [widthRatio, heightRatio] = cropSettings.aspectRatio
+        const [widthRatio, heightRatio] = newCropSettings.aspectRatio
           .split("x")
           .map(Number);
         if (widthRatio && heightRatio) {
@@ -189,7 +189,6 @@ export const useCropStore = create<CropStore>((set, get) => ({
     }),
 
   resetAll: (bounds) => {
-    console.log("resetAll");
     const { resetCropSettings, resetCropRect } = get();
     resetCropSettings();
     resetCropRect(bounds);

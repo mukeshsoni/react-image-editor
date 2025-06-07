@@ -140,7 +140,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
   function handleCropRectChange(newCropRect: CropRect) {
     // This callback can be used for additional logic if needed
     // The store is already updated by the Cropper component
-    console.log({ newCropRect });
+    // console.log({ newCropRect });
   }
   function handleCropReset() {
     if (imageRef.current) {

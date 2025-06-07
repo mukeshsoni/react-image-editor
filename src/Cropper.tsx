@@ -359,7 +359,6 @@ export function CropOptions({ onReset }: { onReset: () => void }) {
   ];
 
   function handleAspectRatioOptionChange(value: string) {
-    console.log({ value });
     switch (value) {
       case "custom":
         // Handle custom aspect ratio input
@@ -384,7 +383,6 @@ export function CropOptions({ onReset }: { onReset: () => void }) {
     updateCropSettings({ aspectRatioLocked: !cropSettings.aspectRatioLocked });
   }
   function handleResetClick() {
-    console.log("handleResetClick");
     onReset();
     resetCropSettings();
   }
