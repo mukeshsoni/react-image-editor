@@ -1,7 +1,7 @@
 import {
-  MutableRefObject,
-  MouseEvent,
-  TouchEvent,
+  type MutableRefObject,
+  type MouseEvent,
+  type TouchEvent,
   useCallback,
   useEffect,
   useRef,
@@ -189,7 +189,6 @@ const defaultZoomPanConfig: ZoomPanOptions = {
 export const useCanvasZoomPan = (
   canvasRef: MutableRefObject<HTMLCanvasElement | null>,
   imageRef: MutableRefObject<HTMLImageElement | null>,
-  enabled: boolean,
   config: Partial<ZoomPanOptions> = {},
 ) => {
   const [zoomPanConfig] = useState<ZoomPanOptions>(() => {

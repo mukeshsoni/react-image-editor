@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
-import {
-  Cropper,
-  CropOptions,
-  type CropSettings,
-  type CropRect,
-} from "./Cropper";
+import { Cropper, CropOptions } from "./Cropper";
+import { useCropStore, type CropRect } from "./store/cropStore";
 import {
   ResizablePanel,
   ResizableHandle,
@@ -57,7 +53,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
-    useCanvasZoomPan(canvasRef, imageRef, !cropMode);
+    useCanvasZoomPan(canvasRef, imageRef);
 
   // Reset zoom when in crop mode
   useEffect(() => {
@@ -139,30 +135,22 @@ export function ReactImageEditor({ imageSrc }: Props) {
       }
     }
   }
-  const [cropSettings, setCropSettings] = useState<CropSettings>({
-    aspectRatio: "original",
-    aspectRatioLocked: false,
-  });
-  const [cropRect, setCropRect] = useState<CropRect>({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  });
+  const { resetAll } = useCropStore();
 
-  function handleCropSettingsChange(newCropSettings: CropSettings) {
-    setCropSettings(newCropSettings);
-  }
   function handleCropRectChange(newCropRect: CropRect) {
-    setCropRect(newCropRect);
+    // This callback can be used for additional logic if needed
+    // The store is already updated by the Cropper component
+    console.log({ newCropRect });
   }
   function handleCropReset() {
-    // setCropRect({
-    //   x: 0,
-    //   y: 0,
-    //   width: 0,
-    //   height: 0,
-    // });
+    if (imageRef.current) {
+      resetAll({
+        minX: offset.x,
+        minY: offset.y,
+        maxX: offset.x + imageRef.current.width * zoomLevel,
+        maxY: offset.y + imageRef.current.height * zoomLevel,
+      });
+    }
   }
 
   return (
@@ -196,7 +184,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     maxX: offset.x + imageRef.current.width * zoomLevel,
                     maxY: offset.y + imageRef.current.height * zoomLevel,
                   }}
-                  cropSettings={cropSettings}
                   onChange={handleCropRectChange}
                 />
               ) : null}
@@ -242,10 +229,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
           </div>
           {cropMode ? (
             <div className="m-2">
-              <CropOptions
-                onChange={handleCropSettingsChange}
-                onReset={handleCropReset}
-              />
+              <CropOptions onReset={handleCropReset} />
             </div>
           ) : null}
         </ResizablePanel>

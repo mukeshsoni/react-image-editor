@@ -42,6 +42,8 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "react-compiler/react-compiler": "error",
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": ["error"],
     },
   },
 );

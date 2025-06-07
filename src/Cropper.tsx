@@ -1,12 +1,19 @@
 import {
   Fragment,
-  MouseEvent,
+  type MouseEvent,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+
+import {
+  useCropStore,
+  type CropRect,
+  type Bounds,
+  type Point,
+} from "./store/cropStore";
 import { Muted } from "@/components/ui/typography";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -21,119 +28,39 @@ import {
   SelectSeparator,
 } from "@/components/ui/select";
 
-type Bounds = {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-};
-
-// The rectangle we calculate on mouse movement should not go outside the bounds of the image
-function clampRect(rect: CropRect, bounds: Bounds): CropRect {
-  return {
-    x: Math.max(bounds.minX, Math.min(bounds.maxX - rect.width, rect.x)),
-    y: Math.max(bounds.minY, Math.min(bounds.maxY - rect.height, rect.y)),
-    width: Math.max(0, Math.min(bounds.maxX - bounds.minX, rect.width)),
-    height: Math.max(0, Math.min(bounds.maxY - bounds.minY, rect.height)),
-  };
-}
+// Check if clicking on a handle
+const handles = [
+  "top-left",
+  "top",
+  "top-right",
+  "left",
+  "right",
+  "bottom-left",
+  "bottom",
+  "bottom-right",
+] as const;
+export type Handle = (typeof handles)[number];
 type CropperProps = {
   cropBounds: Bounds;
-  cropSettings: CropSettings;
   onChange: (cropRect: CropRect) => void;
 };
-export function Cropper({ cropBounds, cropSettings, onChange }: CropperProps) {
-  const [cropRect, setCropRect] = useState<CropRect>({
-    x: cropBounds.minX,
-    y: cropBounds.minY,
-    width: cropBounds.maxX - cropBounds.minX,
-    height: cropBounds.maxY - cropBounds.minY,
-  });
+export function Cropper({ cropBounds, onChange }: CropperProps) {
+  const { cropRect, initializeCropRect, moveCropRect, resizeCropRect } =
+    useCropStore();
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Point | null>(null);
   const [dragType, setDragType] = useState<"move" | "resize" | null>(null);
-  const [activeHandle, setActiveHandle] = useState<string | null>(null);
+  const [activeHandle, setActiveHandle] = useState<Handle | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
 
-  // update cropRect when cropSettings change
+  // Initialize cropRect when component mounts or bounds change
   useEffect(() => {
-    return;
-    switch (cropSettings.aspectRatio) {
-      case "original":
-        // Set to full image dimensions
-        setCropRect({
-          x: cropBounds.minX,
-          y: cropBounds.minY,
-          width: cropBounds.maxX - cropBounds.minX,
-          height: cropBounds.maxY - cropBounds.minY,
-        });
-        break;
-      case "custom":
-        // Do nothing - user can freely resize
-        break;
-      default: {
-        // Handle predefined aspect ratios like "2x3", "16x9", etc.
-        const [widthRatio, heightRatio] = cropSettings.aspectRatio
-          .split("x")
-          .map(Number);
-        if (widthRatio && heightRatio) {
-          const targetAspectRatio = widthRatio / heightRatio;
-
-          // Get current crop rect center
-          const centerX = cropRect.x + cropRect.width / 2;
-          const centerY = cropRect.y + cropRect.height / 2;
-
-          // Calculate available space
-          const maxWidth = cropBounds.maxX - cropBounds.minX;
-          const maxHeight = cropBounds.maxY - cropBounds.minY;
-
-          // Calculate new dimensions maintaining aspect ratio
-          let newWidth, newHeight;
-
-          if (maxWidth / maxHeight > targetAspectRatio) {
-            // Height is the limiting factor
-            newHeight = Math.min(maxHeight, cropRect.height);
-            newWidth = newHeight * targetAspectRatio;
-          } else {
-            // Width is the limiting factor
-            newWidth = Math.min(maxWidth, cropRect.width);
-            newHeight = newWidth / targetAspectRatio;
-          }
-
-          // Try to center the new crop rect around the current center
-          let newX = centerX - newWidth / 2;
-          let newY = centerY - newHeight / 2;
-
-          // Clamp to bounds
-          newX = Math.max(
-            cropBounds.minX,
-            Math.min(cropBounds.maxX - newWidth, newX),
-          );
-          newY = Math.max(
-            cropBounds.minY,
-            Math.min(cropBounds.maxY - newHeight, newY),
-          );
-
-          setCropRect({
-            x: newX,
-            y: newY,
-            width: newWidth,
-            height: newHeight,
-          });
-        }
-        break;
-      }
+    if (!initialized.current) {
+      initializeCropRect(cropBounds);
+      initialized.current = true;
     }
-  }, [
-    cropSettings,
-    cropBounds,
-    // I don't want to recalcuate the cropRect when cropRect itself changes
-    // Only when cropSettings change
-    // cropRect.x,
-    // cropRect.y,
-    // cropRect.height,
-    // cropRect.width,
-  ]);
+  }, [cropBounds, initializeCropRect]);
 
   // We check where in the box is the user clicked down on
   // If it's on a handle, we set the active handle and start resizing
@@ -149,17 +76,6 @@ export function Cropper({ cropBounds, cropSettings, onChange }: CropperProps) {
       setIsDragging(true);
       setDragStart({ x, y });
 
-      // Check if clicking on a handle
-      const handles = [
-        "top-left",
-        "top",
-        "top-right",
-        "left",
-        "right",
-        "bottom-left",
-        "bottom",
-        "bottom-right",
-      ];
       for (const handle of handles) {
         const handleRect = getHandleRect(handle, cropRect);
         if (isPointInRect({ x, y }, handleRect)) {
@@ -199,57 +115,24 @@ export function Cropper({ cropBounds, cropSettings, onChange }: CropperProps) {
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
 
-      // Find how much it has moved from the last mouse position
-      const deltaX = x - dragStart.x;
-      const deltaY = y - dragStart.y;
-      const imageWidth = cropBounds.maxX - cropBounds.minX;
-      const imageHeight = cropBounds.maxY - cropBounds.minY;
-
       if (dragType == "move") {
-        const newX = Math.max(
-          // This is clamp the min x on the left side we allow x to go.
-          cropBounds.minX,
-          Math.min(
-            // This is the max we allow x to go on the right side. Beyond that the right side of crop rectangle
-            // will go outside the image right edge
-            imageWidth - cropRect.width + cropBounds.minX,
-            cropRect.x + deltaX,
-          ),
-        );
-        const newY = Math.max(
-          // This is the min y on the top side we allow y to go.
-          cropBounds.minY,
-          Math.min(
-            // This is the max we allow y to go. Beyond that the bottom side of crop rectangle
-            // will go outside the image bottom edge
-            imageHeight - cropRect.height + cropBounds.minY,
-            cropRect.y + deltaY,
-          ),
-        );
-
-        setCropRect((prev) => ({
-          ...prev,
-          x: newX,
-          y: newY,
-        }));
-        setDragStart({ x, y });
+        moveCropRect({ x, y }, dragStart);
       } else if (dragType == "resize" && activeHandle) {
-        const newRect = getResizedRect(
-          cropRect,
-          activeHandle,
-          { x, y },
-          dragStart,
-        );
-        const boundedRect = clampRect(newRect, cropBounds);
-
-        setCropRect(boundedRect);
+        resizeCropRect({ x, y }, dragStart, activeHandle);
         // The AI generated code didn't reset the dragstart which led to
         // we finding a delta always with respect to the start point and the delta grew exponentially with each
         // mouse movement
-        setDragStart({ x, y });
       }
+      setDragStart({ x, y });
     },
-    [isDragging, dragStart, activeHandle, cropRect, dragType, cropBounds],
+    [
+      isDragging,
+      dragStart,
+      activeHandle,
+      dragType,
+      moveCropRect,
+      resizeCropRect,
+    ],
   );
 
   return (
@@ -289,18 +172,6 @@ export function Cropper({ cropBounds, cropSettings, onChange }: CropperProps) {
     </div>
   );
 }
-
-type Point = {
-  x: number;
-  y: number;
-};
-
-export type CropRect = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
 
 const HANDLE_SIZE = 10;
 
@@ -425,86 +296,9 @@ function isPointInRect(point: Point, rect: CropRect): boolean {
   );
 }
 
-function getResizedRect(
-  rect: CropRect,
-  handle: string,
-  currentPoint: Point,
-  startPoint: Point,
-): CropRect {
-  const deltaX = currentPoint.x - startPoint.x;
-  const deltaY = currentPoint.y - startPoint.y;
-
-  switch (handle) {
-    case "top-left":
-      return {
-        x: rect.x + deltaX,
-        y: rect.y + deltaY,
-        width: rect.width - deltaX,
-        height: rect.height - deltaY,
-      };
-    case "top":
-      return {
-        ...rect,
-        y: rect.y + deltaY,
-        height: rect.height - deltaY,
-      };
-    case "top-right":
-      return {
-        ...rect,
-        y: rect.y + deltaY,
-        width: rect.width + deltaX,
-        height: rect.height - deltaY,
-      };
-    case "left":
-      return {
-        ...rect,
-        x: rect.x + deltaX,
-        width: rect.width - deltaX,
-      };
-    case "right":
-      return {
-        ...rect,
-        width: rect.width + deltaX,
-      };
-    case "bottom-left":
-      return {
-        ...rect,
-        x: rect.x + deltaX,
-        width: rect.width - deltaX,
-        height: rect.height + deltaY,
-      };
-    case "bottom":
-      return {
-        ...rect,
-        height: rect.height + deltaY,
-      };
-    case "bottom-right":
-      return {
-        ...rect,
-        width: rect.width + deltaX,
-        height: rect.height + deltaY,
-      };
-    default:
-      return rect;
-  }
-}
-
-export type CropSettings = {
-  aspectRatio: string;
-  aspectRatioLocked: boolean;
-};
-
-export function CropOptions({
-  onChange,
-  onReset,
-}: {
-  onChange: (settings: CropSettings) => void;
-  onReset: () => void;
-}) {
-  const [cropSettings, setCropSettings] = useState<CropSettings>({
-    aspectRatio: "original",
-    aspectRatioLocked: false,
-  });
+export function CropOptions({ onReset }: { onReset: () => void }) {
+  const { cropSettings, updateCropSettings, resetCropSettings } =
+    useCropStore();
 
   const aspectRatioOptions = [
     {
@@ -578,12 +372,7 @@ export function CropOptions({
       case "4x3":
       case "16x9":
       case "16x10": {
-        const newCropSettings = {
-          ...cropSettings,
-          aspectRatio: value,
-        };
-        setCropSettings(newCropSettings);
-        onChange(newCropSettings);
+        updateCropSettings({ aspectRatio: value });
         break;
       }
       default:
@@ -592,19 +381,12 @@ export function CropOptions({
     }
   }
   function handleAspectRatioLockClick() {
-    const newCropSettings = {
-      ...cropSettings,
-      aspectRatioLocked: !cropSettings.aspectRatioLocked,
-    };
-    setCropSettings(newCropSettings);
-    onChange(newCropSettings);
+    updateCropSettings({ aspectRatioLocked: !cropSettings.aspectRatioLocked });
   }
   function handleResetClick() {
+    console.log("handleResetClick");
     onReset();
-    setCropSettings({
-      aspectRatio: "original",
-      aspectRatioLocked: false,
-    });
+    resetCropSettings();
   }
 
   return (
