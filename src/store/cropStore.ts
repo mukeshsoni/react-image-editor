@@ -235,8 +235,14 @@ export const useCropStore = create<CropStore>((set, get) => ({
   },
 
   resizeCropRect(oldPoint: Point, newPoint: Point, activeHandle: Handle) {
-    const { cropRect, cropBounds, setCropRect } = get();
-    const newRect = getResizedRect(cropRect, activeHandle, oldPoint, newPoint);
+    const { cropRect, cropBounds, cropSettings, setCropRect } = get();
+    const newRect = getResizedRect(
+      cropSettings,
+      cropRect,
+      activeHandle,
+      oldPoint,
+      newPoint,
+    );
     const boundedRect = clampRect(newRect, cropBounds);
 
     setCropRect(boundedRect);
@@ -244,6 +250,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
 }));
 
 function getResizedRect(
+  cropSettings: CropSettings,
   rect: CropRect,
   handle: string,
   currentPoint: Point,
@@ -252,59 +259,177 @@ function getResizedRect(
   const deltaX = currentPoint.x - startPoint.x;
   const deltaY = currentPoint.y - startPoint.y;
 
+  // Calculate the base resize without aspect ratio constraints
+  let newRect: CropRect;
+
   switch (handle) {
     case "top-left":
-      return {
+      newRect = {
         x: rect.x + deltaX,
         y: rect.y + deltaY,
         width: rect.width - deltaX,
         height: rect.height - deltaY,
       };
+      break;
     case "top":
-      return {
+      newRect = {
         ...rect,
         y: rect.y + deltaY,
         height: rect.height - deltaY,
       };
+      break;
     case "top-right":
-      return {
+      newRect = {
         ...rect,
         y: rect.y + deltaY,
         width: rect.width + deltaX,
         height: rect.height - deltaY,
       };
+      break;
     case "left":
-      return {
+      newRect = {
         ...rect,
         x: rect.x + deltaX,
         width: rect.width - deltaX,
       };
+      break;
     case "right":
-      return {
+      newRect = {
         ...rect,
         width: rect.width + deltaX,
       };
+      break;
     case "bottom-left":
-      return {
+      newRect = {
         ...rect,
         x: rect.x + deltaX,
         width: rect.width - deltaX,
         height: rect.height + deltaY,
       };
+      break;
     case "bottom":
-      return {
+      newRect = {
         ...rect,
         height: rect.height + deltaY,
       };
+      break;
     case "bottom-right":
-      return {
+      newRect = {
         ...rect,
         width: rect.width + deltaX,
         height: rect.height + deltaY,
       };
+      break;
     default:
       return rect;
   }
+
+  // If aspect ratio is not locked or is "custom", return the new rect as-is
+  if (!cropSettings.aspectRatioLocked || cropSettings.aspectRatio === "custom") {
+    return newRect;
+  }
+
+  // Apply aspect ratio constraints
+  return applyAspectRatioConstraints(newRect, rect, handle, cropSettings.aspectRatio);
+}
+
+function applyAspectRatioConstraints(
+  newRect: CropRect,
+  originalRect: CropRect,
+  handle: string,
+  aspectRatio: string,
+): CropRect {
+  // Parse aspect ratio
+  let targetAspectRatio: number;
+  
+  if (aspectRatio === "original") {
+    // Use the original rectangle's aspect ratio
+    targetAspectRatio = originalRect.width / originalRect.height;
+  } else {
+    // Parse aspect ratio like "16x9", "4x3", etc.
+    const [widthRatio, heightRatio] = aspectRatio.split("x").map(Number);
+    if (!widthRatio || !heightRatio) {
+      return newRect; // Invalid aspect ratio, return unconstrained
+    }
+    targetAspectRatio = widthRatio / heightRatio;
+  }
+
+  // Calculate constrained dimensions based on the handle being dragged
+  let constrainedRect = { ...newRect };
+
+  switch (handle) {
+    case "top-left":
+    case "bottom-right": {
+      // For corner handles, prioritize width and adjust height
+      const newHeight = newRect.width / targetAspectRatio;
+      if (handle === "top-left") {
+        constrainedRect = {
+          x: newRect.x,
+          y: newRect.y + newRect.height - newHeight,
+          width: newRect.width,
+          height: newHeight,
+        };
+      } else {
+        constrainedRect = {
+          ...newRect,
+          height: newHeight,
+        };
+      }
+      break;
+    }
+    case "top-right":
+    case "bottom-left": {
+      // For other corner handles, prioritize width and adjust height
+      const newHeight = newRect.width / targetAspectRatio;
+      if (handle === "top-right") {
+        constrainedRect = {
+          x: newRect.x,
+          y: newRect.y + newRect.height - newHeight,
+          width: newRect.width,
+          height: newHeight,
+        };
+      } else {
+        constrainedRect = {
+          ...newRect,
+          height: newHeight,
+        };
+      }
+      break;
+    }
+    case "left":
+    case "right": {
+      // For horizontal handles, adjust height to maintain aspect ratio
+      const newHeight = newRect.width / targetAspectRatio;
+      constrainedRect = {
+        ...newRect,
+        height: newHeight,
+      };
+      break;
+    }
+    case "top":
+    case "bottom": {
+      // For vertical handles, adjust width to maintain aspect ratio
+      const newWidth = newRect.height * targetAspectRatio;
+      if (handle === "top") {
+        constrainedRect = {
+          x: newRect.x - (newWidth - newRect.width) / 2,
+          y: newRect.y,
+          width: newWidth,
+          height: newRect.height,
+        };
+      } else {
+        constrainedRect = {
+          x: newRect.x - (newWidth - newRect.width) / 2,
+          y: newRect.y,
+          width: newWidth,
+          height: newRect.height,
+        };
+      }
+      break;
+    }
+  }
+
+  return constrainedRect;
 }
 
 // The rectangle we calculate on mouse movement should not go outside the bounds of the image

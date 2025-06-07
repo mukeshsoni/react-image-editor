@@ -42,7 +42,7 @@ const handles = [
 export type Handle = (typeof handles)[number];
 type CropperProps = {
   cropBounds: Bounds;
-  onChange: (cropRect: CropRect) => void;
+  onChange?: (cropRect: CropRect) => void;
 };
 export function Cropper({ cropBounds, onChange }: CropperProps) {
   const { cropRect, initializeCropRect, moveCropRect, resizeCropRect } =
@@ -438,9 +438,9 @@ export function CropOptions({ onReset }: { onReset: () => void }) {
           onClick={handleAspectRatioLockClick}
         >
           {cropSettings.aspectRatioLocked ? (
-            <LockOpen1Icon />
-          ) : (
             <LockClosedIcon />
+          ) : (
+            <LockOpen1Icon />
           )}
         </Button>
         <Button onClick={handleResetClick}>Reset</Button>

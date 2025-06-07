@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
-import { useCropStore, type CropRect } from "./store/cropStore";
+import { useCropStore } from "./store/cropStore";
 import {
   ResizablePanel,
   ResizableHandle,
@@ -137,11 +137,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
   }
   const { resetAll } = useCropStore();
 
-  function handleCropRectChange(newCropRect: CropRect) {
-    // This callback can be used for additional logic if needed
-    // The store is already updated by the Cropper component
-    // console.log({ newCropRect });
-  }
   function handleCropReset() {
     if (imageRef.current) {
       resetAll({
@@ -184,7 +179,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     maxX: offset.x + imageRef.current.width * zoomLevel,
                     maxY: offset.y + imageRef.current.height * zoomLevel,
                   }}
-                  onChange={handleCropRectChange}
                 />
               ) : null}
             </div>
