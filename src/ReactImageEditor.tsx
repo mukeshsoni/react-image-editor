@@ -86,7 +86,7 @@ type Props = {
   imageSrc: string;
 };
 export function ReactImageEditor({ imageSrc }: Props) {
-  const [cropMode, setCropMode] = useState(true);
+  const [cropMode, setCropMode] = useState(false);
   const [appliedCrop, setAppliedCrop] = useState<{
     imageOffset: { x: number; y: number };
     cropRect: CropRect;
@@ -212,7 +212,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
     }
   }
   function handleCropApplication(cropRect: CropRect) {
-    console.log("Crop applied:", cropRect);
     setAppliedCrop({
       imageOffset: { x: offset.x, y: offset.y },
       cropRect,
