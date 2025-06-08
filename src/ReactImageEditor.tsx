@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
-import { Cropper, CropOptions } from "./Cropper";
-import { useCropStore, type CropRect } from "./store/cropStore";
+import { getPanelGroupElement } from "react-resizable-panels";
+import { PlusIcon, MinusIcon } from "@radix-ui/react-icons";
 import {
   ResizablePanel,
   ResizableHandle,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
-import { getPanelGroupElement } from "react-resizable-panels";
+import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
+import { Cropper, CropOptions } from "./Cropper";
+import { useCropStore, type CropRect } from "./store/cropStore";
 
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
@@ -234,14 +235,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
           defaultSize={75}
           onResize={handleImagePanelResize}
         >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              flex: 1,
-            }}
-            className="p-0"
-          >
+          <div className="flex flex-col flex-1 p-0">
             <div className="flex-1 border-2 relative">
               <canvas ref={canvasRef} {...listeners} />
               {cropMode && imageRef.current ? (
@@ -259,28 +253,36 @@ export function ReactImageEditor({ imageSrc }: Props) {
           </div>
           <div className="flex flex-row-reverse w-full py-2 px-4">
             <div
-              className="flex gap-4"
+              className="flex gap-0.5"
               style={{ display: !cropMode ? "flex" : "none" }}
             >
-              <button
-                className="px-2 rounded border border-indigo-600"
+              <Button
+                className="size-8"
                 onClick={zoomOut}
+                size="icon"
+                variant="outline"
+                title="Zoom Out"
               >
-                -
-              </button>
-              <button
-                className="px-2 rounded border border-indigo-600"
+                <MinusIcon />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="size-8 px-6"
                 onClick={handleResetZoomClick}
                 title="Reset"
               >
                 {Math.round(zoomLevel * 100)}%
-              </button>
-              <button
-                className="px-2 rounded border border-indigo-600"
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="size-8"
                 onClick={zoomIn}
+                title="Zoom In"
               >
-                +
-              </button>
+                <PlusIcon />
+              </Button>
             </div>
           </div>
         </ResizablePanel>
