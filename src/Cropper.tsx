@@ -303,7 +303,7 @@ export function CropOptions({
   onReset: () => void;
   onApply: (cropRect: CropRect) => void;
 }) {
-  const { cropSettings, updateCropSettings, resetCropSettings } =
+  const { cropRect, cropSettings, updateCropSettings, resetCropSettings } =
     useCropStore();
 
   const aspectRatioOptions = [

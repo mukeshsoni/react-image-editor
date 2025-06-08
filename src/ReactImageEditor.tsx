@@ -17,6 +17,11 @@ function renderImageToCanvas(
   imageRef: HTMLImageElement,
   zoomLevel: number,
   offset: { x: number; y: number },
+  appliedCrop?: {
+    cropRect: CropRect;
+    originalZoomLevel: number;
+    imageOffset: { x: number; y: number };
+  },
 ) {
   if (!canvasRef) return;
 
@@ -29,19 +34,51 @@ function renderImageToCanvas(
 
     const imageWidth = imageRef.width;
     const imageHeight = imageRef.height;
-    const scaledImageWidth = zoomLevel * imageWidth;
-    const scaledImageHeight = zoomLevel * imageHeight;
 
-    // y coordinate where to start drawing the image
-    // For now we just draw the whole image to the canvas
-    // If the canvas size is smaller than the image, a part of the image will be clipped
-    ctx.drawImage(
-      imageRef,
-      offset.x,
-      offset.y,
-      scaledImageWidth,
-      scaledImageHeight,
-    );
+    if (appliedCrop) {
+      // Convert crop coordinates from canvas space to image space using the original zoom level
+      const { cropRect, originalZoomLevel, imageOffset } = appliedCrop;
+
+      // Calculate the crop area in actual image pixels using the original image offset
+      const cropX = (cropRect.x - imageOffset.x) / originalZoomLevel;
+      const cropY = (cropRect.y - imageOffset.y) / originalZoomLevel;
+      const cropWidth = cropRect.width / originalZoomLevel;
+      const cropHeight = cropRect.height / originalZoomLevel;
+
+      // Create a virtual coordinate system where the cropped area becomes the "full image"
+      // The cropped image should behave as if it's a standalone image
+      const virtualImageWidth = cropWidth;
+      const virtualImageHeight = cropHeight;
+
+      // Calculate how to fit the virtual image in the canvas at current zoom
+      const scaledVirtualWidth = virtualImageWidth * zoomLevel;
+      const scaledVirtualHeight = virtualImageHeight * zoomLevel;
+
+      // Draw the cropped portion using the current offset for panning
+      ctx.drawImage(
+        imageRef,
+        cropX, // source x in original image
+        cropY, // source y in original image
+        cropWidth, // source width
+        cropHeight, // source height
+        offset.x, // destination x (for panning)
+        offset.y, // destination y (for panning)
+        scaledVirtualWidth, // destination width (scaled by zoom)
+        scaledVirtualHeight, // destination height (scaled by zoom)
+      );
+    } else {
+      // Draw the whole image
+      const scaledImageWidth = zoomLevel * imageWidth;
+      const scaledImageHeight = zoomLevel * imageHeight;
+
+      ctx.drawImage(
+        imageRef,
+        offset.x,
+        offset.y,
+        scaledImageWidth,
+        scaledImageHeight,
+      );
+    }
   }
 }
 
@@ -50,10 +87,30 @@ type Props = {
 };
 export function ReactImageEditor({ imageSrc }: Props) {
   const [cropMode, setCropMode] = useState(true);
+  const [appliedCrop, setAppliedCrop] = useState<{
+    imageOffset: { x: number; y: number };
+    cropRect: CropRect;
+    zoomLevel: number;
+  } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const virtualImageRef = useRef<HTMLImageElement | null>(null);
+
+  // Create virtual image for cropped dimensions
+  useEffect(() => {
+    if (appliedCrop && imageRef.current) {
+      const virtualImg = new Image();
+      const { cropRect, zoomLevel: originalZoomLevel } = appliedCrop;
+      virtualImg.width = cropRect.width / originalZoomLevel;
+      virtualImg.height = cropRect.height / originalZoomLevel;
+      virtualImageRef.current = virtualImg;
+    } else {
+      virtualImageRef.current = null;
+    }
+  }, [appliedCrop]);
+
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
-    useCanvasZoomPan(canvasRef, imageRef);
+    useCanvasZoomPan(canvasRef, appliedCrop ? virtualImageRef : imageRef);
 
   // Reset zoom when in crop mode
   useEffect(() => {
@@ -104,10 +161,17 @@ export function ReactImageEditor({ imageSrc }: Props) {
           imageRef.current,
           zoomLevel,
           offset,
+          appliedCrop
+            ? {
+                cropRect: appliedCrop.cropRect,
+                originalZoomLevel: appliedCrop.zoomLevel,
+                imageOffset: appliedCrop.imageOffset,
+              }
+            : undefined,
         );
       }
     });
-  }, [zoomLevel, offset]);
+  }, [zoomLevel, offset, appliedCrop]);
 
   function handleResetZoomClick() {
     resetZoom();
@@ -147,21 +211,16 @@ export function ReactImageEditor({ imageSrc }: Props) {
       });
     }
   }
-  const [appliedCrop, setAppliedCrop] = useState<{
-    cropRect: CropRect;
-    zoomLevel: number;
-  } | null>(null);
   function handleCropApplication(cropRect: CropRect) {
-    // TODO
-    // Applying the crop for further processing is super tricky
-    // The zoom in and zoom out stuff should work correctly on the cropped image, as if the
-    // image was already cropped. But in reality the crop would  be applied non destructively.
-    // We also have to store the zoom level at which the crop was applied. And then adjust the cropRect according to the
-    // zoom level.
+    console.log("Crop applied:", cropRect);
     setAppliedCrop({
+      imageOffset: { x: offset.x, y: offset.y },
       cropRect,
       zoomLevel,
     });
+    setCropMode(false);
+    // Reset zoom to fit the cropped image
+    setTimeout(() => resetZoom(), 0);
   }
 
   return (
@@ -182,7 +241,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
               flexDirection: "column",
               flex: 1,
             }}
-            className="p-2"
+            className="p-0"
           >
             <div className="flex-1 border-2 relative">
               <canvas ref={canvasRef} {...listeners} />
@@ -228,7 +287,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
         <ResizablePanel defaultSize={25}>
-          <div className="w-full bg-gray-100 py-1 px-2">
+          <div className="w-full bg-gray-100 py-1 px-2 flex gap-2">
             <Button
               onClick={() => setCropMode(!cropMode)}
               variant={cropMode ? "default" : "outline"}
@@ -236,8 +295,19 @@ export function ReactImageEditor({ imageSrc }: Props) {
             >
               Crop
             </Button>
+            {appliedCrop && (
+              <Button
+                onClick={() => {
+                  setAppliedCrop(null);
+                }}
+                variant="outline"
+                size="sm"
+              >
+                Reset Crop
+              </Button>
+            )}
           </div>
-          {cropMode ? (
+          {cropMode && !appliedCrop ? (
             <div className="m-2">
               <CropOptions
                 onReset={handleCropReset}
