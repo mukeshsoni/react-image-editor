@@ -60,14 +60,10 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   const [dragType, setDragType] = useState<"move" | "resize" | null>(null);
   const [activeHandle, setActiveHandle] = useState<Handle | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const initialized = useRef(false);
 
   // Initialize cropRect when component mounts or bounds change
   useEffect(() => {
-    if (!initialized.current) {
-      initializeCropRect(cropBounds);
-      initialized.current = true;
-    }
+    initializeCropRect(cropBounds);
   }, [cropBounds, initializeCropRect]);
 
   // We check where in the box is the user clicked down on
@@ -158,6 +154,7 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
 
       {/* Clear crop region */}
       <div
+        data-testid="crop-region"
         className="absolute border-2 border-gray-600"
         style={{
           left: cropRect.x,
@@ -194,6 +191,7 @@ function DragHandle({
   const handleRect = getHandleRect(position, cropRect);
   return (
     <div
+      data-testid={`crop-handle-${position}`}
       className="absolute bg-white border border-gray-800"
       style={{
         width: HANDLE_SIZE,

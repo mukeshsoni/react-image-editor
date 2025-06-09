@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getPanelGroupElement } from "react-resizable-panels";
 import { PlusIcon, MinusIcon } from "@radix-ui/react-icons";
 import {
@@ -222,6 +222,19 @@ export function ReactImageEditor({ imageSrc }: Props) {
     // Reset zoom to fit the cropped image
     setTimeout(() => resetZoom(), 0);
   }
+  const cropBounds = useMemo(
+    () => ({
+      minX: offset.x,
+      minY: offset.y,
+      maxX: imageRef.current
+        ? offset.x + imageRef.current.width * zoomLevel
+        : 0,
+      maxY: imageRef.current
+        ? offset.y + imageRef.current.height * zoomLevel
+        : 0,
+    }),
+    [offset.x, offset.y, zoomLevel],
+  );
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -239,15 +252,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
             <div className="flex-1 border-2 relative">
               <canvas ref={canvasRef} {...listeners} />
               {cropMode && imageRef.current ? (
-                <Cropper
-                  key={JSON.stringify(offset)}
-                  cropBounds={{
-                    minX: offset.x,
-                    minY: offset.y,
-                    maxX: offset.x + imageRef.current.width * zoomLevel,
-                    maxY: offset.y + imageRef.current.height * zoomLevel,
-                  }}
-                />
+                <Cropper key={JSON.stringify(offset)} cropBounds={cropBounds} />
               ) : null}
             </div>
           </div>
