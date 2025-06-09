@@ -15,6 +15,7 @@ export type CropRect = {
 export type CropSettings = {
   aspectRatio: string;
   aspectRatioLocked: boolean;
+  customAspectRatio?: string; // Format: "WxH" like "3x2"
 };
 
 export type Bounds = {
@@ -63,6 +64,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
   cropSettings: {
     aspectRatio: "original",
     aspectRatioLocked: false,
+    customAspectRatio: undefined,
   },
   cropBounds: {
     minX: 0,
@@ -97,9 +99,61 @@ export const useCropStore = create<CropStore>((set, get) => ({
           height: cropBounds.maxY - cropBounds.minY,
         };
         break;
-      case "custom":
-        // Do nothing - user can freely resize
+      case "custom": {
+        // Apply custom aspect ratio if available
+        if (newCropSettings.customAspectRatio) {
+          const [widthRatio, heightRatio] = newCropSettings.customAspectRatio
+            .split("x")
+            .map(Number);
+          if (widthRatio && heightRatio) {
+            const targetAspectRatio = widthRatio / heightRatio;
+
+            // Get current crop rect center
+            const centerX = cropRect.x + cropRect.width / 2;
+            const centerY = cropRect.y + cropRect.height / 2;
+
+            // Calculate available space
+            const maxWidth = cropBounds.maxX - cropBounds.minX;
+            const maxHeight = cropBounds.maxY - cropBounds.minY;
+
+            // Calculate new dimensions maintaining aspect ratio
+            let newWidth, newHeight;
+
+            if (maxWidth / maxHeight > targetAspectRatio) {
+              // Height is the limiting factor
+              newHeight = Math.min(maxHeight, cropRect.height);
+              newWidth = newHeight * targetAspectRatio;
+            } else {
+              // Width is the limiting factor
+              newWidth = Math.min(maxWidth, cropRect.width);
+              newHeight = newWidth / targetAspectRatio;
+            }
+
+            // Try to center the new crop rect around the current center
+            let newX = centerX - newWidth / 2;
+            let newY = centerY - newHeight / 2;
+
+            // Clamp to bounds
+            newX = Math.max(
+              cropBounds.minX,
+              Math.min(cropBounds.maxX - newWidth, newX),
+            );
+            newY = Math.max(
+              cropBounds.minY,
+              Math.min(cropBounds.maxY - newHeight, newY),
+            );
+
+            newCropRect = {
+              x: newX,
+              y: newY,
+              width: newWidth,
+              height: newHeight,
+            };
+          }
+        }
+        // If no custom aspect ratio is set, do nothing - user can freely resize
         break;
+      }
       default: {
         // Handle predefined aspect ratios like "2x3", "16x9", etc.
         const [widthRatio, heightRatio] = newCropSettings.aspectRatio
@@ -175,6 +229,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
       cropSettings: {
         aspectRatio: "original",
         aspectRatioLocked: false,
+        customAspectRatio: undefined,
       },
     }),
 
@@ -249,7 +304,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
   },
 }));
 
-function getResizedRect(
+export function getResizedRect(
   cropSettings: CropSettings,
   rect: CropRect,
   handle: string,
@@ -324,20 +379,26 @@ function getResizedRect(
       return rect;
   }
 
-  // If aspect ratio is not locked or is "custom", return the new rect as-is
-  if (!cropSettings.aspectRatioLocked || cropSettings.aspectRatio === "custom") {
+  // If aspect ratio is not locked, return the new rect as-is
+  if (!cropSettings.aspectRatioLocked) {
+    return newRect;
+  }
+
+  // If it's custom but no custom aspect ratio is set, return as-is
+  if (cropSettings.aspectRatio === "custom" && !cropSettings.customAspectRatio) {
     return newRect;
   }
 
   // Apply aspect ratio constraints
-  return applyAspectRatioConstraints(newRect, rect, handle, cropSettings.aspectRatio);
+  return applyAspectRatioConstraints(newRect, rect, handle, cropSettings.aspectRatio, cropSettings.customAspectRatio);
 }
 
-function applyAspectRatioConstraints(
+export function applyAspectRatioConstraints(
   newRect: CropRect,
   originalRect: CropRect,
   handle: string,
   aspectRatio: string,
+  customAspectRatio?: string,
 ): CropRect {
   // Parse aspect ratio
   let targetAspectRatio: number;
@@ -345,6 +406,15 @@ function applyAspectRatioConstraints(
   if (aspectRatio === "original") {
     // Use the original rectangle's aspect ratio
     targetAspectRatio = originalRect.width / originalRect.height;
+  } else if (aspectRatio === "custom") {
+    if (!customAspectRatio) {
+      return newRect; // No custom aspect ratio set
+    }
+    const [widthRatio, heightRatio] = customAspectRatio.split("x").map(Number);
+    if (!widthRatio || !heightRatio) {
+      return newRect; // Invalid custom aspect ratio
+    }
+    targetAspectRatio = widthRatio / heightRatio;
   } else {
     // Parse aspect ratio like "16x9", "4x3", etc.
     const [widthRatio, heightRatio] = aspectRatio.split("x").map(Number);

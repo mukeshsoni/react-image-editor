@@ -17,6 +17,7 @@ import {
 import { Muted } from "@/components/ui/typography";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { LockOpen1Icon, LockClosedIcon } from "@radix-ui/react-icons";
 import {
   Select,
@@ -27,6 +28,13 @@ import {
   SelectGroup,
   SelectSeparator,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // Check if clicking on a handle
 const handles = [
@@ -303,8 +311,16 @@ export function CropOptions({
   onReset: () => void;
   onApply: (cropRect: CropRect) => void;
 }) {
-  const { cropRect, cropSettings, updateCropSettings, resetCropSettings } =
-    useCropStore();
+  const {
+    cropRect,
+    cropSettings,
+    cropBounds,
+    updateCropSettings,
+    resetCropSettings,
+  } = useCropStore();
+  const [showCustomDialog, setShowCustomDialog] = useState(false);
+  const [customWidth, setCustomWidth] = useState("");
+  const [customHeight, setCustomHeight] = useState("");
 
   const aspectRatioOptions = [
     {
@@ -363,11 +379,19 @@ export function CropOptions({
       ],
     },
   ];
+  function originalAspectRatio() {
+    const imageWidth = cropBounds.maxX - cropBounds.minX;
+    const imageHeight = cropBounds.maxY - cropBounds.minY;
+    return `${imageWidth}x${imageHeight}`;
+  }
 
   function handleAspectRatioOptionChange(value: string) {
     switch (value) {
+      case "original":
+        updateCropSettings({ aspectRatio: originalAspectRatio() });
+        break;
       case "custom":
-        // Handle custom aspect ratio input
+        setShowCustomDialog(true);
         break;
       case "1x1":
       case "4x5":
@@ -382,6 +406,9 @@ export function CropOptions({
       }
       default:
         // Handle predefined aspect ratios
+        if (value.toLowerCase().startsWith("custom")) {
+          setShowCustomDialog(true);
+        }
         break;
     }
   }
@@ -396,6 +423,41 @@ export function CropOptions({
     onApply(cropRect);
   }
 
+  function handleCustomAspectRatioSubmit() {
+    const width = parseFloat(customWidth);
+    const height = parseFloat(customHeight);
+
+    if (width > 0 && height > 0) {
+      const customRatio = `${width}x${height}`;
+      updateCropSettings({
+        aspectRatio: "custom",
+        customAspectRatio: customRatio,
+      });
+      setShowCustomDialog(false);
+      setCustomWidth("");
+      setCustomHeight("");
+    }
+  }
+
+  function handleCustomDialogCancel() {
+    setShowCustomDialog(false);
+    setCustomWidth("");
+    setCustomHeight("");
+  }
+
+  // Get display value for the select
+  function getAspectRatioDisplayValue() {
+    if (
+      cropSettings.aspectRatio === "custom" &&
+      cropSettings.customAspectRatio
+    ) {
+      return `Custom (${cropSettings.customAspectRatio})`;
+    } else if (cropSettings.aspectRatio === originalAspectRatio()) {
+      return "Original";
+    }
+    return cropSettings.aspectRatio;
+  }
+
   return (
     <div>
       <div className="flex justify-between">
@@ -406,9 +468,14 @@ export function CropOptions({
 
       <div className="flex items-center gap-2">
         <label className="text-xs">Aspect Ratio</label>
-        <Select onValueChange={handleAspectRatioOptionChange}>
+        <Select
+          onValueChange={handleAspectRatioOptionChange}
+          value={cropSettings.aspectRatio}
+        >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select a fruit" />
+            <SelectValue placeholder="Select aspect ratio">
+              {getAspectRatioDisplayValue()}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {aspectRatioOptions.map((group, index) => {
@@ -459,6 +526,71 @@ export function CropOptions({
           Reset
         </Button>
       </div>
+
+      <Dialog open={showCustomDialog} onOpenChange={setShowCustomDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Custom Aspect Ratio</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label
+                  htmlFor="width"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Width
+                </label>
+                <Input
+                  id="width"
+                  type="number"
+                  value={customWidth}
+                  onChange={(e) => setCustomWidth(e.target.value)}
+                  placeholder="e.g., 16"
+                  min="0.1"
+                  step="0.1"
+                />
+              </div>
+              <div className="mt-6 text-xl font-medium">×</div>
+              <div className="flex-1">
+                <label
+                  htmlFor="height"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Height
+                </label>
+                <Input
+                  id="height"
+                  type="number"
+                  value={customHeight}
+                  onChange={(e) => setCustomHeight(e.target.value)}
+                  placeholder="e.g., 9"
+                  min="0.1"
+                  step="0.1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCustomDialogCancel}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCustomAspectRatioSubmit}
+              disabled={
+                !customWidth ||
+                !customHeight ||
+                parseFloat(customWidth) <= 0 ||
+                parseFloat(customHeight) <= 0
+              }
+            >
+              Apply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
