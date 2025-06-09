@@ -292,6 +292,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
   resizeCropRect(oldPoint: Point, newPoint: Point, activeHandle: Handle) {
     const { cropRect, cropBounds, cropSettings, setCropRect } = get();
     const newRect = getResizedRect(
+      cropBounds,
       cropSettings,
       cropRect,
       activeHandle,
@@ -305,6 +306,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
 }));
 
 export function getResizedRect(
+  cropBounds,
   cropSettings: CropSettings,
   rect: CropRect,
   handle: string,
@@ -385,27 +387,38 @@ export function getResizedRect(
   }
 
   // If it's custom but no custom aspect ratio is set, return as-is
-  if (cropSettings.aspectRatio === "custom" && !cropSettings.customAspectRatio) {
+  if (
+    cropSettings.aspectRatio === "custom" &&
+    !cropSettings.customAspectRatio
+  ) {
     return newRect;
   }
 
   // Apply aspect ratio constraints
-  return applyAspectRatioConstraints(newRect, rect, handle, cropSettings.aspectRatio, cropSettings.customAspectRatio);
+  return applyAspectRatioConstraints(
+    cropBounds,
+    newRect,
+    handle,
+    cropSettings.aspectRatio,
+    cropSettings.customAspectRatio,
+  );
 }
 
 export function applyAspectRatioConstraints(
+  cropBounds: Bounds,
   newRect: CropRect,
-  originalRect: CropRect,
   handle: string,
   aspectRatio: string,
   customAspectRatio?: string,
 ): CropRect {
   // Parse aspect ratio
   let targetAspectRatio: number;
-  
+  const imageWidth = cropBounds.maxX - cropBounds.minX;
+  const imageHeight = cropBounds.maxY - cropBounds.minY;
+
   if (aspectRatio === "original") {
     // Use the original rectangle's aspect ratio
-    targetAspectRatio = originalRect.width / originalRect.height;
+    targetAspectRatio = imageWidth / imageHeight;
   } else if (aspectRatio === "custom") {
     if (!customAspectRatio) {
       return newRect; // No custom aspect ratio set
