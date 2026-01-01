@@ -16,6 +16,8 @@ export type CropSettings = {
   aspectRatio: string;
   aspectRatioLocked: boolean;
   customAspectRatio?: string; // Format: "WxH" like "3x2"
+  rotation: number; // Rotation angle in degrees (-45 to +45)
+  constrainCrop: boolean;
 };
 
 export type Bounds = {
@@ -51,6 +53,13 @@ interface CropStore {
     oldPoint: Point,
     activeHandle: Handle,
   ) => void;
+
+  // Rotation actions
+  setRotation: (angle: number) => void;
+  resetRotation: () => void;
+
+  // Crop constraint
+  setConstrainCrop: (constrainCrop: boolean) => void;
 }
 
 export const useCropStore = create<CropStore>((set, get) => ({
@@ -65,6 +74,8 @@ export const useCropStore = create<CropStore>((set, get) => ({
     aspectRatio: "original",
     aspectRatioLocked: false,
     customAspectRatio: undefined,
+    rotation: 0,
+    constrainCrop: true,
   },
   cropBounds: {
     minX: 0,
@@ -213,16 +224,22 @@ export const useCropStore = create<CropStore>((set, get) => ({
     });
   },
 
-  initializeCropRect: (bounds: Bounds) =>
+  initializeCropRect: (bounds: Bounds) => {
+    const { cropRect } = get();
+    const hasExistingRect = cropRect.width > 0 && cropRect.height > 0;
+
     set({
-      cropRect: {
-        x: bounds.minX,
-        y: bounds.minY,
-        width: bounds.maxX - bounds.minX,
-        height: bounds.maxY - bounds.minY,
-      },
+      cropRect: hasExistingRect
+        ? clampRect(cropRect, bounds)
+        : {
+            x: bounds.minX,
+            y: bounds.minY,
+            width: bounds.maxX - bounds.minX,
+            height: bounds.maxY - bounds.minY,
+          },
       cropBounds: bounds,
-    }),
+    });
+  },
 
   resetCropSettings: () =>
     set({
@@ -230,8 +247,38 @@ export const useCropStore = create<CropStore>((set, get) => ({
         aspectRatio: "original",
         aspectRatioLocked: false,
         customAspectRatio: undefined,
+        rotation: 0,
+        constrainCrop: true,
       },
     }),
+
+  setRotation: (angle: number) => {
+    const clampedAngle = clampRotation(angle);
+    set((state) => ({
+      cropSettings: {
+        ...state.cropSettings,
+        rotation: clampedAngle,
+      },
+    }));
+  },
+
+  resetRotation: () => {
+    set((state) => ({
+      cropSettings: {
+        ...state.cropSettings,
+        rotation: 0,
+      },
+    }));
+  },
+
+  setConstrainCrop: (constrainCrop: boolean) => {
+    set((state) => ({
+      cropSettings: {
+        ...state.cropSettings,
+        constrainCrop,
+      },
+    }));
+  },
 
   resetCropRect: (bounds: Bounds) =>
     set({
@@ -305,8 +352,16 @@ export const useCropStore = create<CropStore>((set, get) => ({
   },
 }));
 
+function clampRotation(angle: number): number {
+  const MIN_ROTATION = -45;
+  const MAX_ROTATION = 45;
+
+  return Math.max(MIN_ROTATION, Math.min(MAX_ROTATION, angle));
+}
+
+
 export function getResizedRect(
-  cropBounds,
+  cropBounds: Bounds,
   cropSettings: CropSettings,
   rect: CropRect,
   handle: string,

@@ -1,4 +1,6 @@
 import React, { forwardRef } from "react";
+import type { JSX } from "react";
+
 import { cn } from "@/lib/utils";
 
 // Reusable helper to create components with consistent structure
