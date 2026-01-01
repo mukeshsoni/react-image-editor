@@ -315,6 +315,9 @@ export function CropOptions({
     cropBounds,
     updateCropSettings,
     resetCropSettings,
+    setRotation,
+    resetRotation,
+    setConstrainCrop,
   } = useCropStore();
   const [showCustomDialog, setShowCustomDialog] = useState(false);
   const [customWidth, setCustomWidth] = useState("");
@@ -518,6 +521,46 @@ export function CropOptions({
           )}
         </Button>
       </div>
+      <Separator className="my-2" />
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs">Rotation</label>
+          <span className="text-xs font-medium">{cropSettings.rotation}°</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min="-45"
+            max="45"
+            step="1"
+            value={cropSettings.rotation}
+            onChange={(e) => setRotation(Number(e.target.value))}
+            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+        <div className="flex justify-between">
+          <Button
+            onClick={resetRotation}
+            variant="outline"
+            size="sm"
+            className="text-xs"
+          >
+            Reset Rotation
+          </Button>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={cropSettings.constrainCrop}
+              onChange={(e) => setConstrainCrop(e.target.checked)}
+            />
+            Constrain Crop
+          </label>
+        </div>
+      </div>
+
+      <Separator className="my-2" />
+
       <div className="flex flex-row-reverse mt-2 gap-1">
         <Button onClick={handleApplyClick}>Apply</Button>
         <Button onClick={handleResetClick} variant="outline">
