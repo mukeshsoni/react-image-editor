@@ -1,5 +1,6 @@
-import type { Handle } from "../crop-handles";
 import { create } from "zustand";
+
+import type { Handle } from "../crop-handles";
 
 export type Point = {
   x: number;

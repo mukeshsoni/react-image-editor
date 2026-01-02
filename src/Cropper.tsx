@@ -4,16 +4,9 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
-import {
-  useCropStore,
-  type CropRect,
-  type Bounds,
-  type Point,
-} from "./store/cropStore";
 import { Muted } from "@/components/ui/typography";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -37,8 +30,12 @@ import {
 } from "@/components/ui/dialog";
 
 import { handles, type Handle } from "./crop-handles";
-
-export type { Handle } from "./crop-handles";
+import {
+  useCropStore,
+  type CropRect,
+  type Bounds,
+  type Point,
+} from "./store/cropStore";
 
 type CropperProps = {
   cropBounds: Bounds;
@@ -51,7 +48,6 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   const [dragStart, setDragStart] = useState<Point | null>(null);
   const [dragType, setDragType] = useState<"move" | "resize" | null>(null);
   const [activeHandle, setActiveHandle] = useState<Handle | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   // Initialize cropRect when component mounts or bounds change
   useEffect(() => {
@@ -135,7 +131,6 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
     <div
       className="absolute inset-0"
       style={{ cursor: getCursor(dragType, activeHandle) }}
-      ref={containerRef}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseMove={handleMouseMove}
