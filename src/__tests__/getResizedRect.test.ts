@@ -23,6 +23,8 @@ describe("getResizedRect", () => {
     const cropSettings: CropSettings = {
       aspectRatio: "custom",
       aspectRatioLocked: false,
+      rotation: 0,
+      constrainCrop: true,
     };
 
     test("top-left handle resize", () => {
@@ -145,6 +147,8 @@ describe("getResizedRect", () => {
     const cropSettings: CropSettings = {
       aspectRatio: "16x9",
       aspectRatioLocked: true,
+      rotation: 0,
+      constrainCrop: true,
     };
 
     test("bottom-right handle maintains 16:9 aspect ratio", () => {
@@ -230,24 +234,33 @@ describe("getResizedRect", () => {
   });
 
   describe("with aspect ratio locked - original", () => {
-    const originalRect: CropRect = {
+    const rect: CropRect = {
       x: 50,
       y: 50,
-      width: 400, // 4:1 aspect ratio
+      width: 400,
       height: 100,
     };
 
     const cropSettings: CropSettings = {
       aspectRatio: "original",
       aspectRatioLocked: true,
+      rotation: 0,
+      constrainCrop: true,
     };
 
-    test("maintains original aspect ratio (4:1)", () => {
+    test("maintains crop bounds aspect ratio", () => {
       const currentPoint: Point = { x: 100, y: 25 }; // deltaX: 100, deltaY: 25
-      const result = getResizedRect(cropBounds, cropSettings, originalRect, "bottom-right", currentPoint, startPoint);
+      const result = getResizedRect(
+        cropBounds,
+        cropSettings,
+        rect,
+        "bottom-right",
+        currentPoint,
+        startPoint,
+      );
 
       // New width would be 500 (400 + 100)
-      // For original aspect ratio, height should be 500 / (800/600) = 375
+      // For bounds aspect ratio 800:600 (4:3), height should be 500 / (4/3) = 375
       expect(result.x).toBe(50);
       expect(result.y).toBe(50);
       expect(result.width).toBe(500);

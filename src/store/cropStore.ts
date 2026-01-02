@@ -17,8 +17,8 @@ export type CropSettings = {
   aspectRatio: string;
   aspectRatioLocked: boolean;
   customAspectRatio?: string; // Format: "WxH" like "3x2"
-  rotation: number; // Rotation angle in degrees (-45 to +45)
-  constrainCrop: boolean;
+  rotation?: number; // Rotation angle in degrees (-45 to +45)
+  constrainCrop?: boolean;
 };
 
 export type Bounds = {
@@ -473,7 +473,7 @@ export function applyAspectRatioConstraints(
   const imageHeight = cropBounds.maxY - cropBounds.minY;
 
   if (aspectRatio === "original") {
-    // Use the original rectangle's aspect ratio
+    // Use the crop bounds aspect ratio
     targetAspectRatio = imageWidth / imageHeight;
   } else if (aspectRatio === "custom") {
     if (!customAspectRatio) {

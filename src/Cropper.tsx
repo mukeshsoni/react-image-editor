@@ -294,12 +294,11 @@ export function CropOptions({
   onApply,
 }: {
   onReset: () => void;
-  onApply: (cropRect: CropRect) => void;
+  onApply: (cropRect: CropRect) => void | Promise<void>;
 }) {
   const {
     cropRect,
     cropSettings,
-    cropBounds,
     updateCropSettings,
     resetCropSettings,
     setRotation,
@@ -367,16 +366,13 @@ export function CropOptions({
       ],
     },
   ];
-  function originalAspectRatio() {
-    const imageWidth = cropBounds.maxX - cropBounds.minX;
-    const imageHeight = cropBounds.maxY - cropBounds.minY;
-    return `${imageWidth}x${imageHeight}`;
-  }
-
   function handleAspectRatioOptionChange(value: string) {
     switch (value) {
       case "original":
-        updateCropSettings({ aspectRatio: originalAspectRatio() });
+        updateCropSettings({
+          aspectRatio: "original",
+          customAspectRatio: undefined,
+        });
         break;
       case "custom":
         setShowCustomDialog(true);
@@ -440,9 +436,12 @@ export function CropOptions({
       cropSettings.customAspectRatio
     ) {
       return `Custom (${cropSettings.customAspectRatio})`;
-    } else if (cropSettings.aspectRatio === originalAspectRatio()) {
+    }
+
+    if (cropSettings.aspectRatio === "original") {
       return "Original";
     }
+
     return cropSettings.aspectRatio;
   }
 

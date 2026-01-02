@@ -17,6 +17,38 @@ function degreesToRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
+function drawImageWithRotation(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  zoomLevel: number,
+  offset: { x: number; y: number },
+  rotationDegrees: number,
+) {
+  const imageWidth = image.width;
+  const imageHeight = image.height;
+
+  const radians = degreesToRadians(rotationDegrees);
+  if (radians !== 0) {
+    const renderedWidth = imageWidth * zoomLevel;
+    const renderedHeight = imageHeight * zoomLevel;
+
+    const centerX = offset.x + renderedWidth / 2;
+    const centerY = offset.y + renderedHeight / 2;
+
+    ctx.translate(centerX, centerY);
+    ctx.rotate(radians);
+    ctx.translate(-centerX, -centerY);
+  }
+
+  ctx.drawImage(
+    image,
+    offset.x,
+    offset.y,
+    imageWidth * zoomLevel,
+    imageHeight * zoomLevel,
+  );
+}
+
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
 function renderImageToCanvas(
@@ -25,11 +57,6 @@ function renderImageToCanvas(
   zoomLevel: number,
   offset: { x: number; y: number },
   rotation: number,
-  appliedCrop?: {
-    cropRect: CropRect;
-    originalZoomLevel: number;
-    imageOffset: { x: number; y: number };
-  },
 ) {
   if (!canvasRef) return;
 
@@ -41,76 +68,8 @@ function renderImageToCanvas(
   const canvasHeight = canvasRef.height;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-  // Save canvas state before applying transformations
   ctx.save();
-
-  const imageWidth = imageRef.width;
-  const imageHeight = imageRef.height;
-
-  // Rotate around the center of the currently rendered image region
-  const radians = degreesToRadians(rotation);
-  if (radians !== 0) {
-    const renderedWidth = appliedCrop
-      ? (appliedCrop.cropRect.width / appliedCrop.originalZoomLevel) * zoomLevel
-      : imageWidth * zoomLevel;
-    const renderedHeight = appliedCrop
-      ? (appliedCrop.cropRect.height / appliedCrop.originalZoomLevel) * zoomLevel
-      : imageHeight * zoomLevel;
-
-    const centerX = offset.x + renderedWidth / 2;
-    const centerY = offset.y + renderedHeight / 2;
-
-    ctx.translate(centerX, centerY);
-    ctx.rotate(radians);
-    ctx.translate(-centerX, -centerY);
-  }
-
-  if (appliedCrop) {
-    // Convert crop coordinates from canvas space to image space using the original zoom level
-    const { cropRect, originalZoomLevel, imageOffset } = appliedCrop;
-
-    // Calculate the crop area in actual image pixels using the original image offset
-    const cropX = (cropRect.x - imageOffset.x) / originalZoomLevel;
-    const cropY = (cropRect.y - imageOffset.y) / originalZoomLevel;
-    const cropWidth = cropRect.width / originalZoomLevel;
-    const cropHeight = cropRect.height / originalZoomLevel;
-
-    // Create a virtual coordinate system where the cropped area becomes the "full image"
-    // The cropped image should behave as if it's a standalone image
-    const virtualImageWidth = cropWidth;
-    const virtualImageHeight = cropHeight;
-
-    // Calculate how to fit the virtual image in the canvas at current zoom
-    const scaledVirtualWidth = virtualImageWidth * zoomLevel;
-    const scaledVirtualHeight = virtualImageHeight * zoomLevel;
-
-    // Draw the cropped portion using the current offset for panning
-    ctx.drawImage(
-      imageRef,
-      cropX, // source x in original image
-      cropY, // source y in original image
-      cropWidth, // source width
-      cropHeight, // source height
-      offset.x, // destination x (for panning)
-      offset.y, // destination y (for panning)
-      scaledVirtualWidth, // destination width (scaled by zoom)
-      scaledVirtualHeight, // destination height (scaled by zoom)
-    );
-  } else {
-    // Draw the whole image
-    const scaledImageWidth = zoomLevel * imageWidth;
-    const scaledImageHeight = zoomLevel * imageHeight;
-
-    ctx.drawImage(
-      imageRef,
-      offset.x,
-      offset.y,
-      scaledImageWidth,
-      scaledImageHeight,
-    );
-  }
-
-  // Restore canvas state
+  drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
   ctx.restore();
 }
 
@@ -119,35 +78,17 @@ type Props = {
 };
 export function ReactImageEditor({ imageSrc }: Props) {
   const [cropMode, setCropMode] = useState(false);
-  const [appliedCrop, setAppliedCrop] = useState<{
-    imageOffset: { x: number; y: number };
-    cropRect: CropRect;
-    zoomLevel: number;
-    rotation: number;
-  } | null>(null);
+  const [hasAppliedCrop, setHasAppliedCrop] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const virtualImageRef = useRef<HTMLImageElement | null>(null);
+  const originalImageRef = useRef<HTMLImageElement | null>(null);
+  const bakedImageUrlRef = useRef<string | null>(null);
 
   const { resetAll, cropSettings, setRotation, resetRotation } = useCropStore();
-  const rotation = cropSettings.rotation;
-  const renderRotation = appliedCrop?.rotation ?? rotation;
-
-  // Create virtual image for cropped dimensions
-  useEffect(() => {
-    if (appliedCrop && imageRef.current) {
-      const virtualImg = new Image();
-      const { cropRect, zoomLevel: originalZoomLevel } = appliedCrop;
-      virtualImg.width = cropRect.width / originalZoomLevel;
-      virtualImg.height = cropRect.height / originalZoomLevel;
-      virtualImageRef.current = virtualImg;
-    } else {
-      virtualImageRef.current = null;
-    }
-  }, [appliedCrop]);
+  const rotation = cropSettings.rotation ?? 0;
 
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
-    useCanvasZoomPan(canvasRef, appliedCrop ? virtualImageRef : imageRef);
+    useCanvasZoomPan(canvasRef, imageRef);
 
   // Reset zoom when in crop mode
   useEffect(() => {
@@ -204,12 +145,20 @@ export function ReactImageEditor({ imageSrc }: Props) {
   // On change of imageFile we will try to render the image pointed by that file
   useEffect(() => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = imageSrc;
 
     // when the browser is done loading the image to our Image instance
     // we try to render it to the canvas
     img.onload = () => {
       imageRef.current = img;
+      originalImageRef.current = img;
+      setHasAppliedCrop(false);
+      if (bakedImageUrlRef.current) {
+        URL.revokeObjectURL(bakedImageUrlRef.current);
+        bakedImageUrlRef.current = null;
+      }
+
       // We trigger a recalculation of zoomLevel and image offset by calling resetZoom
       // Otherwise the useEffect which renders the image on change on zoom level might not be called
       // the first time. Or, it is called, but the imageRef.current is still null so we render nothing
@@ -217,6 +166,14 @@ export function ReactImageEditor({ imageSrc }: Props) {
       resetZoom();
     };
   }, [imageSrc, resetZoom]);
+
+  useEffect(() => {
+    return () => {
+      if (bakedImageUrlRef.current) {
+        URL.revokeObjectURL(bakedImageUrlRef.current);
+      }
+    };
+  }, []);
 
   const renderRef = useRef<number | null>(null);
   // rerender the image when the zoomLevel has changed
@@ -233,18 +190,11 @@ export function ReactImageEditor({ imageSrc }: Props) {
           imageRef.current,
           zoomLevel,
           offset,
-          renderRotation,
-          appliedCrop
-            ? {
-                cropRect: appliedCrop.cropRect,
-                originalZoomLevel: appliedCrop.zoomLevel,
-                imageOffset: appliedCrop.imageOffset,
-              }
-            : undefined,
+          rotation,
         );
       }
     });
-  }, [zoomLevel, offset, appliedCrop, renderRotation]);
+  }, [zoomLevel, offset, rotation]);
 
   function handleResetZoomClick() {
     resetZoom();
@@ -283,16 +233,63 @@ export function ReactImageEditor({ imageSrc }: Props) {
       });
     }
   }
-  function handleCropApplication(cropRect: CropRect) {
-    setAppliedCrop({
-      imageOffset: { x: offset.x, y: offset.y },
-      cropRect,
-      zoomLevel,
-      rotation,
-    });
-    setCropMode(false);
-    // Reset zoom to fit the cropped image
-    setTimeout(() => resetZoom(), 0);
+  async function handleCropApplication(cropRect: CropRect) {
+    if (!imageRef.current) return;
+    if (!Number.isFinite(zoomLevel) || zoomLevel <= 0) return;
+
+    const outputWidth = Math.max(1, Math.round(cropRect.width / zoomLevel));
+    const outputHeight = Math.max(1, Math.round(cropRect.height / zoomLevel));
+
+    const offscreen = document.createElement("canvas");
+    offscreen.width = outputWidth;
+    offscreen.height = outputHeight;
+
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, offscreen.width, offscreen.height);
+    ctx.save();
+
+    // Convert canvas-space offset/cropRect into image-pixel space, so we render at zoom=1.
+    const bakedOffset = {
+      x: (offset.x - cropRect.x) / zoomLevel,
+      y: (offset.y - cropRect.y) / zoomLevel,
+    };
+
+    drawImageWithRotation(ctx, imageRef.current, 1, bakedOffset, rotation);
+
+    ctx.restore();
+
+    const blob: Blob | null = await new Promise((resolve) =>
+      offscreen.toBlob(resolve, "image/png"),
+    );
+    if (!blob) return;
+
+    if (bakedImageUrlRef.current) {
+      URL.revokeObjectURL(bakedImageUrlRef.current);
+    }
+
+    const url = URL.createObjectURL(blob);
+    bakedImageUrlRef.current = url;
+
+    const bakedImage = new Image();
+    bakedImage.crossOrigin = "anonymous";
+    bakedImage.src = url;
+
+    bakedImage.onload = () => {
+      imageRef.current = bakedImage;
+      setHasAppliedCrop(true);
+      setCropMode(false);
+      resetRotation();
+      resetZoom();
+    };
+
+    bakedImage.onerror = () => {
+      if (bakedImageUrlRef.current) {
+        URL.revokeObjectURL(bakedImageUrlRef.current);
+        bakedImageUrlRef.current = null;
+      }
+    };
   }
   const cropBounds = useMemo(() => {
     if (!imageRef.current) {
@@ -309,7 +306,8 @@ export function ReactImageEditor({ imageSrc }: Props) {
       maxY: offset.y + imageHeight,
     };
 
-    if (!cropSettings.constrainCrop || rotation === 0) {
+    const constrainCrop = cropSettings.constrainCrop ?? true;
+    if (!constrainCrop || rotation === 0) {
       return baseBounds;
     }
 
@@ -353,7 +351,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
             <div className="flex-1 border-2 relative">
               <canvas ref={canvasRef} {...listeners} />
               {cropMode && imageRef.current ? (
-                <Cropper key={JSON.stringify(offset)} cropBounds={cropBounds} />
+                <Cropper cropBounds={cropBounds} />
               ) : null}
             </div>
           </div>
@@ -402,10 +400,14 @@ export function ReactImageEditor({ imageSrc }: Props) {
             >
               Crop
             </Button>
-            {appliedCrop && (
+            {hasAppliedCrop && (
               <Button
                 onClick={() => {
-                  setAppliedCrop(null);
+                  if (!originalImageRef.current) return;
+                  imageRef.current = originalImageRef.current;
+                  setHasAppliedCrop(false);
+                  resetRotation();
+                  resetZoom();
                 }}
                 variant="outline"
                 size="sm"
@@ -414,7 +416,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
               </Button>
             )}
           </div>
-          {cropMode && !appliedCrop ? (
+          {cropMode ? (
             <div className="m-2">
               <CropOptions onReset={handleCropReset} onApply={handleCropApplication} />
             </div>
