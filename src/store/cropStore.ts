@@ -1,4 +1,4 @@
-import { type Handle } from "../Cropper";
+import type { Handle } from "../crop-handles";
 import { create } from "zustand";
 
 export type Point = {
@@ -232,11 +232,11 @@ export const useCropStore = create<CropStore>((set, get) => ({
       cropRect: hasExistingRect
         ? clampRect(cropRect, bounds)
         : {
-            x: bounds.minX,
-            y: bounds.minY,
-            width: bounds.maxX - bounds.minX,
-            height: bounds.maxY - bounds.minY,
-          },
+          x: bounds.minX,
+          y: bounds.minY,
+          width: bounds.maxX - bounds.minX,
+          height: bounds.maxY - bounds.minY,
+        },
       cropBounds: bounds,
     });
   },

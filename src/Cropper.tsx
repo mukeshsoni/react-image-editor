@@ -36,18 +36,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// Check if clicking on a handle
-const handles = [
-  "top-left",
-  "top",
-  "top-right",
-  "left",
-  "right",
-  "bottom-left",
-  "bottom",
-  "bottom-right",
-] as const;
-export type Handle = (typeof handles)[number];
+import { handles, type Handle } from "./crop-handles";
+
+export type { Handle } from "./crop-handles";
+
 type CropperProps = {
   cropBounds: Bounds;
   onChange?: (cropRect: CropRect) => void;
