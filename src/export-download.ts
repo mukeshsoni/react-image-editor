@@ -28,9 +28,11 @@ function degreesToRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
+type DrawableImage = HTMLImageElement | HTMLCanvasElement;
+
 export function drawImageWithRotation(
   ctx: CanvasRenderingContext2D,
-  image: HTMLImageElement,
+  image: DrawableImage,
   zoomLevel: number,
   offset: { x: number; y: number },
   rotationDegrees: number,

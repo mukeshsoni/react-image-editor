@@ -26,14 +26,14 @@ Source PRD: `prds/tone-and-color-adjustments.md`
 - [x] Decide internal representation (0–255 vs 0–1 floats) and document in code
 
 ## 3) Rendering Integration
-- [ ] Identify the canonical “base image” source used for rendering
-- [ ] Apply light adjustments in the render pipeline (non-destructive)
-- [ ] Ensure neutral settings produce identical output
-- [ ] Add `requestAnimationFrame` (or similar) throttling for slider updates
-- [ ] Avoid re-allocating large buffers per tick (reuse buffers where possible)
-- [ ] Cache intermediate raster(s) to reduce repeated work during drag
-- [ ] Ensure zoom/pan remains smooth while adjustments are active
-- [ ] Handle images with alpha correctly (no halos / artifacts)
+- [x] Identify the canonical “base image” source used for rendering
+- [x] Apply light adjustments in the render pipeline (non-destructive)
+- [x] Ensure neutral settings produce identical output
+- [x] Add `requestAnimationFrame` (or similar) throttling for slider updates
+- [x] Avoid re-allocating large buffers per tick (reuse buffers where possible)
+- [x] Cache intermediate raster(s) to reduce repeated work during drag
+- [x] Ensure zoom/pan remains smooth while adjustments are active
+- [x] Handle images with alpha correctly (no halos / artifacts)
 
 ## 4) UI: Light Panel (Accordion)
 - [ ] Add an accordion item titled `Light`

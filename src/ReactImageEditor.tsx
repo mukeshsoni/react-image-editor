@@ -25,6 +25,7 @@ import {
   type ExportFormat,
 } from "./export-download";
 
+import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
 import { useCropStore, type CropRect } from "./store/cropStore";
@@ -34,10 +35,18 @@ import { useCropStore, type CropRect } from "./store/cropStore";
 // image to the canvas
 function renderImageToCanvas(
   canvasRef: HTMLCanvasElement | null,
-  imageRef: HTMLImageElement,
+  imageRef: HTMLImageElement | HTMLCanvasElement,
   zoomLevel: number,
   offset: { x: number; y: number },
   rotation: number,
+  lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
+  cache?: {
+    baseCanvas: HTMLCanvasElement;
+    baseKey: string;
+    adjustedCanvas: HTMLCanvasElement;
+    in: Uint8ClampedArray;
+    out: Uint8ClampedArray;
+  },
 ) {
   if (!canvasRef) return;
 
@@ -49,8 +58,59 @@ function renderImageToCanvas(
   const canvasHeight = canvasRef.height;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
+  const shouldApplyLight =
+    lightAdjustments != null &&
+    (lightAdjustments.exposure !== 0 ||
+      lightAdjustments.contrast !== 0 ||
+      lightAdjustments.highlights !== 0 ||
+      lightAdjustments.shadows !== 0 ||
+      lightAdjustments.whites !== 0 ||
+      lightAdjustments.blacks !== 0);
+
+  if (!shouldApplyLight || !cache) {
+    ctx.save();
+    drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
+    ctx.restore();
+    return;
+  }
+
+  const baseKey = `${canvasWidth}x${canvasHeight}:${zoomLevel}:${offset.x}:${offset.y}:${rotation}`;
+
+  if (cache.baseKey !== baseKey) {
+    cache.baseCanvas.width = canvasWidth;
+    cache.baseCanvas.height = canvasHeight;
+
+    const baseCtx = cache.baseCanvas.getContext("2d", { willReadFrequently: true });
+    if (!baseCtx) return;
+
+    baseCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+    baseCtx.save();
+    drawImageWithRotation(baseCtx, imageRef, zoomLevel, offset, rotation);
+    baseCtx.restore();
+
+    const imageData = baseCtx.getImageData(0, 0, canvasWidth, canvasHeight);
+    cache.in = imageData.data;
+    cache.out = new Uint8ClampedArray(cache.in.length);
+
+    cache.baseKey = baseKey;
+  }
+
+  const source = cache.in;
+  const dest = cache.out;
+
+  applyLightAdjustmentsToRgbaBytes(source, dest, lightAdjustments);
+
+  cache.adjustedCanvas.width = canvasWidth;
+  cache.adjustedCanvas.height = canvasHeight;
+
+  const adjustedCtx = cache.adjustedCanvas.getContext("2d");
+  if (!adjustedCtx) return;
+
+  const adjustedData = new ImageData(dest, canvasWidth, canvasHeight);
+  adjustedCtx.putImageData(adjustedData, 0, 0);
+
   ctx.save();
-  drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
+  ctx.drawImage(cache.adjustedCanvas, 0, 0);
   ctx.restore();
 }
 
@@ -73,7 +133,13 @@ export function ReactImageEditor({ imageSrc }: Props) {
   const originalImageRef = useRef<HTMLImageElement | null>(null);
   const bakedImageUrlRef = useRef<string | null>(null);
 
-  const { resetAll, cropSettings, setRotation, resetRotation } = useCropStore();
+  const {
+    resetAll,
+    cropSettings,
+    setRotation,
+    resetRotation,
+    lightAdjustments,
+  } = useCropStore();
   const rotation = cropSettings.rotation ?? 0;
 
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
@@ -168,6 +234,24 @@ export function ReactImageEditor({ imageSrc }: Props) {
   }, []);
 
   const renderRef = useRef<number | null>(null);
+  const lightRenderCacheRef = useRef<{
+    baseCanvas: HTMLCanvasElement;
+    baseKey: string;
+    adjustedCanvas: HTMLCanvasElement;
+    in: Uint8ClampedArray;
+    out: Uint8ClampedArray;
+  } | null>(null);
+
+  if (!lightRenderCacheRef.current && typeof document !== "undefined") {
+    lightRenderCacheRef.current = {
+      baseCanvas: document.createElement("canvas"),
+      baseKey: "",
+      adjustedCanvas: document.createElement("canvas"),
+      in: new Uint8ClampedArray(0),
+      out: new Uint8ClampedArray(0),
+    };
+  }
+
   // rerender the image when the zoomLevel has changed
   useEffect(() => {
     if (renderRef.current) {
@@ -183,10 +267,12 @@ export function ReactImageEditor({ imageSrc }: Props) {
           zoomLevel,
           offset,
           rotation,
+          lightAdjustments,
+          lightRenderCacheRef.current ?? undefined,
         );
       }
     });
-  }, [zoomLevel, offset, rotation]);
+  }, [zoomLevel, offset, rotation, lightAdjustments]);
 
   function handleResetZoomClick() {
     resetZoom();
