@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import { getPanelGroupElement } from "react-resizable-panels";
 import { PlusIcon, MinusIcon } from "@radix-ui/react-icons";
 import {
@@ -7,47 +8,27 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
+
+import {
+  canvasToBlob,
+  drawImageWithRotation,
+  renderCommittedImageToOffscreenCanvas,
+  triggerDownload,
+  type ExportFormat,
+} from "./export-download";
 
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
 import { useCropStore, type CropRect } from "./store/cropStore";
 
-function degreesToRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
-
-function drawImageWithRotation(
-  ctx: CanvasRenderingContext2D,
-  image: HTMLImageElement,
-  zoomLevel: number,
-  offset: { x: number; y: number },
-  rotationDegrees: number,
-) {
-  const imageWidth = image.width;
-  const imageHeight = image.height;
-
-  const radians = degreesToRadians(rotationDegrees);
-  if (radians !== 0) {
-    const renderedWidth = imageWidth * zoomLevel;
-    const renderedHeight = imageHeight * zoomLevel;
-
-    const centerX = offset.x + renderedWidth / 2;
-    const centerY = offset.y + renderedHeight / 2;
-
-    ctx.translate(centerX, centerY);
-    ctx.rotate(radians);
-    ctx.translate(-centerX, -centerY);
-  }
-
-  ctx.drawImage(
-    image,
-    offset.x,
-    offset.y,
-    imageWidth * zoomLevel,
-    imageHeight * zoomLevel,
-  );
-}
 
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
@@ -76,9 +57,17 @@ function renderImageToCanvas(
 type Props = {
   imageSrc: string;
 };
+
 export function ReactImageEditor({ imageSrc }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [hasAppliedCrop, setHasAppliedCrop] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
+  const [jpegQuality, setJpegQuality] = useState(92);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
@@ -150,10 +139,13 @@ export function ReactImageEditor({ imageSrc }: Props) {
 
     // when the browser is done loading the image to our Image instance
     // we try to render it to the canvas
+    setIsImageLoaded(false);
+
     img.onload = () => {
       imageRef.current = img;
       originalImageRef.current = img;
       setHasAppliedCrop(false);
+      setIsImageLoaded(true);
       if (bakedImageUrlRef.current) {
         URL.revokeObjectURL(bakedImageUrlRef.current);
         bakedImageUrlRef.current = null;
@@ -233,6 +225,49 @@ export function ReactImageEditor({ imageSrc }: Props) {
       });
     }
   }
+
+  async function handleDownload() {
+    if (!imageRef.current) return;
+    if (!isImageLoaded) return;
+
+    setExportError(null);
+    setIsDownloading(true);
+
+    try {
+      if (cropMode) {
+        setExportError("Apply crop to download");
+        return;
+      }
+
+      const mimeType = exportFormat === "png" ? "image/png" : "image/jpeg";
+      const extension = exportFormat === "png" ? "png" : "jpg";
+      const background = exportFormat === "png" ? "transparent" : "white";
+
+      const offscreen = renderCommittedImageToOffscreenCanvas(
+        imageRef.current,
+        rotation,
+        background,
+      );
+      if (!offscreen) {
+        setExportError("Failed to export image");
+        return;
+      }
+
+      const quality = exportFormat === "jpeg" ? jpegQuality / 100 : undefined;
+      const blob = await canvasToBlob(offscreen, mimeType, quality);
+      if (!blob) {
+        setExportError("Failed to export image");
+        return;
+      }
+
+      triggerDownload(blob, `edited-image.${extension}`);
+    } catch {
+      setExportError("Failed to export image");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
   async function handleCropApplication(cropRect: CropRect) {
     if (!imageRef.current) return;
     if (!Number.isFinite(zoomLevel) || zoomLevel <= 0) return;
@@ -260,9 +295,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
 
     ctx.restore();
 
-    const blob: Blob | null = await new Promise((resolve) =>
-      offscreen.toBlob(resolve, "image/png"),
-    );
+    const blob = await canvasToBlob(offscreen, "image/png");
     if (!blob) return;
 
     if (bakedImageUrlRef.current) {
@@ -276,13 +309,14 @@ export function ReactImageEditor({ imageSrc }: Props) {
     bakedImage.crossOrigin = "anonymous";
     bakedImage.src = url;
 
-    bakedImage.onload = () => {
-      imageRef.current = bakedImage;
-      setHasAppliedCrop(true);
-      setCropMode(false);
-      resetRotation();
-      resetZoom();
-    };
+      bakedImage.onload = () => {
+        imageRef.current = bakedImage;
+        setHasAppliedCrop(true);
+        setIsImageLoaded(true);
+        setCropMode(false);
+        resetRotation();
+        resetZoom();
+      };
 
     bakedImage.onerror = () => {
       if (bakedImageUrlRef.current) {
@@ -392,29 +426,86 @@ export function ReactImageEditor({ imageSrc }: Props) {
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
         <ResizablePanel defaultSize={25}>
-          <div className="w-full bg-gray-100 py-1 px-2 flex gap-2">
-            <Button
-              onClick={() => setCropMode(!cropMode)}
-              variant={cropMode ? "default" : "outline"}
-              size="sm"
-            >
-              Crop
-            </Button>
-            {hasAppliedCrop && (
+          <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
-                onClick={() => {
-                  if (!originalImageRef.current) return;
-                  imageRef.current = originalImageRef.current;
-                  setHasAppliedCrop(false);
-                  resetRotation();
-                  resetZoom();
-                }}
-                variant="outline"
+                onClick={() => setCropMode(!cropMode)}
+                variant={cropMode ? "default" : "outline"}
                 size="sm"
               >
-                Reset Crop
+                Crop
               </Button>
-            )}
+              {hasAppliedCrop && (
+                <Button
+                  onClick={() => {
+                    if (!originalImageRef.current) return;
+                    imageRef.current = originalImageRef.current;
+                    setHasAppliedCrop(false);
+                    resetRotation();
+                    resetZoom();
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  Reset Crop
+                </Button>
+              )}
+
+              <Button
+                onClick={handleDownload}
+                variant="default"
+                size="sm"
+                disabled={!isImageLoaded || isDownloading || cropMode}
+                title={
+                  !isImageLoaded
+                    ? "Load an image to download"
+                    : cropMode
+                      ? "Apply crop to download"
+                      : undefined
+                }
+              >
+                {isDownloading ? "Downloading…" : "Download"}
+              </Button>
+
+              <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as ExportFormat)}>
+                <SelectTrigger size="sm" className="w-[110px]" data-testid="export-format">
+                  <SelectValue placeholder="Format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="png">PNG</SelectItem>
+                  <SelectItem value="jpeg">JPEG</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {exportFormat === "jpeg" ? (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-700" htmlFor="jpeg-quality">
+                  Quality
+                </label>
+                <input
+                  id="jpeg-quality"
+                  data-testid="jpeg-quality"
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={1}
+                  value={jpegQuality}
+                  onChange={(e) => setJpegQuality(Number(e.target.value))}
+                />
+                <span className="text-xs tabular-nums text-gray-700 w-[40px] text-right">
+                  {jpegQuality}
+                </span>
+              </div>
+            ) : null}
+
+            {cropMode ? (
+              <div className="text-xs text-gray-700">Apply crop to download</div>
+            ) : null}
+
+            {exportError ? (
+              <div className="text-xs text-red-600">{exportError}</div>
+            ) : null}
           </div>
           {cropMode ? (
             <div className="m-2">
