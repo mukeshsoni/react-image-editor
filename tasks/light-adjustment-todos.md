@@ -67,6 +67,6 @@ Source PRD: `prds/tone-and-color-adjustments.md`
 - [x] Integration-ish test ensuring render path consumes adjustments
 
 ## 7) Follow-ups (out of scope, but next)
-- [ ] Wire light adjustments into export/download pipeline
+- [x] Wire light adjustments into export/download pipeline
 - [ ] Add histogram / levels visualization
 - [ ] Add color panel (temperature/tint/vibrance/saturation)

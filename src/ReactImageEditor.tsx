@@ -407,6 +407,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
         imageRef.current,
         rotation,
         background,
+        lightAdjustments,
       );
       if (!offscreen) {
         setExportError("Failed to export image");

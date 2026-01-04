@@ -1,3 +1,6 @@
+import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
+import type { LightAdjustments } from "./store/cropStore";
+
 export type ExportFormat = "png" | "jpeg";
 
 type ExportBackground = "transparent" | "white";
@@ -85,6 +88,7 @@ export function renderCommittedImageToOffscreenCanvas(
   image: HTMLImageElement,
   rotationDegrees: number,
   background: ExportBackground,
+  lightAdjustments?: LightAdjustments,
 ): HTMLCanvasElement | null {
   const outputSize = getRotatedBoundingBoxSize(
     image.width,
@@ -114,6 +118,21 @@ export function renderCommittedImageToOffscreenCanvas(
   ctx.save();
   drawImageWithRotation(ctx, image, 1, centeredOffset, rotationDegrees);
   ctx.restore();
+
+  if (
+    lightAdjustments &&
+    (lightAdjustments.exposure !== 0 ||
+      lightAdjustments.contrast !== 0 ||
+      lightAdjustments.highlights !== 0 ||
+      lightAdjustments.shadows !== 0 ||
+      lightAdjustments.whites !== 0 ||
+      lightAdjustments.blacks !== 0)
+  ) {
+    const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+    const out = new Uint8ClampedArray(imageData.data.length);
+    applyLightAdjustmentsToRgbaBytes(imageData.data, out, lightAdjustments);
+    ctx.putImageData(new ImageData(out, offscreen.width, offscreen.height), 0, 0);
+  }
 
   return offscreen;
 }

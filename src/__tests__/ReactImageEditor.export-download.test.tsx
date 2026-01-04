@@ -37,7 +37,7 @@ vi.mock("../store/cropStore", () => ({
     resetRotation: mockResetRotation,
 
     lightAdjustments: {
-      exposure: 0,
+      exposure: 1,
       contrast: 0,
       highlights: 0,
       shadows: 0,
@@ -78,12 +78,45 @@ describe("ReactImageEditor export/download", () => {
   const restore = vi.fn();
   const clearRect = vi.fn();
   const fillRect = vi.fn();
+  const getImageData = vi.fn(
+    () => new ImageData(new Uint8ClampedArray(800 * 600 * 4), 800, 600),
+  );
+  const putImageData = vi.fn();
 
   let toBlobSpy: ReturnType<typeof vi.spyOn>;
   let anchorClickSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    if (typeof globalThis.ImageData === "undefined") {
+      Object.defineProperty(globalThis, "ImageData", {
+        configurable: true,
+        writable: true,
+        value: class ImageDataPolyfill {
+          data: Uint8ClampedArray;
+          width: number;
+          height: number;
+
+          constructor(
+            dataOrWidth: Uint8ClampedArray | number,
+            width?: number,
+            height?: number,
+          ) {
+            if (typeof dataOrWidth === "number") {
+              this.width = dataOrWidth;
+              this.height = width ?? 0;
+              this.data = new Uint8ClampedArray(this.width * this.height * 4);
+              return;
+            }
+
+            this.data = dataOrWidth;
+            this.width = width ?? 0;
+            this.height = height ?? 0;
+          }
+        },
+      });
+    }
 
     if (!("hasPointerCapture" in Element.prototype)) {
       Object.defineProperty(Element.prototype, "hasPointerCapture", {
@@ -129,19 +162,22 @@ describe("ReactImageEditor export/download", () => {
       .spyOn(HTMLAnchorElement.prototype, "click")
       .mockImplementation(() => {});
 
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
-      () =>
-        ({
-          drawImage,
-          translate,
-          rotate,
-          save,
-          restore,
-          clearRect,
-          fillRect,
-          fillStyle: "",
-        }) as unknown as CanvasRenderingContext2D,
-    );
+     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
+       () =>
+         ({
+           drawImage,
+           translate,
+           rotate,
+           save,
+           restore,
+           clearRect,
+           fillRect,
+           getImageData,
+           putImageData,
+           fillStyle: "",
+         }) as unknown as CanvasRenderingContext2D,
+     );
+
 
     toBlobSpy = vi
       .spyOn(HTMLCanvasElement.prototype, "toBlob")
