@@ -36,17 +36,17 @@ Source PRD: `prds/tone-and-color-adjustments.md`
 - [x] Handle images with alpha correctly (no halos / artifacts)
 
 ## 4) UI: Light Panel (Accordion)
-- [ ] Add an accordion item titled `Light`
-- [ ] Add six labeled rows: Exposure, Contrast, Highlights, Shadows, Whites, Blacks
-- [ ] Add slider component for each row
-- [ ] Show current numeric value on the right of each row
-- [ ] Define slider min/max/step per control (match PRD ranges)
-- [ ] Choose display formatting (e.g., exposure `+1.2`, others integer with sign)
-- [ ] Wire slider changes to `setLightAdjustment`
-- [ ] Add “Reset All” button for the Light panel
-- [ ] Disable/guard controls when no image is loaded
-- [ ] Add `aria-label`/`aria-labelledby` for each slider
-- [ ] Confirm keyboard operation (arrow keys adjust by step)
+- [x] Add an accordion item titled `Light`
+- [x] Add six labeled rows: Exposure, Contrast, Highlights, Shadows, Whites, Blacks
+- [x] Add slider component for each row
+- [x] Show current numeric value on the right of each row
+- [x] Define slider min/max/step per control (match PRD ranges)
+- [x] Choose display formatting (e.g., exposure `+1.2`, others integer with sign)
+- [x] Wire slider changes to `setLightAdjustment`
+- [x] Add “Reset All” button for the Light panel
+- [x] Disable/guard controls when no image is loaded
+- [x] Add `aria-label`/`aria-labelledby` for each slider
+- [x] Confirm keyboard operation (arrow keys adjust by step)
 
 ## 5) Behavior + UX Validation
 - [ ] Verify adjustments update live while zoomed in (no lag spikes)

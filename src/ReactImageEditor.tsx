@@ -30,6 +30,66 @@ import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
 import { useCropStore, type CropRect } from "./store/cropStore";
 
+function formatSigned(value: number, digits: number) {
+  const normalized = Object.is(value, -0) ? 0 : value;
+  const sign = normalized > 0 ? "+" : normalized < 0 ? "-" : "+";
+  return `${sign}${Math.abs(normalized).toFixed(digits)}`;
+}
+
+function formatSignedInt(value: number) {
+  const rounded = Math.round(value);
+  const sign = rounded > 0 ? "+" : rounded < 0 ? "-" : "+";
+  return `${sign}${Math.abs(rounded)}`;
+}
+
+type LightSliderProps = {
+  label: string;
+  name: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  disabled: boolean;
+  format: (value: number) => string;
+  onValueChange: (value: number) => void;
+};
+
+function LightSlider({
+  label,
+  name,
+  value,
+  min,
+  max,
+  step,
+  disabled,
+  format,
+  onValueChange,
+}: LightSliderProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <label className="text-xs text-gray-700" htmlFor={name}>
+          {label}
+        </label>
+        <span className="text-xs tabular-nums text-gray-700 w-[52px] text-right">
+          {format(value)}
+        </span>
+      </div>
+      <input
+        id={name}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onValueChange(Number(e.target.value))}
+        disabled={disabled}
+        aria-label={label}
+        className="w-full"
+      />
+    </div>
+  );
+}
 
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
@@ -139,6 +199,8 @@ export function ReactImageEditor({ imageSrc }: Props) {
     setRotation,
     resetRotation,
     lightAdjustments,
+    setLightAdjustment,
+    resetLightAdjustments,
   } = useCropStore();
   const rotation = cropSettings.rotation ?? 0;
 
@@ -511,60 +573,306 @@ export function ReactImageEditor({ imageSrc }: Props) {
           </div>
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
-        <ResizablePanel defaultSize={25}>
-          <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                onClick={() => setCropMode(!cropMode)}
-                variant={cropMode ? "default" : "outline"}
-                size="sm"
-              >
-                Crop
-              </Button>
-              {hasAppliedCrop && (
+          <ResizablePanel defaultSize={25}>
+            <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  onClick={() => {
-                    if (!originalImageRef.current) return;
-                    imageRef.current = originalImageRef.current;
-                    setHasAppliedCrop(false);
-                    resetRotation();
-                    resetZoom();
-                  }}
-                  variant="outline"
+                  onClick={() => setCropMode(!cropMode)}
+                  variant={cropMode ? "default" : "outline"}
                   size="sm"
                 >
-                  Reset Crop
+                  Crop
                 </Button>
-              )}
+                {hasAppliedCrop && (
+                  <Button
+                    onClick={() => {
+                      if (!originalImageRef.current) return;
+                      imageRef.current = originalImageRef.current;
+                      setHasAppliedCrop(false);
+                      resetRotation();
+                      resetZoom();
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Reset Crop
+                  </Button>
+                )}
 
-              <Button
-                onClick={handleDownload}
-                variant="default"
-                size="sm"
-                disabled={!isImageLoaded || isDownloading || cropMode}
-                title={
-                  !isImageLoaded
-                    ? "Load an image to download"
-                    : cropMode
-                      ? "Apply crop to download"
-                      : undefined
-                }
-              >
-                {isDownloading ? "Downloading…" : "Download"}
-              </Button>
+                <Button
+                  onClick={handleDownload}
+                  variant="default"
+                  size="sm"
+                  disabled={!isImageLoaded || isDownloading || cropMode}
+                  title={
+                    !isImageLoaded
+                      ? "Load an image to download"
+                      : cropMode
+                        ? "Apply crop to download"
+                        : undefined
+                  }
+                >
+                  {isDownloading ? "Downloading…" : "Download"}
+                </Button>
 
-              <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as ExportFormat)}>
-                <SelectTrigger size="sm" className="w-[110px]" data-testid="export-format">
-                  <SelectValue placeholder="Format" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="png">PNG</SelectItem>
-                  <SelectItem value="jpeg">JPEG</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <Select
+                  value={exportFormat}
+                  onValueChange={(value) => setExportFormat(value as ExportFormat)}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="w-[110px]"
+                    data-testid="export-format"
+                  >
+                    <SelectValue placeholder="Format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="png">PNG</SelectItem>
+                    <SelectItem value="jpeg">JPEG</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {exportFormat === "jpeg" ? (
+              <details className="rounded-md border bg-white" open>
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Basic</span>
+                  </span>
+                  <span className="text-xs text-gray-500">▾</span>
+                </summary>
+
+                <div className="px-3 pb-3">
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                        Auto
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                        B&W
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                        HDR
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Profile</div>
+                      <div className="text-xs text-gray-500">▾</div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="text-xs text-gray-600">Profile:</div>
+                      <input
+                        type="text"
+                        disabled
+                        value=""
+                        className="w-[140px] rounded-sm border bg-gray-50 px-2 py-1 text-xs text-gray-500"
+                        aria-label="Profile"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 border-t pt-3">
+                    <div className="text-xs font-medium text-gray-700">WB</div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="text-xs text-gray-600">WB:</div>
+                      <input
+                        type="text"
+                        disabled
+                        value=""
+                        className="w-[140px] rounded-sm border bg-gray-50 px-2 py-1 text-xs text-gray-500"
+                        aria-label="White Balance"
+                      />
+                    </div>
+                    <div className="mt-3 flex flex-col gap-3">
+                      <LightSlider
+                        label="Temp"
+                        name="temp"
+                        value={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={() => {}}
+                      />
+                      <LightSlider
+                        label="Tint"
+                        name="tint"
+                        value={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={() => {}}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Tone</div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => resetLightAdjustments()}
+                        disabled={!isImageLoaded}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+
+                    <div className="mt-3 flex flex-col gap-3">
+                      <LightSlider
+                        label="Exposure"
+                        name="exposure"
+                        value={lightAdjustments.exposure}
+                        min={-2}
+                        max={2}
+                        step={0.01}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSigned(value, 2)}
+                        onValueChange={(value) =>
+                          setLightAdjustment("exposure", value)
+                        }
+                      />
+
+                      <LightSlider
+                        label="Contrast"
+                        name="contrast"
+                        value={lightAdjustments.contrast}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) =>
+                          setLightAdjustment("contrast", value)
+                        }
+                      />
+
+                      <LightSlider
+                        label="Highlights"
+                        name="highlights"
+                        value={lightAdjustments.highlights}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) =>
+                          setLightAdjustment("highlights", value)
+                        }
+                      />
+
+                      <LightSlider
+                        label="Shadows"
+                        name="shadows"
+                        value={lightAdjustments.shadows}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) =>
+                          setLightAdjustment("shadows", value)
+                        }
+                      />
+
+                      <LightSlider
+                        label="Whites"
+                        name="whites"
+                        value={lightAdjustments.whites}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) => setLightAdjustment("whites", value)}
+                      />
+
+                      <LightSlider
+                        label="Blacks"
+                        name="blacks"
+                        value={lightAdjustments.blacks}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) => setLightAdjustment("blacks", value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 border-t pt-3">
+                    <div className="text-xs font-medium text-gray-700">Presence</div>
+                    <div className="mt-3 flex flex-col gap-3">
+                      <LightSlider
+                        label="Texture"
+                        name="texture"
+                        value={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={() => {}}
+                      />
+                      <LightSlider
+                        label="Clarity"
+                        name="clarity"
+                        value={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={() => {}}
+                      />
+                      <LightSlider
+                        label="Dehaze"
+                        name="dehaze"
+                        value={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={() => {}}
+                      />
+                      <LightSlider
+                        label="Vibrance"
+                        name="vibrance"
+                        value={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={() => {}}
+                      />
+                      <LightSlider
+                        label="Saturation"
+                        name="saturation"
+                        value={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={() => {}}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              {exportFormat === "jpeg" ? (
               <div className="flex items-center gap-2">
                 <label className="text-xs text-gray-700" htmlFor="jpeg-quality">
                   Quality
