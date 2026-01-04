@@ -61,6 +61,7 @@ type Props = {
 export function ReactImageEditor({ imageSrc }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [hasAppliedCrop, setHasAppliedCrop] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
   const [jpegQuality, setJpegQuality] = useState(92);
@@ -138,10 +139,13 @@ export function ReactImageEditor({ imageSrc }: Props) {
 
     // when the browser is done loading the image to our Image instance
     // we try to render it to the canvas
+    setIsImageLoaded(false);
+
     img.onload = () => {
       imageRef.current = img;
       originalImageRef.current = img;
       setHasAppliedCrop(false);
+      setIsImageLoaded(true);
       if (bakedImageUrlRef.current) {
         URL.revokeObjectURL(bakedImageUrlRef.current);
         bakedImageUrlRef.current = null;
@@ -224,6 +228,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
 
   async function handleDownload() {
     if (!imageRef.current) return;
+    if (!isImageLoaded) return;
 
     setExportError(null);
     setIsDownloading(true);
@@ -304,13 +309,14 @@ export function ReactImageEditor({ imageSrc }: Props) {
     bakedImage.crossOrigin = "anonymous";
     bakedImage.src = url;
 
-    bakedImage.onload = () => {
-      imageRef.current = bakedImage;
-      setHasAppliedCrop(true);
-      setCropMode(false);
-      resetRotation();
-      resetZoom();
-    };
+      bakedImage.onload = () => {
+        imageRef.current = bakedImage;
+        setHasAppliedCrop(true);
+        setIsImageLoaded(true);
+        setCropMode(false);
+        resetRotation();
+        resetZoom();
+      };
 
     bakedImage.onerror = () => {
       if (bakedImageUrlRef.current) {
@@ -449,9 +455,9 @@ export function ReactImageEditor({ imageSrc }: Props) {
                 onClick={handleDownload}
                 variant="default"
                 size="sm"
-                disabled={!imageRef.current || isDownloading || cropMode}
+                disabled={!isImageLoaded || isDownloading || cropMode}
                 title={
-                  !imageRef.current
+                  !isImageLoaded
                     ? "Load an image to download"
                     : cropMode
                       ? "Apply crop to download"
@@ -462,7 +468,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
               </Button>
 
               <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as ExportFormat)}>
-                <SelectTrigger size="sm" className="w-[110px]">
+                <SelectTrigger size="sm" className="w-[110px]" data-testid="export-format">
                   <SelectValue placeholder="Format" />
                 </SelectTrigger>
                 <SelectContent>
@@ -479,6 +485,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                 </label>
                 <input
                   id="jpeg-quality"
+                  data-testid="jpeg-quality"
                   type="range"
                   min={10}
                   max={100}

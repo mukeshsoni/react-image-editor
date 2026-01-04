@@ -64,25 +64,26 @@
 - [x] Update crop-apply path to call shared helpers (avoid duplicate logic)
 
 ### 5) Add tests (Vitest)
-- [ ] Add new test file `src/__tests__/ReactImageEditor.export-download.test.tsx`
-- [ ] Mock/stub browser APIs
-  - [ ] `HTMLCanvasElement.prototype.getContext`
-  - [ ] `HTMLCanvasElement.prototype.toBlob`
-  - [ ] `URL.createObjectURL` and `URL.revokeObjectURL`
-  - [ ] `HTMLAnchorElement.prototype.click` (or mock `document.createElement("a")`)
-- [ ] Add PNG test
-  - [ ] Render editor with image loaded
-  - [ ] Click Download
-  - [ ] Assert `toBlob` called with `"image/png"`
-  - [ ] Assert anchor click invoked
-- [ ] Add JPEG test
-  - [ ] Change format to JPEG
-  - [ ] Set quality to a known value
-  - [ ] Click Download
-  - [ ] Assert `toBlob` called with `"image/jpeg"` and expected quality
-- [ ] Add crop-mode enforcement test
-  - [ ] Toggle Crop mode
-  - [ ] Assert Download disabled / message visible
+- [x] Add new test file `src/__tests__/ReactImageEditor.export-download.test.tsx`
+- [x] Mock/stub browser APIs
+  - [x] `HTMLCanvasElement.prototype.getContext`
+  - [x] `HTMLCanvasElement.prototype.toBlob`
+  - [x] `URL.createObjectURL` and `URL.revokeObjectURL`
+  - [x] `HTMLAnchorElement.prototype.click`
+  - [x] Mock `@/components/ui/select` to avoid Radix/jsdom pointer capture issues
+- [x] Add PNG test
+  - [x] Render editor with image loaded
+  - [x] Click Download
+  - [x] Assert `toBlob` called with `"image/png"`
+  - [x] Assert anchor click invoked
+- [x] Add JPEG test
+  - [x] Change format to JPEG
+  - [x] Set quality to a known value
+  - [x] Click Download
+  - [x] Assert `toBlob` called with `"image/jpeg"` and expected quality
+- [x] Add crop-mode enforcement test
+  - [x] Toggle Crop mode
+  - [x] Assert Download disabled / message visible
 
 ### 6) Manual QA checklist
 - [ ] Download original image (no crop applied)
