@@ -42,6 +42,18 @@ function formatSignedInt(value: number) {
   return `${sign}${Math.abs(rounded)}`;
 }
 
+const WHITE_BALANCE_PRESETS = [
+  { value: "as-shot", label: "As Shot" },
+  { value: "auto", label: "Auto" },
+  { value: "daylight", label: "Daylight" },
+  { value: "cloudy", label: "Cloudy" },
+  { value: "shade", label: "Shade" },
+  { value: "tungsten", label: "Tungsten" },
+  { value: "fluorescent", label: "Fluorescent" },
+  { value: "flash", label: "Flash" },
+  { value: "custom", label: "Custom" },
+] as const;
+
 type LightSliderProps = {
   label: string;
   name: string;
@@ -675,15 +687,20 @@ export function ReactImageEditor({ imageSrc }: Props) {
 
                   <div className="mt-4 border-t pt-3">
                     <div className="text-xs font-medium text-gray-700">WB</div>
-                    <div className="mt-2 flex items-center justify-between">
+                    <div className="mt-2 flex items-center justify-between gap-2">
                       <div className="text-xs text-gray-600">WB:</div>
-                      <input
-                        type="text"
+                      <select
+                        value={WHITE_BALANCE_PRESETS[0].value}
                         disabled
-                        value=""
-                        className="w-[140px] rounded-sm border bg-gray-50 px-2 py-1 text-xs text-gray-500"
                         aria-label="White Balance"
-                      />
+                        className="h-8 w-[140px] rounded-md border bg-gray-50 px-2 text-xs text-gray-700 disabled:opacity-70"
+                      >
+                        {WHITE_BALANCE_PRESETS.map((preset) => (
+                          <option key={preset.value} value={preset.value}>
+                            {preset.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="mt-3 flex flex-col gap-3">
                       <LightSlider
