@@ -14,16 +14,16 @@ Source PRD: `prds/tone-and-color-adjustments.md`
 - [x] Add `getEdits()` snapshot export for all edits
 
 ## 2) Adjustment Math (non-destructive)
-- [ ] Create pure helper module for applying light adjustments
-- [ ] Implement exposure (stops) adjustment
-- [ ] Implement contrast adjustment (mid-gray pivot)
-- [ ] Implement highlights recovery/compression (simple curve)
-- [ ] Implement shadows lift (simple curve)
-- [ ] Implement whites adjustment (white point / endpoint curve)
-- [ ] Implement blacks adjustment (black point / endpoint curve)
-- [ ] Preserve alpha channel in all operations
-- [ ] Clamp output channels safely (avoid overflow/underflow)
-- [ ] Decide internal representation (0–255 vs 0–1 floats) and document in code
+- [x] Create pure helper module for applying light adjustments
+- [x] Implement exposure (stops) adjustment
+- [x] Implement contrast adjustment (mid-gray pivot)
+- [x] Implement highlights recovery/compression (simple curve)
+- [x] Implement shadows lift (simple curve)
+- [x] Implement whites adjustment (white point / endpoint curve)
+- [x] Implement blacks adjustment (black point / endpoint curve)
+- [x] Preserve alpha channel in all operations
+- [x] Clamp output channels safely (avoid overflow/underflow)
+- [x] Decide internal representation (0–255 vs 0–1 floats) and document in code
 
 ## 3) Rendering Integration
 - [ ] Identify the canonical “base image” source used for rendering
