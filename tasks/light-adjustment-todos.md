@@ -3,14 +3,15 @@
 Source PRD: `prds/tone-and-color-adjustments.md`
 
 ## 1) State + Types
-- [ ] Add `LightAdjustments` type (exposure/contrast/highlights/shadows/whites/blacks)
-- [ ] Define `DEFAULT_LIGHT_ADJUSTMENTS` (all neutral)
-- [ ] Add `lightAdjustments` to Zustand store state
-- [ ] Add action: `setLightAdjustment(name, value)`
-- [ ] Add action: `resetLightAdjustments()`
-- [ ] (Optional) Add action: `resetLightAdjustment(name)`
-- [ ] Ensure adjustments persist across crop/zoom/pan interactions
-- [ ] Ensure state is serializable and easy to extend later
+- [x] Add `LightAdjustments` type (exposure/contrast/highlights/shadows/whites/blacks)
+- [x] Define `DEFAULT_LIGHT_ADJUSTMENTS` (all neutral)
+- [x] Add `lightAdjustments` to Zustand store state
+- [x] Add action: `setLightAdjustment(name, value)`
+- [x] Add action: `resetLightAdjustments()`
+- [x] Add action: `resetLightAdjustment(name)`
+- [x] Ensure adjustments persist across crop/zoom/pan interactions
+- [x] Ensure state is serializable and easy to extend later
+- [x] Add `getEdits()` snapshot export for all edits
 
 ## 2) Adjustment Math (non-destructive)
 - [ ] Create pure helper module for applying light adjustments

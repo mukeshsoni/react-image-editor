@@ -14,6 +14,33 @@ vi.mock("../store/cropStore", () => ({
     initializeCropRect: mockInitializeCropRect,
     moveCropRect: mockMoveCropRect,
     resizeCropRect: mockResizeCropRect,
+
+    cropSettings: { aspectRatio: "original", aspectRatioLocked: false },
+    cropBounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+    setCropRect: vi.fn(),
+    updateCropRect: vi.fn(),
+    setCropSettings: vi.fn(),
+    updateCropSettings: vi.fn(),
+    resetCropSettings: vi.fn(),
+    resetCropRect: vi.fn(),
+    resetAll: vi.fn(),
+    handleCropSettingsChange: vi.fn(),
+    setRotation: vi.fn(),
+    resetRotation: vi.fn(),
+    setConstrainCrop: vi.fn(),
+
+    lightAdjustments: {
+      exposure: 0,
+      contrast: 0,
+      highlights: 0,
+      shadows: 0,
+      whites: 0,
+      blacks: 0,
+    },
+    setLightAdjustment: vi.fn(),
+    resetLightAdjustments: vi.fn(),
+    resetLightAdjustment: vi.fn(),
+    getEdits: vi.fn(),
   }),
 }));
 

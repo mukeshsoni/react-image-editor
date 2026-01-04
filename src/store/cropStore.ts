@@ -28,11 +28,41 @@ export type Bounds = {
   maxY: number;
 };
 
+export type LightAdjustments = {
+  exposure: number;
+  contrast: number;
+  highlights: number;
+  shadows: number;
+  whites: number;
+  blacks: number;
+};
+
+export type LightAdjustmentName = keyof LightAdjustments;
+
+export const DEFAULT_LIGHT_ADJUSTMENTS: LightAdjustments = {
+  exposure: 0,
+  contrast: 0,
+  highlights: 0,
+  shadows: 0,
+  whites: 0,
+  blacks: 0,
+};
+
+export type ImageEditorEdits = {
+  version: 1;
+  crop: {
+    rect: CropRect;
+    settings: CropSettings;
+  };
+  light: LightAdjustments;
+};
+
 interface CropStore {
   // State
   cropRect: CropRect;
   cropSettings: CropSettings;
   cropBounds: Bounds;
+  lightAdjustments: LightAdjustments;
 
   // Actions
   setCropRect: (cropRect: CropRect) => void;
@@ -61,6 +91,14 @@ interface CropStore {
 
   // Crop constraint
   setConstrainCrop: (constrainCrop: boolean) => void;
+
+  // Light adjustments
+  setLightAdjustment: (name: LightAdjustmentName, value: number) => void;
+  resetLightAdjustments: () => void;
+  resetLightAdjustment: (name: LightAdjustmentName) => void;
+
+  // Exportable snapshot of all edits
+  getEdits: () => ImageEditorEdits;
 }
 
 export const useCropStore = create<CropStore>((set, get) => ({
@@ -84,6 +122,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
     maxX: 0,
     maxY: 0,
   },
+  lightAdjustments: { ...DEFAULT_LIGHT_ADJUSTMENTS },
 
   // Actions
   setCropRect: (cropRect: CropRect) => set({ cropRect }),
@@ -292,9 +331,45 @@ export const useCropStore = create<CropStore>((set, get) => ({
     }),
 
   resetAll: (bounds) => {
-    const { resetCropSettings, resetCropRect } = get();
+    const { resetCropSettings, resetCropRect, resetLightAdjustments } = get();
     resetCropSettings();
     resetCropRect(bounds);
+    resetLightAdjustments();
+  },
+
+  setLightAdjustment: (name, value) => {
+    set((state) => ({
+      lightAdjustments: {
+        ...state.lightAdjustments,
+        [name]: value,
+      },
+    }));
+  },
+
+  resetLightAdjustments: () => {
+    set({ lightAdjustments: { ...DEFAULT_LIGHT_ADJUSTMENTS } });
+  },
+
+  resetLightAdjustment: (name) => {
+    set((state) => ({
+      lightAdjustments: {
+        ...state.lightAdjustments,
+        [name]: DEFAULT_LIGHT_ADJUSTMENTS[name],
+      },
+    }));
+  },
+
+  getEdits: () => {
+    const { cropRect, cropSettings, lightAdjustments } = get();
+
+    return {
+      version: 1,
+      crop: {
+        rect: cropRect,
+        settings: cropSettings,
+      },
+      light: lightAdjustments,
+    };
   },
 
   handleCropSettingsChange: (newSettings: CropSettings) => {

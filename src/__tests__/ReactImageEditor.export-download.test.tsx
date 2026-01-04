@@ -35,6 +35,19 @@ vi.mock("../store/cropStore", () => ({
     },
     setRotation: mockSetRotation,
     resetRotation: mockResetRotation,
+
+    lightAdjustments: {
+      exposure: 0,
+      contrast: 0,
+      highlights: 0,
+      shadows: 0,
+      whites: 0,
+      blacks: 0,
+    },
+    setLightAdjustment: vi.fn(),
+    resetLightAdjustments: vi.fn(),
+    resetLightAdjustment: vi.fn(),
+    getEdits: vi.fn(),
   }),
 }));
 
