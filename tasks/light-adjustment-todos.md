@@ -57,14 +57,14 @@ Source PRD: `prds/tone-and-color-adjustments.md`
 - [ ] Validate reset returns image to original appearance
 
 ## 6) Tests
-- [ ] Unit tests for math helper (known input/output cases)
-- [ ] Unit test: alpha preservation
-- [ ] Unit test: clamping behavior
-- [ ] Component test: Light accordion renders and contains all six controls
-- [ ] Component test: sliders start at defaults
-- [ ] Component test: slider change updates store state
-- [ ] Component test: “Reset All” restores defaults
-- [ ] (If feasible) integration-ish test ensuring render path consumes adjustments
+- [x] Unit tests for math helper (known input/output cases)
+- [x] Unit test: alpha preservation
+- [x] Unit test: clamping behavior
+- [x] Component test: Light accordion renders and contains all six controls
+- [x] Component test: sliders start at defaults
+- [x] Component test: slider change updates store state
+- [x] Component test: “Reset All” restores defaults
+- [x] Integration-ish test ensuring render path consumes adjustments
 
 ## 7) Follow-ups (out of scope, but next)
 - [ ] Wire light adjustments into export/download pipeline

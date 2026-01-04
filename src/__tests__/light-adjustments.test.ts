@@ -59,4 +59,19 @@ describe("light adjustments math", () => {
     expect(output[2]).toBe(255);
     expect(output[3]).toBe(10);
   });
+
+  test("preserves alpha when applying adjustments", () => {
+    const input = new Uint8ClampedArray([50, 60, 70, 123]);
+    const output = new Uint8ClampedArray(input.length);
+
+    applyLightAdjustmentsToRgbaBytes(input, output, {
+      ...defaults(),
+      exposure: 1,
+      contrast: 10,
+      highlights: 20,
+      shadows: -20,
+    });
+
+    expect(output[3]).toBe(123);
+  });
 });
