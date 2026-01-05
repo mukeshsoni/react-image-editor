@@ -13,7 +13,8 @@ type Props = {
 
 const SIZE = 200;
 const PADDING = 10;
-const HIT_RADIUS = 8;
+const HIT_RADIUS = 10;
+const DRAG_SENSITIVITY = 0.55;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -152,10 +153,16 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
   }, [validatedPoints, activeIndex]);
 
   function getCanvasPoint(event: PointerEvent<HTMLCanvasElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
+    const canvas = event.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+
+    // Map from CSS pixels to canvas pixels (handles flex/stretch scaling).
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+
     return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY,
     };
   }
 
@@ -199,15 +206,23 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
     }
 
     const canvasPoint = getCanvasPoint(event);
-    const point = toPoint(canvasPoint);
+     const point = toPoint(canvasPoint);
+ 
+     const current = validatedPoints[activeIndex];
+     if (!current) return;
 
-    const next = validatedPoints.map((p, idx) => {
-      if (idx !== activeIndex) return p;
-      return {
-        x: clampPointX(validatedPoints, idx, point.x),
-        y: point.y,
-      };
-    });
+     const damped = {
+       x: clamp(current.x + (point.x - current.x) * DRAG_SENSITIVITY, 0, 1),
+       y: clamp(current.y + (point.y - current.y) * DRAG_SENSITIVITY, 0, 1),
+     };
+
+     const next = validatedPoints.map((p, idx) => {
+       if (idx !== activeIndex) return p;
+       return {
+         x: clampPointX(validatedPoints, idx, damped.x),
+         y: damped.y,
+       };
+     });
 
     onChangePoints(validateToneCurvePoints(next));
   }
