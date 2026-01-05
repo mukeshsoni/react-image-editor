@@ -21,7 +21,6 @@ import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 
 import {
   canvasToBlob,
-  drawImageWithRotation,
   renderCommittedImageToOffscreenCanvas,
   triggerDownload,
   type ExportFormat,
@@ -36,8 +35,12 @@ import {
 
 import { ToneCurveEditor } from "./components/ToneCurveEditor";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
-import { Cropper, CropOptions } from "./Cropper";
-import { useCropStore, type CropRect } from "./store/cropStore";
+import {
+  CropToolButtons,
+  CropToolOptions,
+  CropToolOverlay,
+} from "@/editor/CropTool";
+import { useCropStore } from "./store/cropStore";
 
 
 function formatSigned(value: number, digits: number) {
@@ -297,16 +300,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
     }
   }
 
-  function handleCropReset() {
-    if (imageRef.current) {
-      resetAll({
-        minX: offset.x,
-        minY: offset.y,
-        maxX: offset.x + imageRef.current.width * zoomLevel,
-        maxY: offset.y + imageRef.current.height * zoomLevel,
-      });
-    }
-  }
 
   async function handleDownload() {
     if (!imageRef.current) return;
@@ -354,63 +347,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
     }
   }
 
-  async function handleCropApplication(cropRect: CropRect) {
-    if (!imageRef.current) return;
-    if (!Number.isFinite(zoomLevel) || zoomLevel <= 0) return;
-
-    const outputWidth = Math.max(1, Math.round(cropRect.width / zoomLevel));
-    const outputHeight = Math.max(1, Math.round(cropRect.height / zoomLevel));
-
-    const offscreen = document.createElement("canvas");
-    offscreen.width = outputWidth;
-    offscreen.height = outputHeight;
-
-    const ctx = offscreen.getContext("2d");
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, offscreen.width, offscreen.height);
-    ctx.save();
-
-    // Convert canvas-space offset/cropRect into image-pixel space, so we render at zoom=1.
-    const bakedOffset = {
-      x: (offset.x - cropRect.x) / zoomLevel,
-      y: (offset.y - cropRect.y) / zoomLevel,
-    };
-
-    drawImageWithRotation(ctx, imageRef.current, 1, bakedOffset, rotation);
-
-    ctx.restore();
-
-    const blob = await canvasToBlob(offscreen, "image/png");
-    if (!blob) return;
-
-    if (bakedImageUrlRef.current) {
-      URL.revokeObjectURL(bakedImageUrlRef.current);
-    }
-
-    const url = URL.createObjectURL(blob);
-    bakedImageUrlRef.current = url;
-
-    const bakedImage = new Image();
-    bakedImage.crossOrigin = "anonymous";
-    bakedImage.src = url;
-
-      bakedImage.onload = () => {
-        imageRef.current = bakedImage;
-        setHasAppliedCrop(true);
-        setIsImageLoaded(true);
-        setCropMode(false);
-        resetRotation();
-        resetZoom();
-      };
-
-    bakedImage.onerror = () => {
-      if (bakedImageUrlRef.current) {
-        URL.revokeObjectURL(bakedImageUrlRef.current);
-        bakedImageUrlRef.current = null;
-      }
-    };
-  }
   const cropBounds = useMemo(() => {
     if (!imageRef.current) {
       return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
@@ -538,9 +474,11 @@ export function ReactImageEditor({ imageSrc }: Props) {
                   }
                 }}
               />
-              {cropMode && imageRef.current ? (
-                <Cropper cropBounds={cropBounds} />
-              ) : null}
+              <CropToolOverlay
+                cropMode={cropMode}
+                imageRef={imageRef}
+                cropBounds={cropBounds}
+              />
             </div>
           </div>
           <div className="flex flex-row-reverse w-full py-2 px-4">
@@ -582,28 +520,16 @@ export function ReactImageEditor({ imageSrc }: Props) {
           <ResizablePanel defaultSize={25}>
             <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  onClick={() => setCropMode(!cropMode)}
-                  variant={cropMode ? "default" : "outline"}
-                  size="sm"
-                >
-                  Crop
-                </Button>
-                {hasAppliedCrop && (
-                  <Button
-                    onClick={() => {
-                      if (!originalImageRef.current) return;
-                      imageRef.current = originalImageRef.current;
-                      setHasAppliedCrop(false);
-                      resetRotation();
-                      resetZoom();
-                    }}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Reset Crop
-                  </Button>
-                )}
+                <CropToolButtons
+                  cropMode={cropMode}
+                  setCropMode={setCropMode}
+                  hasAppliedCrop={hasAppliedCrop}
+                  imageRef={imageRef}
+                  originalImageRef={originalImageRef}
+                  setHasAppliedCrop={setHasAppliedCrop}
+                  resetRotation={resetRotation}
+                  resetZoom={resetZoom}
+                />
 
                 <Button
                   onClick={handleDownload}
@@ -1118,11 +1044,20 @@ export function ReactImageEditor({ imageSrc }: Props) {
               <div className="text-xs text-red-600">{exportError}</div>
             ) : null}
           </div>
-          {cropMode ? (
-            <div className="m-2">
-              <CropOptions onReset={handleCropReset} onApply={handleCropApplication} />
-            </div>
-          ) : null}
+          <CropToolOptions
+            cropMode={cropMode}
+            imageRef={imageRef}
+            bakedImageUrlRef={bakedImageUrlRef}
+            setCropMode={setCropMode}
+            setHasAppliedCrop={setHasAppliedCrop}
+            setIsImageLoaded={setIsImageLoaded}
+            zoomLevel={zoomLevel}
+            offset={offset}
+            rotation={rotation}
+            resetRotation={resetRotation}
+            resetZoom={resetZoom}
+            resetAll={resetAll}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
