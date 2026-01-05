@@ -1,7 +1,18 @@
+import { applyColorAdjustmentsToRgbaBytes, hasNonNeutralColorAdjustments } from "./lib/color-adjustments";
 import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
+import {
+  applyToneCurveToRgbaBytes,
+  createToneCurveLuts,
+  hasNonNeutralToneCurve,
+} from "./lib/tone-curve";
 import { applyWhiteBalanceToRgbaBytes, hasNonNeutralWhiteBalance } from "./lib/white-balance";
 
-import type { LightAdjustments, WhiteBalanceSettings } from "./store/cropStore";
+import type {
+  ColorAdjustments,
+  LightAdjustments,
+  ToneCurveSettings,
+  WhiteBalanceSettings,
+} from "./store/cropStore";
 
 export type ExportFormat = "png" | "jpeg";
 
@@ -92,6 +103,8 @@ export function renderCommittedImageToOffscreenCanvas(
   background: ExportBackground,
   whiteBalance?: WhiteBalanceSettings,
   lightAdjustments?: LightAdjustments,
+  toneCurve?: ToneCurveSettings,
+  colorAdjustments?: ColorAdjustments,
 ): HTMLCanvasElement | null {
   const outputSize = getRotatedBoundingBoxSize(
     image.width,
@@ -134,7 +147,12 @@ export function renderCommittedImageToOffscreenCanvas(
       lightAdjustments.whites !== 0 ||
       lightAdjustments.blacks !== 0);
 
-  if (shouldApplyWhiteBalance || shouldApplyLight) {
+  const shouldApplyToneCurve = toneCurve != null && hasNonNeutralToneCurve(toneCurve);
+
+  const shouldApplyColor =
+    colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
+
+  if (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyToneCurve || shouldApplyColor) {
     const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
 
     const out = new Uint8ClampedArray(imageData.data.length);
@@ -149,6 +167,19 @@ export function renderCommittedImageToOffscreenCanvas(
       const lightOut = new Uint8ClampedArray(out.length);
       applyLightAdjustmentsToRgbaBytes(out, lightOut, lightAdjustments);
       out.set(lightOut);
+    }
+
+    if (shouldApplyToneCurve && toneCurve) {
+      const luts = createToneCurveLuts(toneCurve);
+      const toneOut = new Uint8ClampedArray(out.length);
+      applyToneCurveToRgbaBytes(out, toneOut, luts);
+      out.set(toneOut);
+    }
+
+    if (shouldApplyColor && colorAdjustments) {
+      const colorOut = new Uint8ClampedArray(out.length);
+      applyColorAdjustmentsToRgbaBytes(out, colorOut, colorAdjustments);
+      out.set(colorOut);
     }
 
     ctx.putImageData(new ImageData(out, offscreen.width, offscreen.height), 0, 0);

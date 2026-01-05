@@ -526,6 +526,8 @@ export function ReactImageEditor({ imageSrc }: Props) {
         background,
         whiteBalance,
         lightAdjustments,
+        toneCurve,
+        colorAdjustments,
       );
       if (!offscreen) {
         setExportError("Failed to export image");

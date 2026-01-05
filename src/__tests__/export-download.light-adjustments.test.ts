@@ -72,6 +72,8 @@ describe("export-download applies light adjustments", () => {
         whites: 0,
         blacks: 0,
       },
+      undefined,
+      undefined,
     );
 
     expect(offscreen).toBeTruthy();
