@@ -27,10 +27,10 @@ Source PRD: `prds/white-balance-prd.md`
 - [x] Add a minimal set of unit tests for helper(s)
 
 ## 4) Rendering integration
-- [ ] Integrate WB into the existing adjustment pipeline (before/alongside Light adjustments)
-- [ ] Ensure neutral WB produces identical output
-- [ ] Throttle updates with `requestAnimationFrame` (match Light behavior)
-- [ ] Avoid repeated large allocations per tick (reuse buffers where possible)
+- [x] Integrate WB into the existing adjustment pipeline (before/alongside Light adjustments)
+- [x] Ensure neutral WB produces identical output
+- [x] Throttle updates with `requestAnimationFrame` (match Light behavior)
+- [x] Avoid repeated large allocations per tick (reuse buffers where possible)
 
 ## 5) UI: White Balance panel (Basic accordion)
 - [ ] Add a section titled `White Balance` above `Light`

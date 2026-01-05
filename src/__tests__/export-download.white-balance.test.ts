@@ -2,7 +2,6 @@ import { describe, expect, test, vi } from "vitest";
 
 import { renderCommittedImageToOffscreenCanvas } from "../export-download";
 
-
 // Minimal ImageData polyfill (jsdom doesn't always expose it).
 if (typeof globalThis.ImageData === "undefined") {
   Object.defineProperty(globalThis, "ImageData", {
@@ -33,7 +32,7 @@ if (typeof globalThis.ImageData === "undefined") {
   });
 }
 
-describe("export-download applies light adjustments", () => {
+describe("export-download applies white balance", () => {
   test("applies adjustments when non-neutral", () => {
     const ctx = {
       fillStyle: "",
@@ -46,7 +45,11 @@ describe("export-download applies light adjustments", () => {
       drawImage: vi.fn(),
       getImageData: vi.fn(
         () =>
-          new ImageData(new Uint8ClampedArray([10, 20, 30, 255]), 1, 1) as ImageData,
+          new ImageData(
+            new Uint8ClampedArray([10, 20, 30, 255]),
+            1,
+            1,
+          ) as ImageData,
       ),
       putImageData: vi.fn(),
     } as unknown as CanvasRenderingContext2D;
@@ -63,15 +66,12 @@ describe("export-download applies light adjustments", () => {
       image,
       0,
       "white",
-      undefined,
       {
-        exposure: 1,
-        contrast: 0,
-        highlights: 0,
-        shadows: 0,
-        whites: 0,
-        blacks: 0,
+        temperatureKelvin: 5500,
+        tint: 0,
+        preset: "custom",
       },
+      undefined,
     );
 
     expect(offscreen).toBeTruthy();

@@ -228,24 +228,33 @@ describe("ReactImageEditor render integration", () => {
       applyLightAdjustmentsToRgbaBytes: applySpy,
     }));
 
-    const nonNeutralStore = {
-      resetAll: vi.fn(),
-      cropSettings: { rotation: 0, constrainCrop: true },
-      setRotation: vi.fn(),
-      resetRotation: vi.fn(),
-      lightAdjustments: {
-        exposure: 1,
-        contrast: 0,
-        highlights: 0,
-        shadows: 0,
-        whites: 0,
-        blacks: 0,
-      },
-      setLightAdjustment: vi.fn(),
-      resetLightAdjustments: vi.fn(),
-      resetLightAdjustment: vi.fn(),
-      getEdits: vi.fn(),
-    };
+     const nonNeutralStore = {
+       resetAll: vi.fn(),
+       cropSettings: { rotation: 0, constrainCrop: true },
+       setRotation: vi.fn(),
+       resetRotation: vi.fn(),
+       whiteBalance: {
+         temperatureKelvin: 6500,
+         tint: 0,
+         preset: "custom",
+       },
+       setWhiteBalance: vi.fn(),
+       setWhiteBalancePreset: vi.fn(),
+       resetWhiteBalance: vi.fn(),
+       lightAdjustments: {
+         exposure: 1,
+         contrast: 0,
+         highlights: 0,
+         shadows: 0,
+         whites: 0,
+         blacks: 0,
+       },
+       setLightAdjustment: vi.fn(),
+       resetLightAdjustments: vi.fn(),
+       resetLightAdjustment: vi.fn(),
+       getEdits: vi.fn(),
+     };
+
 
     vi.doMock("../store/cropStore", () => ({
       useCropStore: () => nonNeutralStore,

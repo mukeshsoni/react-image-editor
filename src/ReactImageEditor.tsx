@@ -26,9 +26,11 @@ import {
 } from "./export-download";
 
 import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
+import { applyWhiteBalanceToRgbaBytes, hasNonNeutralWhiteBalance } from "./lib/white-balance";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
 import { useCropStore, type CropRect } from "./store/cropStore";
+
 
 function formatSigned(value: number, digits: number) {
   const normalized = Object.is(value, -0) ? 0 : value;
@@ -109,6 +111,7 @@ function renderImageToCanvas(
   zoomLevel: number,
   offset: { x: number; y: number },
   rotation: number,
+  whiteBalance?: Parameters<typeof applyWhiteBalanceToRgbaBytes>[2],
   lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
   cache?: {
     baseCanvas: HTMLCanvasElement;
@@ -116,6 +119,7 @@ function renderImageToCanvas(
     adjustedCanvas: HTMLCanvasElement;
     in: Uint8ClampedArray;
     out: Uint8ClampedArray;
+    temp: Uint8ClampedArray;
   },
 ) {
   if (!canvasRef) return;
@@ -128,6 +132,9 @@ function renderImageToCanvas(
   const canvasHeight = canvasRef.height;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
+  const shouldApplyWhiteBalance =
+    whiteBalance != null && hasNonNeutralWhiteBalance(whiteBalance);
+
   const shouldApplyLight =
     lightAdjustments != null &&
     (lightAdjustments.exposure !== 0 ||
@@ -137,7 +144,9 @@ function renderImageToCanvas(
       lightAdjustments.whites !== 0 ||
       lightAdjustments.blacks !== 0);
 
-  if (!shouldApplyLight || !cache) {
+  const shouldProcessPixels = (shouldApplyWhiteBalance || shouldApplyLight) && cache;
+
+  if (!shouldProcessPixels) {
     ctx.save();
     drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
     ctx.restore();
@@ -159,8 +168,10 @@ function renderImageToCanvas(
     baseCtx.restore();
 
     const imageData = baseCtx.getImageData(0, 0, canvasWidth, canvasHeight);
-    cache.in = imageData.data;
-    cache.out = new Uint8ClampedArray(cache.in.length);
+     cache.in = imageData.data;
+     cache.out = new Uint8ClampedArray(cache.in.length);
+     cache.temp = new Uint8ClampedArray(cache.in.length);
+
 
     cache.baseKey = baseKey;
   }
@@ -168,7 +179,20 @@ function renderImageToCanvas(
   const source = cache.in;
   const dest = cache.out;
 
-  applyLightAdjustmentsToRgbaBytes(source, dest, lightAdjustments);
+  if (shouldApplyWhiteBalance && whiteBalance) {
+    applyWhiteBalanceToRgbaBytes(source, dest, whiteBalance);
+  } else {
+    dest.set(source);
+  }
+
+  if (shouldApplyLight && lightAdjustments) {
+    if (cache.temp.length !== dest.length) {
+      cache.temp = new Uint8ClampedArray(dest.length);
+    }
+
+    applyLightAdjustmentsToRgbaBytes(dest, cache.temp, lightAdjustments);
+    dest.set(cache.temp);
+  }
 
   cache.adjustedCanvas.width = canvasWidth;
   cache.adjustedCanvas.height = canvasHeight;
@@ -208,6 +232,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
     cropSettings,
     setRotation,
     resetRotation,
+    whiteBalance,
     lightAdjustments,
     setLightAdjustment,
     resetLightAdjustments,
@@ -312,6 +337,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
     adjustedCanvas: HTMLCanvasElement;
     in: Uint8ClampedArray;
     out: Uint8ClampedArray;
+    temp: Uint8ClampedArray;
   } | null>(null);
 
   if (!lightRenderCacheRef.current && typeof document !== "undefined") {
@@ -321,6 +347,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
       adjustedCanvas: document.createElement("canvas"),
       in: new Uint8ClampedArray(0),
       out: new Uint8ClampedArray(0),
+      temp: new Uint8ClampedArray(0),
     };
   }
 
@@ -339,12 +366,13 @@ export function ReactImageEditor({ imageSrc }: Props) {
           zoomLevel,
           offset,
           rotation,
+          whiteBalance,
           lightAdjustments,
           lightRenderCacheRef.current ?? undefined,
         );
       }
     });
-  }, [zoomLevel, offset, rotation, lightAdjustments]);
+  }, [zoomLevel, offset, rotation, whiteBalance, lightAdjustments]);
 
   function handleResetZoomClick() {
     resetZoom();
@@ -405,6 +433,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
         imageRef.current,
         rotation,
         background,
+        whiteBalance,
         lightAdjustments,
       );
       if (!offscreen) {
