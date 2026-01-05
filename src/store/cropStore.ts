@@ -48,12 +48,34 @@ export const DEFAULT_LIGHT_ADJUSTMENTS: LightAdjustments = {
   blacks: 0,
 };
 
+export type WhiteBalancePreset =
+  | "daylight"
+  | "cloudy"
+  | "shade"
+  | "tungsten"
+  | "fluorescent"
+  | "flash"
+  | "custom";
+
+export type WhiteBalanceSettings = {
+  temperatureKelvin: number;
+  tint: number;
+  preset: WhiteBalancePreset;
+};
+
+export const DEFAULT_WHITE_BALANCE: WhiteBalanceSettings = {
+  temperatureKelvin: 6500,
+  tint: 0,
+  preset: "custom",
+};
+
 export type ImageEditorEdits = {
   version: 1;
   crop: {
     rect: CropRect;
     settings: CropSettings;
   };
+  whiteBalance: WhiteBalanceSettings;
   light: LightAdjustments;
 };
 
@@ -62,6 +84,7 @@ interface CropStore {
   cropRect: CropRect;
   cropSettings: CropSettings;
   cropBounds: Bounds;
+  whiteBalance: WhiteBalanceSettings;
   lightAdjustments: LightAdjustments;
 
   // Actions
@@ -91,6 +114,11 @@ interface CropStore {
 
   // Crop constraint
   setConstrainCrop: (constrainCrop: boolean) => void;
+
+  // White balance
+  setWhiteBalance: (updates: Partial<WhiteBalanceSettings>) => void;
+  setWhiteBalancePreset: (preset: WhiteBalancePreset) => void;
+  resetWhiteBalance: () => void;
 
   // Light adjustments
   setLightAdjustment: (name: LightAdjustmentName, value: number) => void;
@@ -122,6 +150,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
     maxX: 0,
     maxY: 0,
   },
+  whiteBalance: { ...DEFAULT_WHITE_BALANCE },
   lightAdjustments: { ...DEFAULT_LIGHT_ADJUSTMENTS },
 
   // Actions
@@ -331,10 +360,45 @@ export const useCropStore = create<CropStore>((set, get) => ({
     }),
 
   resetAll: (bounds) => {
-    const { resetCropSettings, resetCropRect, resetLightAdjustments } = get();
+    const {
+      resetCropSettings,
+      resetCropRect,
+      resetWhiteBalance,
+      resetLightAdjustments,
+    } = get();
     resetCropSettings();
     resetCropRect(bounds);
+    resetWhiteBalance();
     resetLightAdjustments();
+  },
+
+  setWhiteBalance: (updates) => {
+    set((state) => {
+      const nextWhiteBalance = { ...state.whiteBalance, ...updates };
+      const hasManualChange =
+        updates.temperatureKelvin !== undefined || updates.tint !== undefined;
+      const shouldForceCustom = hasManualChange && updates.preset === undefined;
+
+      return {
+        whiteBalance: {
+          ...nextWhiteBalance,
+          preset: shouldForceCustom ? "custom" : nextWhiteBalance.preset,
+        },
+      };
+    });
+  },
+
+  setWhiteBalancePreset: (preset) => {
+    set((state) => ({
+      whiteBalance: {
+        ...state.whiteBalance,
+        preset,
+      },
+    }));
+  },
+
+  resetWhiteBalance: () => {
+    set({ whiteBalance: { ...DEFAULT_WHITE_BALANCE } });
   },
 
   setLightAdjustment: (name, value) => {
@@ -360,7 +424,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
   },
 
   getEdits: () => {
-    const { cropRect, cropSettings, lightAdjustments } = get();
+    const { cropRect, cropSettings, whiteBalance, lightAdjustments } = get();
 
     return {
       version: 1,
@@ -368,6 +432,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
         rect: cropRect,
         settings: cropSettings,
       },
+      whiteBalance,
       light: lightAdjustments,
     };
   },

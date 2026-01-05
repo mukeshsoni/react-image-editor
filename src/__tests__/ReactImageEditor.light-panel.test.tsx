@@ -30,6 +30,15 @@ vi.mock("../store/cropStore", () => ({
     setRotation: vi.fn(),
     resetRotation: vi.fn(),
 
+    whiteBalance: {
+      temperatureKelvin: 6500,
+      tint: 0,
+      preset: "custom",
+    },
+    setWhiteBalance: vi.fn(),
+    setWhiteBalancePreset: vi.fn(),
+    resetWhiteBalance: vi.fn(),
+
     lightAdjustments: mockLightAdjustments,
     setLightAdjustment: mockSetLightAdjustment,
     resetLightAdjustments: mockResetLightAdjustments,

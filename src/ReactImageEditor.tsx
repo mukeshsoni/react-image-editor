@@ -43,8 +43,6 @@ function formatSignedInt(value: number) {
 }
 
 const WHITE_BALANCE_PRESETS = [
-  { value: "as-shot", label: "As Shot" },
-  { value: "auto", label: "Auto" },
   { value: "daylight", label: "Daylight" },
   { value: "cloudy", label: "Cloudy" },
   { value: "shade", label: "Shade" },
