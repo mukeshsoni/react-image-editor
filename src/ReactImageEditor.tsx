@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { EditorCanvas } from "@/editor/EditorCanvas";
+
 import { getPanelGroupElement } from "react-resizable-panels";
 import { PlusIcon, MinusIcon } from "@radix-ui/react-icons";
 import {
@@ -26,19 +28,7 @@ import {
 } from "./export-download";
 
 import {
-  applyColorAdjustmentsToRgbaBytes,
-  hasNonNeutralColorAdjustments,
-} from "./lib/color-adjustments";
-import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
-import {
-  applyToneCurveToRgbaBytes,
-  createToneCurveLuts,
-  hasNonNeutralToneCurve,
-} from "./lib/tone-curve";
-import {
-  applyWhiteBalanceToRgbaBytes,
   estimateWhiteBalanceFromRgb,
-  hasNonNeutralWhiteBalance,
   sampleAverageRgb,
   WHITE_BALANCE_PRESETS,
 } from "./lib/white-balance";
@@ -126,145 +116,7 @@ function LightSlider({
   );
 }
 
-// Given a canvas element ref and an Image instance, render the
-// image to the canvas
-  function renderImageToCanvas(
-    canvasRef: HTMLCanvasElement | null,
-    imageRef: HTMLImageElement | HTMLCanvasElement,
-    zoomLevel: number,
-    offset: { x: number; y: number },
-    rotation: number,
-    whiteBalance?: Parameters<typeof applyWhiteBalanceToRgbaBytes>[2],
-    lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
-    toneCurve?: Parameters<typeof hasNonNeutralToneCurve>[0],
-    colorAdjustments?: Parameters<typeof applyColorAdjustmentsToRgbaBytes>[2],
-    cache?: {
-      baseCanvas: HTMLCanvasElement;
-      baseKey: string;
-      adjustedCanvas: HTMLCanvasElement;
-      in: Uint8ClampedArray;
-      out: Uint8ClampedArray;
-      temp: Uint8ClampedArray;
-      toneCurveKey?: string;
-      toneCurveLuts?: ReturnType<typeof createToneCurveLuts>;
-    },
-  ) {
-  if (!canvasRef) return;
-
-  const ctx = canvasRef.getContext("2d");
-  if (!ctx) return;
-
-  // We restrict the canvas width to the canvas container width
-  const canvasWidth = canvasRef.width;
-  const canvasHeight = canvasRef.height;
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-  const shouldApplyWhiteBalance =
-    whiteBalance != null && hasNonNeutralWhiteBalance(whiteBalance);
-
-  const shouldApplyLight =
-    lightAdjustments != null &&
-    (lightAdjustments.exposure !== 0 ||
-      lightAdjustments.contrast !== 0 ||
-      lightAdjustments.highlights !== 0 ||
-      lightAdjustments.shadows !== 0 ||
-      lightAdjustments.whites !== 0 ||
-      lightAdjustments.blacks !== 0);
-
-  const shouldApplyToneCurve = toneCurve != null && hasNonNeutralToneCurve(toneCurve);
-
-  const shouldApplyColor =
-    colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
-
-  const shouldProcessPixels =
-    (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyToneCurve || shouldApplyColor) &&
-    cache;
-
-  if (!shouldProcessPixels) {
-    ctx.save();
-    drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
-    ctx.restore();
-    return;
-  }
-
-  const baseKey = `${canvasWidth}x${canvasHeight}:${zoomLevel}:${offset.x}:${offset.y}:${rotation}`;
-
-  if (cache.baseKey !== baseKey) {
-    cache.baseCanvas.width = canvasWidth;
-    cache.baseCanvas.height = canvasHeight;
-
-    const baseCtx = cache.baseCanvas.getContext("2d", { willReadFrequently: true });
-    if (!baseCtx) return;
-
-    baseCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-    baseCtx.save();
-    drawImageWithRotation(baseCtx, imageRef, zoomLevel, offset, rotation);
-    baseCtx.restore();
-
-    const imageData = baseCtx.getImageData(0, 0, canvasWidth, canvasHeight);
-     cache.in = imageData.data;
-     cache.out = new Uint8ClampedArray(cache.in.length);
-     cache.temp = new Uint8ClampedArray(cache.in.length);
-
-
-    cache.baseKey = baseKey;
-  }
-
-  const source = cache.in;
-  const dest = cache.out;
-
-  if (shouldApplyWhiteBalance && whiteBalance) {
-    applyWhiteBalanceToRgbaBytes(source, dest, whiteBalance);
-  } else {
-    dest.set(source);
-  }
-
-  if (shouldApplyLight && lightAdjustments) {
-    if (cache.temp.length !== dest.length) {
-      cache.temp = new Uint8ClampedArray(dest.length);
-    }
-
-    applyLightAdjustmentsToRgbaBytes(dest, cache.temp, lightAdjustments);
-    dest.set(cache.temp);
-  }
-
-  if (shouldApplyToneCurve && toneCurve) {
-    const toneCurveKey = JSON.stringify(toneCurve);
-    if (cache.toneCurveKey !== toneCurveKey || !cache.toneCurveLuts) {
-      cache.toneCurveLuts = createToneCurveLuts(toneCurve);
-      cache.toneCurveKey = toneCurveKey;
-    }
-
-    if (cache.temp.length !== dest.length) {
-      cache.temp = new Uint8ClampedArray(dest.length);
-    }
-
-    applyToneCurveToRgbaBytes(dest, cache.temp, cache.toneCurveLuts);
-    dest.set(cache.temp);
-  }
-
-  if (shouldApplyColor && colorAdjustments) {
-    if (cache.temp.length !== dest.length) {
-      cache.temp = new Uint8ClampedArray(dest.length);
-    }
-
-    applyColorAdjustmentsToRgbaBytes(dest, cache.temp, colorAdjustments);
-    dest.set(cache.temp);
-  }
-
-  cache.adjustedCanvas.width = canvasWidth;
-  cache.adjustedCanvas.height = canvasHeight;
-
-  const adjustedCtx = cache.adjustedCanvas.getContext("2d");
-  if (!adjustedCtx) return;
-
-  const adjustedData = new ImageData(dest, canvasWidth, canvasHeight);
-  adjustedCtx.putImageData(adjustedData, 0, 0);
-
-  ctx.save();
-  ctx.drawImage(cache.adjustedCanvas, 0, 0);
-  ctx.restore();
-}
+// Preview canvas rendering is handled by `EditorCanvas`.
 
 type Props = {
   imageSrc: string;
@@ -417,59 +269,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
     };
   }, []);
 
-  const renderRef = useRef<number | null>(null);
-  const lightRenderCacheRef = useRef<{
-    baseCanvas: HTMLCanvasElement;
-    baseKey: string;
-    adjustedCanvas: HTMLCanvasElement;
-    in: Uint8ClampedArray;
-    out: Uint8ClampedArray;
-    temp: Uint8ClampedArray;
-  } | null>(null);
-
-  if (!lightRenderCacheRef.current && typeof document !== "undefined") {
-    lightRenderCacheRef.current = {
-      baseCanvas: document.createElement("canvas"),
-      baseKey: "",
-      adjustedCanvas: document.createElement("canvas"),
-      in: new Uint8ClampedArray(0),
-      out: new Uint8ClampedArray(0),
-      temp: new Uint8ClampedArray(0),
-    };
-  }
-
-  // rerender the image when the zoomLevel has changed
-  useEffect(() => {
-    if (renderRef.current) {
-      cancelAnimationFrame(renderRef.current);
-    }
-
-    // We try to render the image to the canvas at 60fps
-    renderRef.current = requestAnimationFrame(() => {
-      if (imageRef.current) {
-          renderImageToCanvas(
-            canvasRef.current,
-            imageRef.current,
-            zoomLevel,
-            offset,
-            rotation,
-            whiteBalance,
-            lightAdjustments,
-            toneCurve,
-            colorAdjustments,
-            lightRenderCacheRef.current ?? undefined,
-          );
-      }
-    });
-  }, [
-    zoomLevel,
-    offset,
-    rotation,
-    whiteBalance,
-    lightAdjustments,
-    toneCurve,
-    colorAdjustments,
-  ]);
 
   function handleResetZoomClick() {
     resetZoom();
@@ -676,10 +475,19 @@ export function ReactImageEditor({ imageSrc }: Props) {
                   </div>
                 ) : null}
 
-              <canvas
-                ref={canvasRef}
-                {...listeners}
-                onClick={(event) => {
+              <EditorCanvas
+                canvasRef={canvasRef}
+                imageRef={imageRef}
+                zoomLevel={zoomLevel}
+                offset={offset}
+                rotation={rotation}
+                whiteBalance={whiteBalance}
+                lightAdjustments={lightAdjustments}
+                toneCurve={toneCurve}
+                colorAdjustments={colorAdjustments}
+                listeners={listeners}
+                isPickingWhiteBalance={isPickingWhiteBalance}
+                onPickWhiteBalance={(event) => {
                   if (!isPickingWhiteBalance) {
                     return;
                   }
@@ -710,7 +518,14 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     const sh = Math.min(size, Math.max(1, canvasRef.current.height - sy));
 
                     const imageData = ctx.getImageData(sx, sy, sw, sh);
-                    const avg = sampleAverageRgb(imageData.data, sw, sh, radius, radius, radius);
+                    const avg = sampleAverageRgb(
+                      imageData.data,
+                      sw,
+                      sh,
+                      radius,
+                      radius,
+                      radius,
+                    );
                     const estimated = estimateWhiteBalanceFromRgb(avg);
 
                     setWhiteBalance({
@@ -722,7 +537,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     // Likely a tainted canvas; silently ignore for now.
                   }
                 }}
-                style={{ cursor: isPickingWhiteBalance ? "crosshair" : undefined }}
               />
               {cropMode && imageRef.current ? (
                 <Cropper cropBounds={cropBounds} />
