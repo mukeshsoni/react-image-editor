@@ -31,6 +31,11 @@ import {
 } from "./lib/color-adjustments";
 import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
 import {
+  applyToneCurveToRgbaBytes,
+  createToneCurveLuts,
+  hasNonNeutralToneCurve,
+} from "./lib/tone-curve";
+import {
   applyWhiteBalanceToRgbaBytes,
   estimateWhiteBalanceFromRgb,
   hasNonNeutralWhiteBalance,
@@ -122,24 +127,27 @@ function LightSlider({
 
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
-function renderImageToCanvas(
-  canvasRef: HTMLCanvasElement | null,
-  imageRef: HTMLImageElement | HTMLCanvasElement,
-  zoomLevel: number,
-  offset: { x: number; y: number },
-  rotation: number,
-  whiteBalance?: Parameters<typeof applyWhiteBalanceToRgbaBytes>[2],
-  lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
-  colorAdjustments?: Parameters<typeof applyColorAdjustmentsToRgbaBytes>[2],
-  cache?: {
-    baseCanvas: HTMLCanvasElement;
-    baseKey: string;
-    adjustedCanvas: HTMLCanvasElement;
-    in: Uint8ClampedArray;
-    out: Uint8ClampedArray;
-    temp: Uint8ClampedArray;
-  },
-) {
+  function renderImageToCanvas(
+    canvasRef: HTMLCanvasElement | null,
+    imageRef: HTMLImageElement | HTMLCanvasElement,
+    zoomLevel: number,
+    offset: { x: number; y: number },
+    rotation: number,
+    whiteBalance?: Parameters<typeof applyWhiteBalanceToRgbaBytes>[2],
+    lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
+    toneCurve?: Parameters<typeof hasNonNeutralToneCurve>[0],
+    colorAdjustments?: Parameters<typeof applyColorAdjustmentsToRgbaBytes>[2],
+    cache?: {
+      baseCanvas: HTMLCanvasElement;
+      baseKey: string;
+      adjustedCanvas: HTMLCanvasElement;
+      in: Uint8ClampedArray;
+      out: Uint8ClampedArray;
+      temp: Uint8ClampedArray;
+      toneCurveKey?: string;
+      toneCurveLuts?: ReturnType<typeof createToneCurveLuts>;
+    },
+  ) {
   if (!canvasRef) return;
 
   const ctx = canvasRef.getContext("2d");
@@ -162,11 +170,14 @@ function renderImageToCanvas(
       lightAdjustments.whites !== 0 ||
       lightAdjustments.blacks !== 0);
 
+  const shouldApplyToneCurve = toneCurve != null && hasNonNeutralToneCurve(toneCurve);
+
   const shouldApplyColor =
     colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
 
   const shouldProcessPixels =
-    (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyColor) && cache;
+    (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyToneCurve || shouldApplyColor) &&
+    cache;
 
   if (!shouldProcessPixels) {
     ctx.save();
@@ -213,6 +224,21 @@ function renderImageToCanvas(
     }
 
     applyLightAdjustmentsToRgbaBytes(dest, cache.temp, lightAdjustments);
+    dest.set(cache.temp);
+  }
+
+  if (shouldApplyToneCurve && toneCurve) {
+    const toneCurveKey = JSON.stringify(toneCurve);
+    if (cache.toneCurveKey !== toneCurveKey || !cache.toneCurveLuts) {
+      cache.toneCurveLuts = createToneCurveLuts(toneCurve);
+      cache.toneCurveKey = toneCurveKey;
+    }
+
+    if (cache.temp.length !== dest.length) {
+      cache.temp = new Uint8ClampedArray(dest.length);
+    }
+
+    applyToneCurveToRgbaBytes(dest, cache.temp, cache.toneCurveLuts);
     dest.set(cache.temp);
   }
 
@@ -290,6 +316,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
     colorAdjustments,
     setColorAdjustment,
     resetColorAdjustments,
+    toneCurve,
   } = useCropStore();
   const rotation = cropSettings.rotation ?? 0;
 
@@ -414,20 +441,29 @@ export function ReactImageEditor({ imageSrc }: Props) {
     // We try to render the image to the canvas at 60fps
     renderRef.current = requestAnimationFrame(() => {
       if (imageRef.current) {
-        renderImageToCanvas(
-          canvasRef.current,
-          imageRef.current,
-          zoomLevel,
-          offset,
-           rotation,
-           whiteBalance,
-           lightAdjustments,
-           colorAdjustments,
-           lightRenderCacheRef.current ?? undefined,
-         );
+          renderImageToCanvas(
+            canvasRef.current,
+            imageRef.current,
+            zoomLevel,
+            offset,
+            rotation,
+            whiteBalance,
+            lightAdjustments,
+            toneCurve,
+            colorAdjustments,
+            lightRenderCacheRef.current ?? undefined,
+          );
       }
     });
-  }, [zoomLevel, offset, rotation, whiteBalance, lightAdjustments, colorAdjustments]);
+  }, [
+    zoomLevel,
+    offset,
+    rotation,
+    whiteBalance,
+    lightAdjustments,
+    toneCurve,
+    colorAdjustments,
+  ]);
 
   function handleResetZoomClick() {
     resetZoom();
