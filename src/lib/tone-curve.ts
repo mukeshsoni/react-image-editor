@@ -186,18 +186,15 @@ function enforceIncreasingX(points: CurvePoint[]): CurvePoint[] {
     const x = Math.max(point.x, prevX + MIN_POINT_DISTANCE);
     const clampedX = clamp(x, 0, 1);
 
-    if (output.length > 0 && clampedX >= 1) {
-      // Keep the last endpoint fixed at 1.
-      continue;
-    }
-
     output.push({ x: clampedX, y: clamp01(point.y) });
     prevX = clampedX;
   }
 
   // Ensure endpoints remain exact.
-  if (output.length >= 2) {
+  if (output.length > 0) {
     output[0] = { x: 0, y: 0 };
+  }
+  if (output.length >= 2) {
     output[output.length - 1] = { x: 1, y: 1 };
   }
 

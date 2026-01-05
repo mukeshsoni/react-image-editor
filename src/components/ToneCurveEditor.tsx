@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent, PointerEvent } from "react";
 
 import { validateToneCurvePoints } from "@/lib/tone-curve";
 
@@ -32,13 +33,19 @@ function toPoint(canvas: { x: number; y: number }): CurvePoint {
   };
 }
 
-function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+function distance(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): number {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-function findPointIndex(points: CurvePoint[], canvas: { x: number; y: number }): number {
+function findPointIndex(
+  points: CurvePoint[],
+  canvas: { x: number; y: number },
+): number {
   for (let i = 0; i < points.length; i += 1) {
     const candidate = points[i];
     if (!candidate) continue;
@@ -72,6 +79,20 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    // Some tests mock CanvasRenderingContext2D partially.
+    if (
+      typeof ctx.clearRect !== "function" ||
+      typeof ctx.fillRect !== "function" ||
+      typeof ctx.beginPath !== "function" ||
+      typeof ctx.moveTo !== "function" ||
+      typeof ctx.lineTo !== "function" ||
+      typeof ctx.stroke !== "function" ||
+      typeof ctx.arc !== "function" ||
+      typeof ctx.fill !== "function"
+    ) {
+      return;
+    }
 
     ctx.clearRect(0, 0, SIZE, SIZE);
 
@@ -130,7 +151,7 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
     });
   }, [validatedPoints, activeIndex]);
 
-  function getCanvasPoint(event: React.PointerEvent<HTMLCanvasElement>) {
+  function getCanvasPoint(event: PointerEvent<HTMLCanvasElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     return {
       x: event.clientX - rect.left,
@@ -138,7 +159,7 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
     };
   }
 
-  function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
+  function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {
     if (disabled) return;
 
     const canvasPoint = getCanvasPoint(event);
@@ -157,7 +178,8 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
 
     // find inserted index
     const insertedIndex = next.findIndex(
-      (p) => Math.abs(p.x - newPoint.x) < 1e-3 && Math.abs(p.y - newPoint.y) < 1e-3,
+      (p) =>
+        Math.abs(p.x - newPoint.x) < 1e-3 && Math.abs(p.y - newPoint.y) < 1e-3,
     );
 
     onChangePoints(next);
@@ -166,7 +188,7 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
-  function handlePointerMove(event: React.PointerEvent<HTMLCanvasElement>) {
+  function handlePointerMove(event: PointerEvent<HTMLCanvasElement>) {
     if (disabled) return;
     if (!isDragging) return;
     if (activeIndex == null) return;
@@ -190,14 +212,14 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
     onChangePoints(validateToneCurvePoints(next));
   }
 
-  function handlePointerUp(event: React.PointerEvent<HTMLCanvasElement>) {
+  function handlePointerUp(event: PointerEvent<HTMLCanvasElement>) {
     if (disabled) return;
 
     setIsDragging(false);
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLCanvasElement>) {
+  function handleKeyDown(event: KeyboardEvent<HTMLCanvasElement>) {
     if (disabled) return;
     if (activeIndex == null) return;
 
