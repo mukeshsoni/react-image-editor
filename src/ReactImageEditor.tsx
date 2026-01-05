@@ -25,6 +25,10 @@ import {
   type ExportFormat,
 } from "./export-download";
 
+import {
+  applyColorAdjustmentsToRgbaBytes,
+  hasNonNeutralColorAdjustments,
+} from "./lib/color-adjustments";
 import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
 import {
   applyWhiteBalanceToRgbaBytes,
@@ -126,6 +130,7 @@ function renderImageToCanvas(
   rotation: number,
   whiteBalance?: Parameters<typeof applyWhiteBalanceToRgbaBytes>[2],
   lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
+  colorAdjustments?: Parameters<typeof applyColorAdjustmentsToRgbaBytes>[2],
   cache?: {
     baseCanvas: HTMLCanvasElement;
     baseKey: string;
@@ -157,7 +162,11 @@ function renderImageToCanvas(
       lightAdjustments.whites !== 0 ||
       lightAdjustments.blacks !== 0);
 
-  const shouldProcessPixels = (shouldApplyWhiteBalance || shouldApplyLight) && cache;
+  const shouldApplyColor =
+    colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
+
+  const shouldProcessPixels =
+    (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyColor) && cache;
 
   if (!shouldProcessPixels) {
     ctx.save();
@@ -204,6 +213,15 @@ function renderImageToCanvas(
     }
 
     applyLightAdjustmentsToRgbaBytes(dest, cache.temp, lightAdjustments);
+    dest.set(cache.temp);
+  }
+
+  if (shouldApplyColor && colorAdjustments) {
+    if (cache.temp.length !== dest.length) {
+      cache.temp = new Uint8ClampedArray(dest.length);
+    }
+
+    applyColorAdjustmentsToRgbaBytes(dest, cache.temp, colorAdjustments);
     dest.set(cache.temp);
   }
 
@@ -269,6 +287,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
     lightAdjustments,
     setLightAdjustment,
     resetLightAdjustments,
+    colorAdjustments,
   } = useCropStore();
   const rotation = cropSettings.rotation ?? 0;
 
@@ -398,14 +417,15 @@ export function ReactImageEditor({ imageSrc }: Props) {
           imageRef.current,
           zoomLevel,
           offset,
-          rotation,
-          whiteBalance,
-          lightAdjustments,
-          lightRenderCacheRef.current ?? undefined,
-        );
+           rotation,
+           whiteBalance,
+           lightAdjustments,
+           colorAdjustments,
+           lightRenderCacheRef.current ?? undefined,
+         );
       }
     });
-  }, [zoomLevel, offset, rotation, whiteBalance, lightAdjustments]);
+  }, [zoomLevel, offset, rotation, whiteBalance, lightAdjustments, colorAdjustments]);
 
   function handleResetZoomClick() {
     resetZoom();
