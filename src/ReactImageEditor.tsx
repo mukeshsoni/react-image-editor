@@ -25,19 +25,120 @@ import {
   type ExportFormat,
 } from "./export-download";
 
+import {
+  applyColorAdjustmentsToRgbaBytes,
+  hasNonNeutralColorAdjustments,
+} from "./lib/color-adjustments";
+import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
+import {
+  applyWhiteBalanceToRgbaBytes,
+  estimateWhiteBalanceFromRgb,
+  hasNonNeutralWhiteBalance,
+  sampleAverageRgb,
+  WHITE_BALANCE_PRESETS,
+} from "./lib/white-balance";
+
+
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
 import { useCropStore, type CropRect } from "./store/cropStore";
 
 
+function formatSigned(value: number, digits: number) {
+  const normalized = Object.is(value, -0) ? 0 : value;
+  const sign = normalized > 0 ? "+" : normalized < 0 ? "-" : "+";
+  return `${sign}${Math.abs(normalized).toFixed(digits)}`;
+}
+
+function formatSignedInt(value: number) {
+  const rounded = Math.round(value);
+  const sign = rounded > 0 ? "+" : rounded < 0 ? "-" : "+";
+  return `${sign}${Math.abs(rounded)}`;
+}
+
+const WHITE_BALANCE_PRESETS_UI = [
+  { value: "daylight", label: "Daylight" },
+  { value: "cloudy", label: "Cloudy" },
+  { value: "shade", label: "Shade" },
+  { value: "tungsten", label: "Tungsten" },
+  { value: "fluorescent", label: "Fluorescent" },
+  { value: "flash", label: "Flash" },
+  { value: "custom", label: "Custom" },
+] as const;
+
+const WHITE_BALANCE_PICKER_RADIUS = 2;
+
+type LightSliderProps = {
+  label: string;
+  name: string;
+  value: number;
+  defaultValue: number;
+  min: number;
+  max: number;
+  step: number;
+  disabled: boolean;
+  format: (value: number) => string;
+  onValueChange: (value: number) => void;
+};
+
+function LightSlider({
+  label,
+  name,
+  value,
+  defaultValue,
+  min,
+  max,
+  step,
+  disabled,
+  format,
+  onValueChange,
+}: LightSliderProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <label className="text-xs text-gray-700" htmlFor={name}>
+          {label}
+        </label>
+        <span className="text-xs tabular-nums text-gray-700 w-[52px] text-right">
+          {format(value)}
+        </span>
+      </div>
+      <input
+        id={name}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onValueChange(Number(e.target.value))}
+        onDoubleClick={() => onValueChange(defaultValue)}
+        disabled={disabled}
+        aria-label={label}
+        className="w-full"
+      />
+    </div>
+  );
+}
+
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
 function renderImageToCanvas(
   canvasRef: HTMLCanvasElement | null,
-  imageRef: HTMLImageElement,
+  imageRef: HTMLImageElement | HTMLCanvasElement,
   zoomLevel: number,
   offset: { x: number; y: number },
   rotation: number,
+  whiteBalance?: Parameters<typeof applyWhiteBalanceToRgbaBytes>[2],
+  lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
+  colorAdjustments?: Parameters<typeof applyColorAdjustmentsToRgbaBytes>[2],
+  cache?: {
+    baseCanvas: HTMLCanvasElement;
+    baseKey: string;
+    adjustedCanvas: HTMLCanvasElement;
+    in: Uint8ClampedArray;
+    out: Uint8ClampedArray;
+    temp: Uint8ClampedArray;
+  },
 ) {
   if (!canvasRef) return;
 
@@ -49,8 +150,92 @@ function renderImageToCanvas(
   const canvasHeight = canvasRef.height;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
+  const shouldApplyWhiteBalance =
+    whiteBalance != null && hasNonNeutralWhiteBalance(whiteBalance);
+
+  const shouldApplyLight =
+    lightAdjustments != null &&
+    (lightAdjustments.exposure !== 0 ||
+      lightAdjustments.contrast !== 0 ||
+      lightAdjustments.highlights !== 0 ||
+      lightAdjustments.shadows !== 0 ||
+      lightAdjustments.whites !== 0 ||
+      lightAdjustments.blacks !== 0);
+
+  const shouldApplyColor =
+    colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
+
+  const shouldProcessPixels =
+    (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyColor) && cache;
+
+  if (!shouldProcessPixels) {
+    ctx.save();
+    drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
+    ctx.restore();
+    return;
+  }
+
+  const baseKey = `${canvasWidth}x${canvasHeight}:${zoomLevel}:${offset.x}:${offset.y}:${rotation}`;
+
+  if (cache.baseKey !== baseKey) {
+    cache.baseCanvas.width = canvasWidth;
+    cache.baseCanvas.height = canvasHeight;
+
+    const baseCtx = cache.baseCanvas.getContext("2d", { willReadFrequently: true });
+    if (!baseCtx) return;
+
+    baseCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+    baseCtx.save();
+    drawImageWithRotation(baseCtx, imageRef, zoomLevel, offset, rotation);
+    baseCtx.restore();
+
+    const imageData = baseCtx.getImageData(0, 0, canvasWidth, canvasHeight);
+     cache.in = imageData.data;
+     cache.out = new Uint8ClampedArray(cache.in.length);
+     cache.temp = new Uint8ClampedArray(cache.in.length);
+
+
+    cache.baseKey = baseKey;
+  }
+
+  const source = cache.in;
+  const dest = cache.out;
+
+  if (shouldApplyWhiteBalance && whiteBalance) {
+    applyWhiteBalanceToRgbaBytes(source, dest, whiteBalance);
+  } else {
+    dest.set(source);
+  }
+
+  if (shouldApplyLight && lightAdjustments) {
+    if (cache.temp.length !== dest.length) {
+      cache.temp = new Uint8ClampedArray(dest.length);
+    }
+
+    applyLightAdjustmentsToRgbaBytes(dest, cache.temp, lightAdjustments);
+    dest.set(cache.temp);
+  }
+
+  if (shouldApplyColor && colorAdjustments) {
+    if (cache.temp.length !== dest.length) {
+      cache.temp = new Uint8ClampedArray(dest.length);
+    }
+
+    applyColorAdjustmentsToRgbaBytes(dest, cache.temp, colorAdjustments);
+    dest.set(cache.temp);
+  }
+
+  cache.adjustedCanvas.width = canvasWidth;
+  cache.adjustedCanvas.height = canvasHeight;
+
+  const adjustedCtx = cache.adjustedCanvas.getContext("2d");
+  if (!adjustedCtx) return;
+
+  const adjustedData = new ImageData(dest, canvasWidth, canvasHeight);
+  adjustedCtx.putImageData(adjustedData, 0, 0);
+
   ctx.save();
-  drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
+  ctx.drawImage(cache.adjustedCanvas, 0, 0);
   ctx.restore();
 }
 
@@ -68,12 +253,44 @@ export function ReactImageEditor({ imageSrc }: Props) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
+  const [isPickingWhiteBalance, setIsPickingWhiteBalance] = useState(false);
+
+  useEffect(() => {
+    if (!isPickingWhiteBalance) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      setIsPickingWhiteBalance(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPickingWhiteBalance]);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
   const bakedImageUrlRef = useRef<string | null>(null);
 
-  const { resetAll, cropSettings, setRotation, resetRotation } = useCropStore();
+  const {
+    resetAll,
+    cropSettings,
+    setRotation,
+    resetRotation,
+    whiteBalance,
+    setWhiteBalance,
+    resetWhiteBalance,
+    lightAdjustments,
+    setLightAdjustment,
+    resetLightAdjustments,
+    colorAdjustments,
+    setColorAdjustment,
+    resetColorAdjustments,
+  } = useCropStore();
   const rotation = cropSettings.rotation ?? 0;
 
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
@@ -168,6 +385,26 @@ export function ReactImageEditor({ imageSrc }: Props) {
   }, []);
 
   const renderRef = useRef<number | null>(null);
+  const lightRenderCacheRef = useRef<{
+    baseCanvas: HTMLCanvasElement;
+    baseKey: string;
+    adjustedCanvas: HTMLCanvasElement;
+    in: Uint8ClampedArray;
+    out: Uint8ClampedArray;
+    temp: Uint8ClampedArray;
+  } | null>(null);
+
+  if (!lightRenderCacheRef.current && typeof document !== "undefined") {
+    lightRenderCacheRef.current = {
+      baseCanvas: document.createElement("canvas"),
+      baseKey: "",
+      adjustedCanvas: document.createElement("canvas"),
+      in: new Uint8ClampedArray(0),
+      out: new Uint8ClampedArray(0),
+      temp: new Uint8ClampedArray(0),
+    };
+  }
+
   // rerender the image when the zoomLevel has changed
   useEffect(() => {
     if (renderRef.current) {
@@ -182,11 +419,15 @@ export function ReactImageEditor({ imageSrc }: Props) {
           imageRef.current,
           zoomLevel,
           offset,
-          rotation,
-        );
+           rotation,
+           whiteBalance,
+           lightAdjustments,
+           colorAdjustments,
+           lightRenderCacheRef.current ?? undefined,
+         );
       }
     });
-  }, [zoomLevel, offset, rotation]);
+  }, [zoomLevel, offset, rotation, whiteBalance, lightAdjustments, colorAdjustments]);
 
   function handleResetZoomClick() {
     resetZoom();
@@ -247,6 +488,8 @@ export function ReactImageEditor({ imageSrc }: Props) {
         imageRef.current,
         rotation,
         background,
+        whiteBalance,
+        lightAdjustments,
       );
       if (!offscreen) {
         setExportError("Failed to export image");
@@ -381,9 +624,62 @@ export function ReactImageEditor({ imageSrc }: Props) {
           defaultSize={75}
           onResize={handleImagePanelResize}
         >
-          <div className="flex flex-col flex-1 p-0">
-            <div className="flex-1 border-2 relative">
-              <canvas ref={canvasRef} {...listeners} />
+            <div className="flex flex-col flex-1 p-0">
+              <div className="flex-1 border-2 relative">
+                {isPickingWhiteBalance ? (
+                  <div className="absolute left-2 top-2 z-10 rounded-md bg-white/90 px-2 py-1 text-xs text-gray-700 shadow">
+                    Click image to pick white balance (Esc to cancel)
+                  </div>
+                ) : null}
+
+              <canvas
+                ref={canvasRef}
+                {...listeners}
+                onClick={(event) => {
+                  if (!isPickingWhiteBalance) {
+                    return;
+                  }
+
+                  if (!canvasRef.current) return;
+
+                  // Cancel pick mode after a click attempt.
+                  setIsPickingWhiteBalance(false);
+
+                  // Read a small region from the preview canvas. This can fail if the
+                  // canvas is tainted (CORS).
+                  const ctx = canvasRef.current.getContext("2d", {
+                    willReadFrequently: true,
+                  });
+                  if (!ctx) return;
+
+                  try {
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const x = Math.round(event.clientX - rect.left);
+                    const y = Math.round(event.clientY - rect.top);
+
+                    const radius = WHITE_BALANCE_PICKER_RADIUS;
+                    const size = radius * 2 + 1;
+
+                    const sx = Math.max(0, x - radius);
+                    const sy = Math.max(0, y - radius);
+                    const sw = Math.min(size, Math.max(1, canvasRef.current.width - sx));
+                    const sh = Math.min(size, Math.max(1, canvasRef.current.height - sy));
+
+                    const imageData = ctx.getImageData(sx, sy, sw, sh);
+                    const avg = sampleAverageRgb(imageData.data, sw, sh, radius, radius, radius);
+                    const estimated = estimateWhiteBalanceFromRgb(avg);
+
+                    setWhiteBalance({
+                      preset: "custom",
+                      temperatureKelvin: Math.round(estimated.temperatureKelvin),
+                      tint: Math.round(estimated.tint),
+                    });
+                  } catch {
+                    // Likely a tainted canvas; silently ignore for now.
+                  }
+                }}
+                style={{ cursor: isPickingWhiteBalance ? "crosshair" : undefined }}
+              />
               {cropMode && imageRef.current ? (
                 <Cropper cropBounds={cropBounds} />
               ) : null}
@@ -425,60 +721,353 @@ export function ReactImageEditor({ imageSrc }: Props) {
           </div>
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
-        <ResizablePanel defaultSize={25}>
-          <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                onClick={() => setCropMode(!cropMode)}
-                variant={cropMode ? "default" : "outline"}
-                size="sm"
-              >
-                Crop
-              </Button>
-              {hasAppliedCrop && (
+          <ResizablePanel defaultSize={25}>
+            <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  onClick={() => {
-                    if (!originalImageRef.current) return;
-                    imageRef.current = originalImageRef.current;
-                    setHasAppliedCrop(false);
-                    resetRotation();
-                    resetZoom();
-                  }}
-                  variant="outline"
+                  onClick={() => setCropMode(!cropMode)}
+                  variant={cropMode ? "default" : "outline"}
                   size="sm"
                 >
-                  Reset Crop
+                  Crop
                 </Button>
-              )}
+                {hasAppliedCrop && (
+                  <Button
+                    onClick={() => {
+                      if (!originalImageRef.current) return;
+                      imageRef.current = originalImageRef.current;
+                      setHasAppliedCrop(false);
+                      resetRotation();
+                      resetZoom();
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Reset Crop
+                  </Button>
+                )}
 
-              <Button
-                onClick={handleDownload}
-                variant="default"
-                size="sm"
-                disabled={!isImageLoaded || isDownloading || cropMode}
-                title={
-                  !isImageLoaded
-                    ? "Load an image to download"
-                    : cropMode
-                      ? "Apply crop to download"
-                      : undefined
-                }
-              >
-                {isDownloading ? "Downloading…" : "Download"}
-              </Button>
+                <Button
+                  onClick={handleDownload}
+                  variant="default"
+                  size="sm"
+                  disabled={!isImageLoaded || isDownloading || cropMode}
+                  title={
+                    !isImageLoaded
+                      ? "Load an image to download"
+                      : cropMode
+                        ? "Apply crop to download"
+                        : undefined
+                  }
+                >
+                  {isDownloading ? "Downloading…" : "Download"}
+                </Button>
 
-              <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as ExportFormat)}>
-                <SelectTrigger size="sm" className="w-[110px]" data-testid="export-format">
-                  <SelectValue placeholder="Format" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="png">PNG</SelectItem>
-                  <SelectItem value="jpeg">JPEG</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <Select
+                  value={exportFormat}
+                  onValueChange={(value) => setExportFormat(value as ExportFormat)}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="w-[110px]"
+                    data-testid="export-format"
+                  >
+                    <SelectValue placeholder="Format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="png">PNG</SelectItem>
+                    <SelectItem value="jpeg">JPEG</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {exportFormat === "jpeg" ? (
+              <details className="rounded-md border bg-white" open>
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Basic</span>
+                  </span>
+                  <span className="text-xs text-gray-500">▾</span>
+                </summary>
+
+                <div className="px-3 pb-3">
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                        Auto
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                        B&W
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                        HDR
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Profile</div>
+                      <div className="text-xs text-gray-500">▾</div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="text-xs text-gray-600">Profile:</div>
+                      <input
+                        type="text"
+                        disabled
+                        value=""
+                        className="w-[140px] rounded-sm border bg-gray-50 px-2 py-1 text-xs text-gray-500"
+                        aria-label="Profile"
+                      />
+                    </div>
+                  </div>
+
+                    <div className="mt-4 border-t pt-3" data-testid="wb-section">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-medium text-gray-700">White Balance</div>
+
+                       <Button
+                         type="button"
+                         size="sm"
+                         variant="outline"
+                         className="h-7 px-2 text-xs"
+                         onClick={() => resetWhiteBalance()}
+                         disabled={!isImageLoaded}
+                       >
+                         Reset
+                       </Button>
+                     </div>
+
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <div className="text-xs text-gray-600">Preset:</div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="h-8 rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70"
+                            data-testid="wb-eyedropper"
+                            aria-label="Pick white balance from image"
+                            disabled={!isImageLoaded}
+                            onClick={() => {
+                              setIsPickingWhiteBalance((current) => !current);
+                            }}
+                          >
+                            Pick
+                          </button>
+
+                          <select
+                            value={whiteBalance.preset}
+                            onChange={(e) => {
+                              const preset =
+                                e.target.value as (typeof WHITE_BALANCE_PRESETS_UI)[number]["value"];
+
+                              if (preset === "custom") {
+                                setWhiteBalance({ preset: "custom" });
+                                return;
+                              }
+
+                              const presetKey = preset as keyof typeof WHITE_BALANCE_PRESETS;
+                              const presetValues = WHITE_BALANCE_PRESETS[presetKey];
+                              setWhiteBalance({
+                                preset,
+                                temperatureKelvin: presetValues.temperatureKelvin,
+                                tint: presetValues.tint,
+                              });
+                            }}
+                            disabled={!isImageLoaded}
+                            aria-label="White Balance"
+                            className="h-8 w-[140px] rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70"
+                          >
+                            {WHITE_BALANCE_PRESETS_UI.map((preset) => (
+                              <option key={preset.value} value={preset.value}>
+                                {preset.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+
+
+                     <div className="mt-3 flex flex-col gap-3">
+                        <LightSlider
+                          label="Temp"
+                          name="temp"
+                          value={whiteBalance.temperatureKelvin}
+                          defaultValue={6500}
+                          min={2000}
+                          max={10000}
+                          step={50}
+                          disabled={!isImageLoaded}
+                          format={(value) => `${Math.round(value)}K`}
+                          onValueChange={(value) =>
+                            setWhiteBalance({ temperatureKelvin: value })
+                          }
+                        />
+                        <LightSlider
+                          label="Tint"
+                          name="tint"
+                          value={whiteBalance.tint}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          disabled={!isImageLoaded}
+                          format={(value) => formatSignedInt(value)}
+                          onValueChange={(value) => setWhiteBalance({ tint: value })}
+                        />
+                     </div>
+                   </div>
+
+
+                  <div className="mt-4 border-t pt-3" data-testid="tone-section">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Tone</div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => resetLightAdjustments()}
+                        disabled={!isImageLoaded}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+
+                    <div className="mt-3 flex flex-col gap-3">
+                      <LightSlider
+                        label="Exposure"
+                        name="exposure"
+                        value={lightAdjustments.exposure}
+                        defaultValue={0}
+                        min={-2}
+                        max={2}
+                        step={0.01}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSigned(value, 2)}
+                        onValueChange={(value) =>
+                          setLightAdjustment("exposure", value)
+                        }
+                      />
+
+                      <LightSlider
+                        label="Contrast"
+                        name="contrast"
+                        value={lightAdjustments.contrast}
+                        defaultValue={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) =>
+                          setLightAdjustment("contrast", value)
+                        }
+                      />
+
+                      <LightSlider
+                        label="Highlights"
+                        name="highlights"
+                        value={lightAdjustments.highlights}
+                        defaultValue={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) =>
+                          setLightAdjustment("highlights", value)
+                        }
+                      />
+
+                      <LightSlider
+                        label="Shadows"
+                        name="shadows"
+                        value={lightAdjustments.shadows}
+                        defaultValue={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) =>
+                          setLightAdjustment("shadows", value)
+                        }
+                      />
+
+                      <LightSlider
+                        label="Whites"
+                        name="whites"
+                        value={lightAdjustments.whites}
+                        defaultValue={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) => setLightAdjustment("whites", value)}
+                      />
+
+                      <LightSlider
+                        label="Blacks"
+                        name="blacks"
+                        value={lightAdjustments.blacks}
+                        defaultValue={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) => setLightAdjustment("blacks", value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 border-t pt-3" data-testid="color-section">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Color</div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => resetColorAdjustments()}
+                        disabled={!isImageLoaded}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+
+                    <div className="mt-3 flex flex-col gap-3">
+                      <LightSlider
+                        label="Vibrance"
+                        name="vibrance"
+                        value={colorAdjustments.vibrance}
+                        defaultValue={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) => setColorAdjustment("vibrance", value)}
+                      />
+                      <LightSlider
+                        label="Saturation"
+                        name="saturation"
+                        value={colorAdjustments.saturation}
+                        defaultValue={0}
+                        min={-100}
+                        max={100}
+                        step={1}
+                        disabled={!isImageLoaded}
+                        format={(value) => formatSignedInt(value)}
+                        onValueChange={(value) => setColorAdjustment("saturation", value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              {exportFormat === "jpeg" ? (
               <div className="flex items-center gap-2">
                 <label className="text-xs text-gray-700" htmlFor="jpeg-quality">
                   Quality

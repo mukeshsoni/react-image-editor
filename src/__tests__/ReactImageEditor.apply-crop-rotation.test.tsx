@@ -19,6 +19,37 @@ vi.mock("../store/cropStore", () => ({
     },
     setRotation: mockSetRotation,
     resetRotation: mockResetRotation,
+
+    whiteBalance: {
+      temperatureKelvin: 6500,
+      tint: 0,
+      preset: "custom",
+    },
+    setWhiteBalance: vi.fn(),
+    setWhiteBalancePreset: vi.fn(),
+    resetWhiteBalance: vi.fn(),
+
+    lightAdjustments: {
+      exposure: 0,
+      contrast: 0,
+      highlights: 0,
+      shadows: 0,
+      whites: 0,
+      blacks: 0,
+    },
+    setLightAdjustment: vi.fn(),
+    resetLightAdjustments: vi.fn(),
+    resetLightAdjustment: vi.fn(),
+
+    colorAdjustments: {
+      vibrance: 0,
+      saturation: 0,
+    },
+    setColorAdjustment: vi.fn(),
+    resetColorAdjustments: vi.fn(),
+    resetColorAdjustment: vi.fn(),
+
+    getEdits: vi.fn(),
   }),
 }));
 

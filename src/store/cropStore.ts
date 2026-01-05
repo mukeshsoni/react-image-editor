@@ -28,11 +28,78 @@ export type Bounds = {
   maxY: number;
 };
 
+export type LightAdjustments = {
+  exposure: number;
+  contrast: number;
+  highlights: number;
+  shadows: number;
+  whites: number;
+  blacks: number;
+};
+
+export type LightAdjustmentName = keyof LightAdjustments;
+
+export const DEFAULT_LIGHT_ADJUSTMENTS: LightAdjustments = {
+  exposure: 0,
+  contrast: 0,
+  highlights: 0,
+  shadows: 0,
+  whites: 0,
+  blacks: 0,
+};
+
+export type ColorAdjustments = {
+  vibrance: number;
+  saturation: number;
+};
+
+export type ColorAdjustmentName = keyof ColorAdjustments;
+
+export const DEFAULT_COLOR_ADJUSTMENTS: ColorAdjustments = {
+  vibrance: 0,
+  saturation: 0,
+};
+
+export type WhiteBalancePreset =
+  | "daylight"
+  | "cloudy"
+  | "shade"
+  | "tungsten"
+  | "fluorescent"
+  | "flash"
+  | "custom";
+
+export type WhiteBalanceSettings = {
+  temperatureKelvin: number;
+  tint: number;
+  preset: WhiteBalancePreset;
+};
+
+export const DEFAULT_WHITE_BALANCE: WhiteBalanceSettings = {
+  temperatureKelvin: 6500,
+  tint: 0,
+  preset: "custom",
+};
+
+export type ImageEditorEdits = {
+  version: 1;
+  crop: {
+    rect: CropRect;
+    settings: CropSettings;
+  };
+  whiteBalance: WhiteBalanceSettings;
+  light: LightAdjustments;
+  color: ColorAdjustments;
+};
+
 interface CropStore {
   // State
   cropRect: CropRect;
   cropSettings: CropSettings;
   cropBounds: Bounds;
+  whiteBalance: WhiteBalanceSettings;
+  lightAdjustments: LightAdjustments;
+  colorAdjustments: ColorAdjustments;
 
   // Actions
   setCropRect: (cropRect: CropRect) => void;
@@ -61,6 +128,24 @@ interface CropStore {
 
   // Crop constraint
   setConstrainCrop: (constrainCrop: boolean) => void;
+
+  // White balance
+  setWhiteBalance: (updates: Partial<WhiteBalanceSettings>) => void;
+  setWhiteBalancePreset: (preset: WhiteBalancePreset) => void;
+  resetWhiteBalance: () => void;
+
+  // Light adjustments
+  setLightAdjustment: (name: LightAdjustmentName, value: number) => void;
+  resetLightAdjustments: () => void;
+  resetLightAdjustment: (name: LightAdjustmentName) => void;
+
+  // Color adjustments
+  setColorAdjustment: (name: ColorAdjustmentName, value: number) => void;
+  resetColorAdjustments: () => void;
+  resetColorAdjustment: (name: ColorAdjustmentName) => void;
+
+  // Exportable snapshot of all edits
+  getEdits: () => ImageEditorEdits;
 }
 
 export const useCropStore = create<CropStore>((set, get) => ({
@@ -84,6 +169,9 @@ export const useCropStore = create<CropStore>((set, get) => ({
     maxX: 0,
     maxY: 0,
   },
+  whiteBalance: { ...DEFAULT_WHITE_BALANCE },
+  lightAdjustments: { ...DEFAULT_LIGHT_ADJUSTMENTS },
+  colorAdjustments: { ...DEFAULT_COLOR_ADJUSTMENTS },
 
   // Actions
   setCropRect: (cropRect: CropRect) => set({ cropRect }),
@@ -291,11 +379,114 @@ export const useCropStore = create<CropStore>((set, get) => ({
       },
     }),
 
-  resetAll: (bounds) => {
-    const { resetCropSettings, resetCropRect } = get();
-    resetCropSettings();
-    resetCropRect(bounds);
+   resetAll: (bounds) => {
+     const {
+       resetCropSettings,
+       resetCropRect,
+       resetWhiteBalance,
+       resetLightAdjustments,
+       resetColorAdjustments,
+     } = get();
+     resetCropSettings();
+     resetCropRect(bounds);
+     resetWhiteBalance();
+     resetLightAdjustments();
+     resetColorAdjustments();
+   },
+
+  setWhiteBalance: (updates) => {
+    set((state) => {
+      const nextWhiteBalance = { ...state.whiteBalance, ...updates };
+      const hasManualChange =
+        updates.temperatureKelvin !== undefined || updates.tint !== undefined;
+      const shouldForceCustom = hasManualChange && updates.preset === undefined;
+
+      return {
+        whiteBalance: {
+          ...nextWhiteBalance,
+          preset: shouldForceCustom ? "custom" : nextWhiteBalance.preset,
+        },
+      };
+    });
   },
+
+  setWhiteBalancePreset: (preset) => {
+    set((state) => ({
+      whiteBalance: {
+        ...state.whiteBalance,
+        preset,
+      },
+    }));
+  },
+
+  resetWhiteBalance: () => {
+    set({ whiteBalance: { ...DEFAULT_WHITE_BALANCE } });
+  },
+
+  setLightAdjustment: (name, value) => {
+    set((state) => ({
+      lightAdjustments: {
+        ...state.lightAdjustments,
+        [name]: value,
+      },
+    }));
+  },
+
+  resetLightAdjustments: () => {
+    set({ lightAdjustments: { ...DEFAULT_LIGHT_ADJUSTMENTS } });
+  },
+
+   resetLightAdjustment: (name) => {
+     set((state) => ({
+       lightAdjustments: {
+         ...state.lightAdjustments,
+         [name]: DEFAULT_LIGHT_ADJUSTMENTS[name],
+       },
+     }));
+   },
+
+   setColorAdjustment: (name, value) => {
+     set((state) => ({
+       colorAdjustments: {
+         ...state.colorAdjustments,
+         [name]: value,
+       },
+     }));
+   },
+
+   resetColorAdjustments: () => {
+     set({ colorAdjustments: { ...DEFAULT_COLOR_ADJUSTMENTS } });
+   },
+
+   resetColorAdjustment: (name) => {
+     set((state) => ({
+       colorAdjustments: {
+         ...state.colorAdjustments,
+         [name]: DEFAULT_COLOR_ADJUSTMENTS[name],
+       },
+     }));
+   },
+
+   getEdits: () => {
+     const {
+       cropRect,
+       cropSettings,
+       whiteBalance,
+       lightAdjustments,
+       colorAdjustments,
+     } = get();
+
+     return {
+       version: 1,
+       crop: {
+         rect: cropRect,
+         settings: cropSettings,
+       },
+       whiteBalance,
+       light: lightAdjustments,
+       color: colorAdjustments,
+     };
+   },
 
   handleCropSettingsChange: (newSettings: CropSettings) => {
     set({ cropSettings: newSettings });

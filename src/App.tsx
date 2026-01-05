@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import "./App.css";
 
 const tempImageSource =
-  "https://fastly.picsum.photos/id/111/1200/800.jpg?hmac=oz1sjdq1Wzml77GI8gkQVi4nKElWzI1edJnvlPXIBrs";
+  "https://fastly.picsum.photos/id/882/1200/800.jpg?hmac=i4kum7mc7UBbYR4ihbpgXdiQkQ_A_sMiewo3uHJRe4w";
 function App() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageSource, setImageSource] = useState<string | null>(

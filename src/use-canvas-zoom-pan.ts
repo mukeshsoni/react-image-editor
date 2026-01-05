@@ -10,9 +10,10 @@ import {
 import {
   getCanvasCenter,
   getMousePosInCanvas,
-  isMouseInCanvas,
   getTouchDistance,
+  isMouseInCanvas,
 } from "./dom-helpers";
+
 
 export function calculateInitialImageStartOffset(
   canvas: HTMLCanvasElement | null,
@@ -699,74 +700,73 @@ export const useCanvasZoomPan = (
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  const handleDoubleClick = useCallback(
-    (event: MouseEvent) => {
-      if (canvasRef.current && imageRef.current) {
-        // We don't want to zoom in if the user double clicks outside the canvas
-        // This caused a subtle bug where i was trying to zoom in using the + button
-        // And every few clicks later, the image changed position but went to original zoom
-        // size. Because the double click handler came into effect
-        if (isMouseInCanvas(canvasRef.current, event)) {
-          event.preventDefault();
 
-          const defaultZoomLevel = calculateInitialZoomLevel(
-            canvasRef.current,
-            imageRef.current,
-          );
-          // If the current zoom level is the default zoom level, we will zoom in
-          // Otherwise we will reset the zoom to the default zoom level, i.e.
-          // the zoom which should have been when we load the image
-          if (defaultZoomLevel !== zoomLevel) {
-            resetZoom();
-          } else {
-            const newZoomLevel = defaultZoomLevel * 2;
-            const mousePosInCanvas = getMousePosInCanvas(
-              canvasRef.current,
-              event,
-            );
-            const newOffset = calculateImageStartOffsetAroundAReferencePoint(
-              zoomLevel,
-              newZoomLevel,
-              offset,
-              mousePosInCanvas,
-            );
+  useEffect(() => {
+    function handleNativeDoubleClick(event: globalThis.MouseEvent) {
+      if (!canvasRef.current || !imageRef.current) return;
 
-            animateZoom(
-              zoomLevel,
-              newZoomLevel,
-              offset,
-              newOffset,
-              mousePosInCanvas,
-              performance.now(),
-            );
-            // setOffset(newOffset);
-            // setZoomLevel(newZoomLevel);
-          }
-        }
+      if (!isMouseInCanvas(canvasRef.current, event)) {
+        return;
       }
-    },
-    [animateZoom, resetZoom, canvasRef, imageRef, offset, zoomLevel],
-  );
-  useEffect(() => {
-    document.addEventListener("dblclick", handleDoubleClick);
 
-    return () => {
-      document.removeEventListener("dblclick", handleDoubleClick);
-    };
-  }, [handleDoubleClick]);
-  useEffect(() => {
-    if (zoomPanConfig.enableTouch) {
-      document.addEventListener("touchstart", handleTouchStart, {
-        passive: false,
-      });
-      document.addEventListener("touchmove", handleTouchMove, {
-        passive: false,
-      });
+      event.preventDefault();
+
+      const defaultZoomLevel = calculateInitialZoomLevel(
+        canvasRef.current,
+        imageRef.current,
+      );
+
+      if (defaultZoomLevel !== zoomLevel) {
+        resetZoom();
+        return;
+      }
+
+      const newZoomLevel = defaultZoomLevel * 2;
+      const mousePosInCanvas = getMousePosInCanvas(canvasRef.current, event);
+      const newOffset = calculateImageStartOffsetAroundAReferencePoint(
+        zoomLevel,
+        newZoomLevel,
+        offset,
+        mousePosInCanvas,
+      );
+
+      animateZoom(
+        zoomLevel,
+        newZoomLevel,
+        offset,
+        newOffset,
+        mousePosInCanvas,
+        performance.now(),
+      );
     }
 
+    document.addEventListener("dblclick", handleNativeDoubleClick);
+
     return () => {
-      document.removeEventListener("touchstart", handleTouchStart);
-      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("dblclick", handleNativeDoubleClick);
+    };
+  }, [animateZoom, canvasRef, imageRef, offset, resetZoom, zoomLevel]);
+
+  useEffect(() => {
+    if (!zoomPanConfig.enableTouch) return;
+
+    const handleNativeTouchStart = (event: globalThis.TouchEvent) => {
+      handleTouchStart(event as unknown as TouchEvent<HTMLCanvasElement>);
+    };
+    const handleNativeTouchMove = (event: globalThis.TouchEvent) => {
+      handleTouchMove(event as unknown as TouchEvent<HTMLCanvasElement>);
+    };
+
+    document.addEventListener("touchstart", handleNativeTouchStart, {
+      passive: false,
+    });
+    document.addEventListener("touchmove", handleNativeTouchMove, {
+      passive: false,
+    });
+
+    return () => {
+      document.removeEventListener("touchstart", handleNativeTouchStart);
+      document.removeEventListener("touchmove", handleNativeTouchMove);
     };
   }, [handleTouchMove, handleTouchStart, zoomPanConfig.enableTouch]);
   useEffect(() => {

@@ -1,3 +1,8 @@
+import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
+import { applyWhiteBalanceToRgbaBytes, hasNonNeutralWhiteBalance } from "./lib/white-balance";
+
+import type { LightAdjustments, WhiteBalanceSettings } from "./store/cropStore";
+
 export type ExportFormat = "png" | "jpeg";
 
 type ExportBackground = "transparent" | "white";
@@ -28,9 +33,11 @@ function degreesToRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
+type DrawableImage = HTMLImageElement | HTMLCanvasElement;
+
 export function drawImageWithRotation(
   ctx: CanvasRenderingContext2D,
-  image: HTMLImageElement,
+  image: DrawableImage,
   zoomLevel: number,
   offset: { x: number; y: number },
   rotationDegrees: number,
@@ -83,6 +90,8 @@ export function renderCommittedImageToOffscreenCanvas(
   image: HTMLImageElement,
   rotationDegrees: number,
   background: ExportBackground,
+  whiteBalance?: WhiteBalanceSettings,
+  lightAdjustments?: LightAdjustments,
 ): HTMLCanvasElement | null {
   const outputSize = getRotatedBoundingBoxSize(
     image.width,
@@ -112,6 +121,38 @@ export function renderCommittedImageToOffscreenCanvas(
   ctx.save();
   drawImageWithRotation(ctx, image, 1, centeredOffset, rotationDegrees);
   ctx.restore();
+
+  const shouldApplyWhiteBalance =
+    whiteBalance != null && hasNonNeutralWhiteBalance(whiteBalance);
+
+  const shouldApplyLight =
+    lightAdjustments != null &&
+    (lightAdjustments.exposure !== 0 ||
+      lightAdjustments.contrast !== 0 ||
+      lightAdjustments.highlights !== 0 ||
+      lightAdjustments.shadows !== 0 ||
+      lightAdjustments.whites !== 0 ||
+      lightAdjustments.blacks !== 0);
+
+  if (shouldApplyWhiteBalance || shouldApplyLight) {
+    const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+
+    const out = new Uint8ClampedArray(imageData.data.length);
+
+    if (shouldApplyWhiteBalance && whiteBalance) {
+      applyWhiteBalanceToRgbaBytes(imageData.data, out, whiteBalance);
+    } else {
+      out.set(imageData.data);
+    }
+
+    if (shouldApplyLight && lightAdjustments) {
+      const lightOut = new Uint8ClampedArray(out.length);
+      applyLightAdjustmentsToRgbaBytes(out, lightOut, lightAdjustments);
+      out.set(lightOut);
+    }
+
+    ctx.putImageData(new ImageData(out, offscreen.width, offscreen.height), 0, 0);
+  }
 
   return offscreen;
 }
