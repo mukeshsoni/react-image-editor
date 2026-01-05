@@ -14,17 +14,17 @@ Source PRD: `prds/white-balance-prd.md`
 - [x] Ensure state is serializable and included in any “get edits snapshot” helper
 
 ## 2) Preset mapping
-- [ ] Add a constant mapping `WHITE_BALANCE_PRESETS` → `{ temperatureKelvin, tint }`
+- [x] Add a constant mapping `WHITE_BALANCE_PRESETS` → `{ temperatureKelvin, tint }`
 - [ ] Decide initial values for each preset (tune visually)
 - [ ] Behavior: selecting preset updates temp/tint; manual slider change switches to `custom`
 
 ## 3) White balance math (non-destructive)
-- [ ] Create pure helper(s) for applying WB to RGB(A) pixel data
-- [ ] Apply Kelvin temperature as a channel gain transform (approximation acceptable v1)
-- [ ] Apply tint (green ↔ magenta) adjustment
-- [ ] Preserve alpha channel
-- [ ] Clamp output channels safely
-- [ ] Add a minimal set of unit tests for helper(s)
+- [x] Create pure helper(s) for applying WB to RGB(A) pixel data
+- [x] Apply Kelvin temperature as a channel gain transform (approximation acceptable v1)
+- [x] Apply tint (green ↔ magenta) adjustment
+- [x] Preserve alpha channel
+- [x] Clamp output channels safely
+- [x] Add a minimal set of unit tests for helper(s)
 
 ## 4) Rendering integration
 - [ ] Integrate WB into the existing adjustment pipeline (before/alongside Light adjustments)
