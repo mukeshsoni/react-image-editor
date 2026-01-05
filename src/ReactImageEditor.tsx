@@ -288,6 +288,8 @@ export function ReactImageEditor({ imageSrc }: Props) {
     setLightAdjustment,
     resetLightAdjustments,
     colorAdjustments,
+    setColorAdjustment,
+    resetColorAdjustments,
   } = useCropStore();
   const rotation = cropSettings.rotation ?? 0;
 
@@ -1020,68 +1022,45 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     </div>
                   </div>
 
-                  <div className="mt-4 border-t pt-3">
-                    <div className="text-xs font-medium text-gray-700">Presence</div>
+                  <div className="mt-4 border-t pt-3" data-testid="color-section">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Color</div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => resetColorAdjustments()}
+                        disabled={!isImageLoaded}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+
                     <div className="mt-3 flex flex-col gap-3">
-                      <LightSlider
-                        label="Texture"
-                        name="texture"
-                        value={0}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={() => {}}
-                      />
-                      <LightSlider
-                        label="Clarity"
-                        name="clarity"
-                        value={0}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={() => {}}
-                      />
-                      <LightSlider
-                        label="Dehaze"
-                        name="dehaze"
-                        value={0}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={() => {}}
-                      />
                       <LightSlider
                         label="Vibrance"
                         name="vibrance"
-                        value={0}
+                        value={colorAdjustments.vibrance}
                         defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
-                        disabled
+                        disabled={!isImageLoaded}
                         format={(value) => formatSignedInt(value)}
-                        onValueChange={() => {}}
+                        onValueChange={(value) => setColorAdjustment("vibrance", value)}
                       />
                       <LightSlider
                         label="Saturation"
                         name="saturation"
-                        value={0}
+                        value={colorAdjustments.saturation}
                         defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
-                        disabled
+                        disabled={!isImageLoaded}
                         format={(value) => formatSignedInt(value)}
-                        onValueChange={() => {}}
+                        onValueChange={(value) => setColorAdjustment("saturation", value)}
                       />
                     </div>
                   </div>
