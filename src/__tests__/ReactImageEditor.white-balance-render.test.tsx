@@ -73,6 +73,15 @@ describe("ReactImageEditor render integration (white balance)", () => {
       setLightAdjustment: vi.fn(),
       resetLightAdjustments: vi.fn(),
       resetLightAdjustment: vi.fn(),
+
+      colorAdjustments: {
+        vibrance: 0,
+        saturation: 0,
+      },
+      setColorAdjustment: vi.fn(),
+      resetColorAdjustments: vi.fn(),
+      resetColorAdjustment: vi.fn(),
+
       getEdits: vi.fn(),
     };
 

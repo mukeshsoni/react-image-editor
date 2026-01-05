@@ -48,6 +48,18 @@ export const DEFAULT_LIGHT_ADJUSTMENTS: LightAdjustments = {
   blacks: 0,
 };
 
+export type ColorAdjustments = {
+  vibrance: number;
+  saturation: number;
+};
+
+export type ColorAdjustmentName = keyof ColorAdjustments;
+
+export const DEFAULT_COLOR_ADJUSTMENTS: ColorAdjustments = {
+  vibrance: 0,
+  saturation: 0,
+};
+
 export type WhiteBalancePreset =
   | "daylight"
   | "cloudy"
@@ -77,6 +89,7 @@ export type ImageEditorEdits = {
   };
   whiteBalance: WhiteBalanceSettings;
   light: LightAdjustments;
+  color: ColorAdjustments;
 };
 
 interface CropStore {
@@ -86,6 +99,7 @@ interface CropStore {
   cropBounds: Bounds;
   whiteBalance: WhiteBalanceSettings;
   lightAdjustments: LightAdjustments;
+  colorAdjustments: ColorAdjustments;
 
   // Actions
   setCropRect: (cropRect: CropRect) => void;
@@ -125,6 +139,11 @@ interface CropStore {
   resetLightAdjustments: () => void;
   resetLightAdjustment: (name: LightAdjustmentName) => void;
 
+  // Color adjustments
+  setColorAdjustment: (name: ColorAdjustmentName, value: number) => void;
+  resetColorAdjustments: () => void;
+  resetColorAdjustment: (name: ColorAdjustmentName) => void;
+
   // Exportable snapshot of all edits
   getEdits: () => ImageEditorEdits;
 }
@@ -152,6 +171,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
   },
   whiteBalance: { ...DEFAULT_WHITE_BALANCE },
   lightAdjustments: { ...DEFAULT_LIGHT_ADJUSTMENTS },
+  colorAdjustments: { ...DEFAULT_COLOR_ADJUSTMENTS },
 
   // Actions
   setCropRect: (cropRect: CropRect) => set({ cropRect }),
@@ -359,18 +379,20 @@ export const useCropStore = create<CropStore>((set, get) => ({
       },
     }),
 
-  resetAll: (bounds) => {
-    const {
-      resetCropSettings,
-      resetCropRect,
-      resetWhiteBalance,
-      resetLightAdjustments,
-    } = get();
-    resetCropSettings();
-    resetCropRect(bounds);
-    resetWhiteBalance();
-    resetLightAdjustments();
-  },
+   resetAll: (bounds) => {
+     const {
+       resetCropSettings,
+       resetCropRect,
+       resetWhiteBalance,
+       resetLightAdjustments,
+       resetColorAdjustments,
+     } = get();
+     resetCropSettings();
+     resetCropRect(bounds);
+     resetWhiteBalance();
+     resetLightAdjustments();
+     resetColorAdjustments();
+   },
 
   setWhiteBalance: (updates) => {
     set((state) => {
@@ -414,28 +436,57 @@ export const useCropStore = create<CropStore>((set, get) => ({
     set({ lightAdjustments: { ...DEFAULT_LIGHT_ADJUSTMENTS } });
   },
 
-  resetLightAdjustment: (name) => {
-    set((state) => ({
-      lightAdjustments: {
-        ...state.lightAdjustments,
-        [name]: DEFAULT_LIGHT_ADJUSTMENTS[name],
-      },
-    }));
-  },
+   resetLightAdjustment: (name) => {
+     set((state) => ({
+       lightAdjustments: {
+         ...state.lightAdjustments,
+         [name]: DEFAULT_LIGHT_ADJUSTMENTS[name],
+       },
+     }));
+   },
 
-  getEdits: () => {
-    const { cropRect, cropSettings, whiteBalance, lightAdjustments } = get();
+   setColorAdjustment: (name, value) => {
+     set((state) => ({
+       colorAdjustments: {
+         ...state.colorAdjustments,
+         [name]: value,
+       },
+     }));
+   },
 
-    return {
-      version: 1,
-      crop: {
-        rect: cropRect,
-        settings: cropSettings,
-      },
-      whiteBalance,
-      light: lightAdjustments,
-    };
-  },
+   resetColorAdjustments: () => {
+     set({ colorAdjustments: { ...DEFAULT_COLOR_ADJUSTMENTS } });
+   },
+
+   resetColorAdjustment: (name) => {
+     set((state) => ({
+       colorAdjustments: {
+         ...state.colorAdjustments,
+         [name]: DEFAULT_COLOR_ADJUSTMENTS[name],
+       },
+     }));
+   },
+
+   getEdits: () => {
+     const {
+       cropRect,
+       cropSettings,
+       whiteBalance,
+       lightAdjustments,
+       colorAdjustments,
+     } = get();
+
+     return {
+       version: 1,
+       crop: {
+         rect: cropRect,
+         settings: cropSettings,
+       },
+       whiteBalance,
+       light: lightAdjustments,
+       color: colorAdjustments,
+     };
+   },
 
   handleCropSettingsChange: (newSettings: CropSettings) => {
     set({ cropSettings: newSettings });
