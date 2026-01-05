@@ -1,6 +1,7 @@
 import { describe, test, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, cleanup, fireEvent } from "@testing-library/react";
 import { Cropper } from "../Cropper";
+import { createMockToneCurve } from "./test-helpers/mockToneCurve";
 import type { Bounds } from "../store/cropStore";
 
 // Mock the crop store
@@ -57,6 +58,13 @@ vi.mock("../store/cropStore", () => ({
     setColorAdjustment: vi.fn(),
     resetColorAdjustments: vi.fn(),
     resetColorAdjustment: vi.fn(),
+
+    toneCurve: createMockToneCurve(),
+    setToneCurveMode: vi.fn(),
+    setToneCurveChannel: vi.fn(),
+    setToneCurvePoints: vi.fn(),
+    setToneCurveParametricRgb: vi.fn(),
+    resetToneCurve: vi.fn(),
 
     getEdits: vi.fn(),
   }),

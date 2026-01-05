@@ -8,6 +8,8 @@ import {
   within,
 } from "@testing-library/react";
 
+import { createMockToneCurve } from "./test-helpers/mockToneCurve";
+
 const mockSetLightAdjustment = vi.fn();
 const mockResetLightAdjustments = vi.fn();
 
@@ -51,6 +53,13 @@ vi.mock("../store/cropStore", () => ({
     setColorAdjustment: vi.fn(),
     resetColorAdjustments: vi.fn(),
     resetColorAdjustment: vi.fn(),
+
+    toneCurve: createMockToneCurve(),
+    setToneCurveMode: vi.fn(),
+    setToneCurveChannel: vi.fn(),
+    setToneCurvePoints: vi.fn(),
+    setToneCurveParametricRgb: vi.fn(),
+    resetToneCurve: vi.fn(),
 
     getEdits: vi.fn(),
   }),

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
+import { createMockToneCurve } from "./test-helpers/mockToneCurve";
+
 import { ReactImageEditor } from "../ReactImageEditor";
 
 const mockResetAll = vi.fn();
@@ -48,6 +50,13 @@ vi.mock("../store/cropStore", () => ({
     setColorAdjustment: vi.fn(),
     resetColorAdjustments: vi.fn(),
     resetColorAdjustment: vi.fn(),
+
+    toneCurve: createMockToneCurve(),
+    setToneCurveMode: vi.fn(),
+    setToneCurveChannel: vi.fn(),
+    setToneCurvePoints: vi.fn(),
+    setToneCurveParametricRgb: vi.fn(),
+    resetToneCurve: vi.fn(),
 
     getEdits: vi.fn(),
   }),
