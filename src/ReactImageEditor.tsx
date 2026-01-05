@@ -1066,6 +1066,152 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     </div>
                   </div>
 
+                  <div className="mt-4 border-t pt-3" data-testid="tone-curve-section">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Tone Curve</div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => resetToneCurve()}
+                        disabled={!isImageLoaded}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+
+                    <div className="mt-3 flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs text-gray-600">Mode:</div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className={`h-7 rounded-md border px-2 text-xs ${
+                              toneCurve.mode === "point"
+                                ? "bg-gray-900 text-white"
+                                : "bg-white text-gray-700"
+                            }`}
+                            onClick={() => setToneCurveMode("point")}
+                            disabled={!isImageLoaded}
+                            aria-label="Tone Curve mode: Point"
+                          >
+                            Point
+                          </button>
+                          <button
+                            type="button"
+                            className={`h-7 rounded-md border px-2 text-xs ${
+                              toneCurve.mode === "parametric"
+                                ? "bg-gray-900 text-white"
+                                : "bg-white text-gray-700"
+                            }`}
+                            onClick={() => setToneCurveMode("parametric")}
+                            disabled={!isImageLoaded}
+                            aria-label="Tone Curve mode: Parametric"
+                          >
+                            Region
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs text-gray-600">Adjust:</div>
+                        <div className="flex items-center gap-2">
+                          {([
+                            { key: "rgb", label: "RGB" },
+                            { key: "r", label: "R" },
+                            { key: "g", label: "G" },
+                            { key: "b", label: "B" },
+                          ] as const).map((channel) => (
+                            <button
+                              key={channel.key}
+                              type="button"
+                              className={`h-7 rounded-md border px-2 text-xs ${
+                                toneCurve.activeChannel === channel.key
+                                  ? "bg-gray-900 text-white"
+                                  : "bg-white text-gray-700"
+                              }`}
+                              onClick={() => setToneCurveChannel(channel.key)}
+                              disabled={!isImageLoaded}
+                              aria-label={`Tone Curve channel: ${channel.label}`}
+                            >
+                              {channel.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <ToneCurveEditor
+                        points={toneCurve.point[toneCurve.activeChannel]}
+                        onChangePoints={(nextPoints) =>
+                          setToneCurvePoints(toneCurve.activeChannel, nextPoints)
+                        }
+                        disabled={!isImageLoaded || toneCurve.mode !== "point"}
+                      />
+
+                      <div className="border-t pt-3">
+                        <div className="text-xs font-medium text-gray-700">Region</div>
+                        <div className="mt-3 flex flex-col gap-3">
+                          <LightSlider
+                            label="Highlights"
+                            name="tone-curve-highlights"
+                            value={toneCurve.parametric.rgb.highlights}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
+                            format={(value) => formatSignedInt(value)}
+                            onValueChange={(value) =>
+                              setToneCurveParametricRgb({ highlights: value })
+                            }
+                          />
+                          <LightSlider
+                            label="Lights"
+                            name="tone-curve-lights"
+                            value={toneCurve.parametric.rgb.lights}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
+                            format={(value) => formatSignedInt(value)}
+                            onValueChange={(value) =>
+                              setToneCurveParametricRgb({ lights: value })
+                            }
+                          />
+                          <LightSlider
+                            label="Darks"
+                            name="tone-curve-darks"
+                            value={toneCurve.parametric.rgb.darks}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
+                            format={(value) => formatSignedInt(value)}
+                            onValueChange={(value) =>
+                              setToneCurveParametricRgb({ darks: value })
+                            }
+                          />
+                          <LightSlider
+                            label="Shadows"
+                            name="tone-curve-shadows"
+                            value={toneCurve.parametric.rgb.shadows}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
+                            format={(value) => formatSignedInt(value)}
+                            onValueChange={(value) =>
+                              setToneCurveParametricRgb({ shadows: value })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="mt-4 border-t pt-3" data-testid="color-section">
                     <div className="flex items-center justify-between">
@@ -1112,159 +1258,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                 </div>
               </details>
 
-              <details className="rounded-md border bg-white">
-                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <span>Tone Curve</span>
-                  </span>
-                  <span className="text-xs text-gray-500">▾</span>
-                </summary>
-
-                <div className="px-3 pb-3" data-testid="tone-curve-section">
-                  <div className="flex items-center justify-end py-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => resetToneCurve()}
-                      disabled={!isImageLoaded}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs text-gray-600">Mode:</div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className={`h-7 rounded-md border px-2 text-xs ${
-                            toneCurve.mode === "point"
-                              ? "bg-gray-900 text-white"
-                              : "bg-white text-gray-700"
-                          }`}
-                          onClick={() => setToneCurveMode("point")}
-                          disabled={!isImageLoaded}
-                          aria-label="Tone Curve mode: Point"
-                        >
-                          Point
-                        </button>
-                        <button
-                          type="button"
-                          className={`h-7 rounded-md border px-2 text-xs ${
-                            toneCurve.mode === "parametric"
-                              ? "bg-gray-900 text-white"
-                              : "bg-white text-gray-700"
-                          }`}
-                          onClick={() => setToneCurveMode("parametric")}
-                          disabled={!isImageLoaded}
-                          aria-label="Tone Curve mode: Parametric"
-                        >
-                          Region
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs text-gray-600">Adjust:</div>
-                      <div className="flex items-center gap-2">
-                        {([
-                          { key: "rgb", label: "RGB" },
-                          { key: "r", label: "R" },
-                          { key: "g", label: "G" },
-                          { key: "b", label: "B" },
-                        ] as const).map((channel) => (
-                          <button
-                            key={channel.key}
-                            type="button"
-                            className={`h-7 rounded-md border px-2 text-xs ${
-                              toneCurve.activeChannel === channel.key
-                                ? "bg-gray-900 text-white"
-                                : "bg-white text-gray-700"
-                            }`}
-                            onClick={() => setToneCurveChannel(channel.key)}
-                            disabled={!isImageLoaded}
-                            aria-label={`Tone Curve channel: ${channel.label}`}
-                          >
-                            {channel.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <ToneCurveEditor
-                      points={toneCurve.point[toneCurve.activeChannel]}
-                      onChangePoints={(nextPoints) =>
-                        setToneCurvePoints(toneCurve.activeChannel, nextPoints)
-                      }
-                      disabled={!isImageLoaded || toneCurve.mode !== "point"}
-                    />
-
-                    <div className="border-t pt-3">
-                      <div className="text-xs font-medium text-gray-700">Region</div>
-                      <div className="mt-3 flex flex-col gap-3">
-                        <LightSlider
-                          label="Highlights"
-                          name="tone-curve-highlights"
-                          value={toneCurve.parametric.rgb.highlights}
-                          defaultValue={0}
-                          min={-100}
-                          max={100}
-                          step={1}
-                          disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
-                          format={(value) => formatSignedInt(value)}
-                          onValueChange={(value) =>
-                            setToneCurveParametricRgb({ highlights: value })
-                          }
-                        />
-                        <LightSlider
-                          label="Lights"
-                          name="tone-curve-lights"
-                          value={toneCurve.parametric.rgb.lights}
-                          defaultValue={0}
-                          min={-100}
-                          max={100}
-                          step={1}
-                          disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
-                          format={(value) => formatSignedInt(value)}
-                          onValueChange={(value) => setToneCurveParametricRgb({ lights: value })}
-                        />
-                        <LightSlider
-                          label="Darks"
-                          name="tone-curve-darks"
-                          value={toneCurve.parametric.rgb.darks}
-                          defaultValue={0}
-                          min={-100}
-                          max={100}
-                          step={1}
-                          disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
-                          format={(value) => formatSignedInt(value)}
-                          onValueChange={(value) => setToneCurveParametricRgb({ darks: value })}
-                        />
-                        <LightSlider
-                          label="Shadows"
-                          name="tone-curve-shadows"
-                          value={toneCurve.parametric.rgb.shadows}
-                          defaultValue={0}
-                          min={-100}
-                          max={100}
-                          step={1}
-                          disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
-                          format={(value) => formatSignedInt(value)}
-                          onValueChange={(value) =>
-                            setToneCurveParametricRgb({ shadows: value })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </details>
- 
               {exportFormat === "jpeg" ? (
-
               <div className="flex items-center gap-2">
                 <label className="text-xs text-gray-700" htmlFor="jpeg-quality">
                   Quality

@@ -1,4 +1,3 @@
-import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { validateToneCurvePoints } from "@/lib/tone-curve";
@@ -30,22 +29,6 @@ function toPoint(canvas: { x: number; y: number }): CurvePoint {
   return {
     x: clamp((canvas.x - PADDING) / (SIZE - PADDING * 2), 0, 1),
     y: clamp(1 - (canvas.y - PADDING) / (SIZE - PADDING * 2), 0, 1),
-  };
-}
-
-function getCanvasPoint(
-  canvas: HTMLCanvasElement,
-  event: React.PointerEvent<HTMLCanvasElement>,
-): { x: number; y: number } {
-  const rect = canvas.getBoundingClientRect();
-
-  // Account for CSS scaling so hit-testing matches rendered pixels.
-  const scaleX = rect.width ? canvas.width / rect.width : 1;
-  const scaleY = rect.height ? canvas.height / rect.height : 1;
-
-  return {
-    x: (event.clientX - rect.left) * scaleX,
-    y: (event.clientY - rect.top) * scaleY,
   };
 }
 
@@ -89,16 +72,6 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    // Some unit tests mock a minimal 2D context; bail out.
-    const minimal = ctx as Partial<CanvasRenderingContext2D>;
-    if (
-      typeof minimal.beginPath !== "function" ||
-      typeof minimal.fillRect !== "function" ||
-      typeof minimal.stroke !== "function"
-    ) {
-      return;
-    }
 
     ctx.clearRect(0, 0, SIZE, SIZE);
 
@@ -157,14 +130,19 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
     });
   }, [validatedPoints, activeIndex]);
 
+  function getCanvasPoint(event: React.PointerEvent<HTMLCanvasElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  }
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
     if (disabled) return;
 
-    const canvas = event.currentTarget;
-    const canvasPoint = getCanvasPoint(canvas, event);
+    const canvasPoint = getCanvasPoint(event);
     const hitIndex = findPointIndex(validatedPoints, canvasPoint);
-
 
     if (hitIndex >= 0) {
       setActiveIndex(hitIndex);
@@ -198,20 +176,14 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
       return;
     }
 
-    const canvas = event.currentTarget;
-    const canvasPoint = getCanvasPoint(canvas, event);
-    const targetPoint = toPoint(canvasPoint);
-
-    // Add some “tension” so dragging feels less twitchy.
-    const DRAG_TENSION = 0.35;
+    const canvasPoint = getCanvasPoint(event);
+    const point = toPoint(canvasPoint);
 
     const next = validatedPoints.map((p, idx) => {
       if (idx !== activeIndex) return p;
-
-      const nextX = clampPointX(validatedPoints, idx, targetPoint.x);
       return {
-        x: p.x + (nextX - p.x) * DRAG_TENSION,
-        y: p.y + (targetPoint.y - p.y) * DRAG_TENSION,
+        x: clampPointX(validatedPoints, idx, point.x),
+        y: point.y,
       };
     });
 
