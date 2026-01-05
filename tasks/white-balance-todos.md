@@ -42,6 +42,8 @@ Source PRD: `prds/white-balance-prd.md`
 - [x] Disable/guard controls when no image is loaded
 - [x] Add `aria-label`/`aria-labelledby` for sliders and picker
 - [x] Implement slider UX: double-click Temperature/Tint resets to defaults
+- [ ] Add Temp slider gradient (yellow ↔ blue)
+- [ ] Add Tint slider gradient (green ↔ magenta)
 
 ## 6) Eyedropper implementation
 - [x] Implement “pick mode” UI state (cursor/active indicator)
