@@ -26,7 +26,15 @@ import {
 } from "./export-download";
 
 import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
-import { applyWhiteBalanceToRgbaBytes, hasNonNeutralWhiteBalance } from "./lib/white-balance";
+import {
+  applyWhiteBalanceToRgbaBytes,
+  estimateWhiteBalanceFromRgb,
+  hasNonNeutralWhiteBalance,
+  sampleAverageRgb,
+  WHITE_BALANCE_PRESETS,
+} from "./lib/white-balance";
+
+
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
 import { useCropStore, type CropRect } from "./store/cropStore";
@@ -44,7 +52,7 @@ function formatSignedInt(value: number) {
   return `${sign}${Math.abs(rounded)}`;
 }
 
-const WHITE_BALANCE_PRESETS = [
+const WHITE_BALANCE_PRESETS_UI = [
   { value: "daylight", label: "Daylight" },
   { value: "cloudy", label: "Cloudy" },
   { value: "shade", label: "Shade" },
@@ -54,10 +62,13 @@ const WHITE_BALANCE_PRESETS = [
   { value: "custom", label: "Custom" },
 ] as const;
 
+const WHITE_BALANCE_PICKER_RADIUS = 2;
+
 type LightSliderProps = {
   label: string;
   name: string;
   value: number;
+  defaultValue: number;
   min: number;
   max: number;
   step: number;
@@ -70,6 +81,7 @@ function LightSlider({
   label,
   name,
   value,
+  defaultValue,
   min,
   max,
   step,
@@ -95,6 +107,7 @@ function LightSlider({
         step={step}
         value={value}
         onChange={(e) => onValueChange(Number(e.target.value))}
+        onDoubleClick={() => onValueChange(defaultValue)}
         disabled={disabled}
         aria-label={label}
         className="w-full"
@@ -222,6 +235,24 @@ export function ReactImageEditor({ imageSrc }: Props) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
+  const [isPickingWhiteBalance, setIsPickingWhiteBalance] = useState(false);
+
+  useEffect(() => {
+    if (!isPickingWhiteBalance) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      setIsPickingWhiteBalance(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPickingWhiteBalance]);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
@@ -233,6 +264,8 @@ export function ReactImageEditor({ imageSrc }: Props) {
     setRotation,
     resetRotation,
     whiteBalance,
+    setWhiteBalance,
+    resetWhiteBalance,
     lightAdjustments,
     setLightAdjustment,
     resetLightAdjustments,
@@ -569,9 +602,62 @@ export function ReactImageEditor({ imageSrc }: Props) {
           defaultSize={75}
           onResize={handleImagePanelResize}
         >
-          <div className="flex flex-col flex-1 p-0">
-            <div className="flex-1 border-2 relative">
-              <canvas ref={canvasRef} {...listeners} />
+            <div className="flex flex-col flex-1 p-0">
+              <div className="flex-1 border-2 relative">
+                {isPickingWhiteBalance ? (
+                  <div className="absolute left-2 top-2 z-10 rounded-md bg-white/90 px-2 py-1 text-xs text-gray-700 shadow">
+                    Click image to pick white balance (Esc to cancel)
+                  </div>
+                ) : null}
+
+              <canvas
+                ref={canvasRef}
+                {...listeners}
+                onClick={(event) => {
+                  if (!isPickingWhiteBalance) {
+                    return;
+                  }
+
+                  if (!canvasRef.current) return;
+
+                  // Cancel pick mode after a click attempt.
+                  setIsPickingWhiteBalance(false);
+
+                  // Read a small region from the preview canvas. This can fail if the
+                  // canvas is tainted (CORS).
+                  const ctx = canvasRef.current.getContext("2d", {
+                    willReadFrequently: true,
+                  });
+                  if (!ctx) return;
+
+                  try {
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const x = Math.round(event.clientX - rect.left);
+                    const y = Math.round(event.clientY - rect.top);
+
+                    const radius = WHITE_BALANCE_PICKER_RADIUS;
+                    const size = radius * 2 + 1;
+
+                    const sx = Math.max(0, x - radius);
+                    const sy = Math.max(0, y - radius);
+                    const sw = Math.min(size, Math.max(1, canvasRef.current.width - sx));
+                    const sh = Math.min(size, Math.max(1, canvasRef.current.height - sy));
+
+                    const imageData = ctx.getImageData(sx, sy, sw, sh);
+                    const avg = sampleAverageRgb(imageData.data, sw, sh, radius, radius, radius);
+                    const estimated = estimateWhiteBalanceFromRgb(avg);
+
+                    setWhiteBalance({
+                      preset: "custom",
+                      temperatureKelvin: Math.round(estimated.temperatureKelvin),
+                      tint: Math.round(estimated.tint),
+                    });
+                  } catch {
+                    // Likely a tainted canvas; silently ignore for now.
+                  }
+                }}
+                style={{ cursor: isPickingWhiteBalance ? "crosshair" : undefined }}
+              />
               {cropMode && imageRef.current ? (
                 <Cropper cropBounds={cropBounds} />
               ) : null}
@@ -713,48 +799,102 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     </div>
                   </div>
 
-                  <div className="mt-4 border-t pt-3">
-                    <div className="text-xs font-medium text-gray-700">WB</div>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <div className="text-xs text-gray-600">WB:</div>
-                      <select
-                        value={WHITE_BALANCE_PRESETS[0].value}
-                        disabled
-                        aria-label="White Balance"
-                        className="h-8 w-[140px] rounded-md border bg-gray-50 px-2 text-xs text-gray-700 disabled:opacity-70"
-                      >
-                        {WHITE_BALANCE_PRESETS.map((preset) => (
-                          <option key={preset.value} value={preset.value}>
-                            {preset.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="mt-3 flex flex-col gap-3">
-                      <LightSlider
-                        label="Temp"
-                        name="temp"
-                        value={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={() => {}}
-                      />
-                      <LightSlider
-                        label="Tint"
-                        name="tint"
-                        value={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={() => {}}
-                      />
-                    </div>
-                  </div>
+                    <div className="mt-4 border-t pt-3" data-testid="wb-section">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-medium text-gray-700">White Balance</div>
+
+                       <Button
+                         type="button"
+                         size="sm"
+                         variant="outline"
+                         className="h-7 px-2 text-xs"
+                         onClick={() => resetWhiteBalance()}
+                         disabled={!isImageLoaded}
+                       >
+                         Reset
+                       </Button>
+                     </div>
+
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <div className="text-xs text-gray-600">Preset:</div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="h-8 rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70"
+                            data-testid="wb-eyedropper"
+                            aria-label="Pick white balance from image"
+                            disabled={!isImageLoaded}
+                            onClick={() => {
+                              setIsPickingWhiteBalance((current) => !current);
+                            }}
+                          >
+                            Pick
+                          </button>
+
+                          <select
+                            value={whiteBalance.preset}
+                            onChange={(e) => {
+                              const preset =
+                                e.target.value as (typeof WHITE_BALANCE_PRESETS_UI)[number]["value"];
+
+                              if (preset === "custom") {
+                                setWhiteBalance({ preset: "custom" });
+                                return;
+                              }
+
+                              const presetKey = preset as keyof typeof WHITE_BALANCE_PRESETS;
+                              const presetValues = WHITE_BALANCE_PRESETS[presetKey];
+                              setWhiteBalance({
+                                preset,
+                                temperatureKelvin: presetValues.temperatureKelvin,
+                                tint: presetValues.tint,
+                              });
+                            }}
+                            disabled={!isImageLoaded}
+                            aria-label="White Balance"
+                            className="h-8 w-[140px] rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70"
+                          >
+                            {WHITE_BALANCE_PRESETS_UI.map((preset) => (
+                              <option key={preset.value} value={preset.value}>
+                                {preset.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+
+
+                     <div className="mt-3 flex flex-col gap-3">
+                        <LightSlider
+                          label="Temp"
+                          name="temp"
+                          value={whiteBalance.temperatureKelvin}
+                          defaultValue={6500}
+                          min={2000}
+                          max={10000}
+                          step={50}
+                          disabled={!isImageLoaded}
+                          format={(value) => `${Math.round(value)}K`}
+                          onValueChange={(value) =>
+                            setWhiteBalance({ temperatureKelvin: value })
+                          }
+                        />
+                        <LightSlider
+                          label="Tint"
+                          name="tint"
+                          value={whiteBalance.tint}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          disabled={!isImageLoaded}
+                          format={(value) => formatSignedInt(value)}
+                          onValueChange={(value) => setWhiteBalance({ tint: value })}
+                        />
+                     </div>
+                   </div>
+
 
                   <div className="mt-4 border-t pt-3" data-testid="tone-section">
                     <div className="flex items-center justify-between">
@@ -776,6 +916,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Exposure"
                         name="exposure"
                         value={lightAdjustments.exposure}
+                        defaultValue={0}
                         min={-2}
                         max={2}
                         step={0.01}
@@ -790,6 +931,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Contrast"
                         name="contrast"
                         value={lightAdjustments.contrast}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -804,6 +946,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Highlights"
                         name="highlights"
                         value={lightAdjustments.highlights}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -818,6 +961,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Shadows"
                         name="shadows"
                         value={lightAdjustments.shadows}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -832,6 +976,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Whites"
                         name="whites"
                         value={lightAdjustments.whites}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -844,6 +989,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Blacks"
                         name="blacks"
                         value={lightAdjustments.blacks}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -861,6 +1007,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Texture"
                         name="texture"
                         value={0}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -872,6 +1019,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Clarity"
                         name="clarity"
                         value={0}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -883,6 +1031,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Dehaze"
                         name="dehaze"
                         value={0}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -894,6 +1043,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Vibrance"
                         name="vibrance"
                         value={0}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}
@@ -905,6 +1055,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         label="Saturation"
                         name="saturation"
                         value={0}
+                        defaultValue={0}
                         min={-100}
                         max={100}
                         step={1}

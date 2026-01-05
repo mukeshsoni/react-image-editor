@@ -33,31 +33,33 @@ Source PRD: `prds/white-balance-prd.md`
 - [x] Avoid repeated large allocations per tick (reuse buffers where possible)
 
 ## 5) UI: White Balance panel (Basic accordion)
-- [ ] Add a section titled `White Balance` above `Light`
-- [ ] Add Temperature (Kelvin) slider + value readout
-- [ ] Add Tint slider + value readout
-- [ ] Add Preset select/dropdown
-- [ ] Add Eyedropper button (pick-from-image mode)
-- [ ] Add “Reset WB” action
-- [ ] Disable/guard controls when no image is loaded
-- [ ] Add `aria-label`/`aria-labelledby` for sliders and picker
-- [ ] Implement slider UX: double-click Temperature/Tint resets to defaults
+- [x] Add a section titled `White Balance` above `Light`
+- [x] Add Temperature (Kelvin) slider + value readout
+- [x] Add Tint slider + value readout
+- [x] Add Preset select/dropdown
+- [x] Add Eyedropper button (pick-from-image mode)
+- [x] Add “Reset WB” action
+- [x] Disable/guard controls when no image is loaded
+- [x] Add `aria-label`/`aria-labelledby` for sliders and picker
+- [x] Implement slider UX: double-click Temperature/Tint resets to defaults
 
 ## 6) Eyedropper implementation
-- [ ] Implement “pick mode” UI state (cursor/active indicator)
-- [ ] On click, sample a small region from the rendered image (`getImageData`)
-- [ ] Compute `temperatureKelvin` + `tint` that neutralize the sampled color
-- [ ] Apply values and exit pick mode; set preset to `custom`
-- [ ] Escape cancels pick mode; click outside image cancels (no change)
+- [x] Implement “pick mode” UI state (cursor/active indicator)
+- [x] On click, sample a small region from the rendered image (`getImageData`)
+- [x] Compute `temperatureKelvin` + `tint` that neutralize the sampled color
+- [x] Apply values and exit pick mode; set preset to `custom`
+- [x] Escape cancels pick mode; click outside image cancels (no change)
 - [ ] Handle tainted canvas/no image with clear message or disabled picker
+- [ ] Add an icon to the Pick button
+- [ ] Use an eyedropper icon for picker mode
 
 ## 7) Tests
-- [ ] Unit tests for WB helper math (basic known cases)
+- [x] Unit tests for WB helper math (basic known cases)
 - [ ] Component test: panel renders with defaults
 - [ ] Component test: selecting preset updates state
 - [ ] Component test: slider change switches preset to `custom`
 - [ ] Component test: double-click slider resets to default
-- [ ] Component test: eyedropper updates WB (mock `getImageData`)
+- [x] Component test: eyedropper updates WB (mock `getImageData`)
 
 ## 8) Manual QA checklist
 - [ ] Presets feel sensible across a few sample photos
