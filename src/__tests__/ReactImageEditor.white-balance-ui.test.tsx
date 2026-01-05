@@ -8,6 +8,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { createMockToneCurve } from "./test-helpers/mockToneCurve";
+
 describe("ReactImageEditor Basic panel (WB)", () => {
   const originalImage = globalThis.Image;
 
@@ -53,6 +55,13 @@ describe("ReactImageEditor Basic panel (WB)", () => {
       setColorAdjustment: vi.fn(),
       resetColorAdjustments: vi.fn(),
       resetColorAdjustment: vi.fn(),
+
+      toneCurve: createMockToneCurve(),
+      setToneCurveMode: vi.fn(),
+      setToneCurveChannel: vi.fn(),
+      setToneCurvePoints: vi.fn(),
+      setToneCurveParametricRgb: vi.fn(),
+      resetToneCurve: vi.fn(),
 
       getEdits: vi.fn(),
     };

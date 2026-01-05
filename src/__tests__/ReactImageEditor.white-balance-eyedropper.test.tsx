@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { createMockToneCurve } from "./test-helpers/mockToneCurve";
+
 describe("ReactImageEditor white balance eyedropper", () => {
   const originalImage = globalThis.Image;
 
@@ -43,6 +45,13 @@ describe("ReactImageEditor white balance eyedropper", () => {
         setColorAdjustment: vi.fn(),
         resetColorAdjustments: vi.fn(),
         resetColorAdjustment: vi.fn(),
+
+        toneCurve: createMockToneCurve(),
+        setToneCurveMode: vi.fn(),
+        setToneCurveChannel: vi.fn(),
+        setToneCurvePoints: vi.fn(),
+        setToneCurveParametricRgb: vi.fn(),
+        resetToneCurve: vi.fn(),
 
         getEdits: vi.fn(),
       }),

@@ -60,6 +60,76 @@ export const DEFAULT_COLOR_ADJUSTMENTS: ColorAdjustments = {
   saturation: 0,
 };
 
+export type ToneCurveChannel = "rgb" | "r" | "g" | "b";
+
+export type CurvePoint = {
+  x: number;
+  y: number;
+};
+
+export type ToneCurveParametricSettings = {
+  highlights: number;
+  lights: number;
+  darks: number;
+  shadows: number;
+};
+
+export type ToneCurveSettings = {
+  mode: "point" | "parametric";
+  activeChannel: ToneCurveChannel;
+  point: Record<ToneCurveChannel, CurvePoint[]>;
+  parametric: {
+    rgb: ToneCurveParametricSettings;
+  };
+};
+
+export const DEFAULT_TONE_CURVE: ToneCurveSettings = {
+  mode: "point",
+  activeChannel: "rgb",
+  point: {
+    rgb: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+    r: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+    g: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+    b: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+  },
+  parametric: {
+    rgb: {
+      highlights: 0,
+      lights: 0,
+      darks: 0,
+      shadows: 0,
+    },
+  },
+};
+
+function cloneDefaultToneCurve(): ToneCurveSettings {
+  return {
+    mode: DEFAULT_TONE_CURVE.mode,
+    activeChannel: DEFAULT_TONE_CURVE.activeChannel,
+    point: {
+      rgb: DEFAULT_TONE_CURVE.point.rgb.map((point) => ({ ...point })),
+      r: DEFAULT_TONE_CURVE.point.r.map((point) => ({ ...point })),
+      g: DEFAULT_TONE_CURVE.point.g.map((point) => ({ ...point })),
+      b: DEFAULT_TONE_CURVE.point.b.map((point) => ({ ...point })),
+    },
+    parametric: {
+      rgb: { ...DEFAULT_TONE_CURVE.parametric.rgb },
+    },
+  };
+}
+
 export type WhiteBalancePreset =
   | "daylight"
   | "cloudy"
@@ -90,6 +160,7 @@ export type ImageEditorEdits = {
   whiteBalance: WhiteBalanceSettings;
   light: LightAdjustments;
   color: ColorAdjustments;
+  toneCurve: ToneCurveSettings;
 };
 
 interface CropStore {
@@ -100,6 +171,7 @@ interface CropStore {
   whiteBalance: WhiteBalanceSettings;
   lightAdjustments: LightAdjustments;
   colorAdjustments: ColorAdjustments;
+  toneCurve: ToneCurveSettings;
 
   // Actions
   setCropRect: (cropRect: CropRect) => void;
@@ -144,6 +216,15 @@ interface CropStore {
   resetColorAdjustments: () => void;
   resetColorAdjustment: (name: ColorAdjustmentName) => void;
 
+  // Tone curve
+  setToneCurveMode: (mode: ToneCurveSettings["mode"]) => void;
+  setToneCurveChannel: (channel: ToneCurveChannel) => void;
+  setToneCurvePoints: (channel: ToneCurveChannel, points: CurvePoint[]) => void;
+  setToneCurveParametricRgb: (
+    updates: Partial<ToneCurveParametricSettings>,
+  ) => void;
+  resetToneCurve: () => void;
+
   // Exportable snapshot of all edits
   getEdits: () => ImageEditorEdits;
 }
@@ -172,6 +253,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
   whiteBalance: { ...DEFAULT_WHITE_BALANCE },
   lightAdjustments: { ...DEFAULT_LIGHT_ADJUSTMENTS },
   colorAdjustments: { ...DEFAULT_COLOR_ADJUSTMENTS },
+  toneCurve: cloneDefaultToneCurve(),
 
   // Actions
   setCropRect: (cropRect: CropRect) => set({ cropRect }),
@@ -386,12 +468,14 @@ export const useCropStore = create<CropStore>((set, get) => ({
        resetWhiteBalance,
        resetLightAdjustments,
        resetColorAdjustments,
+       resetToneCurve,
      } = get();
      resetCropSettings();
      resetCropRect(bounds);
      resetWhiteBalance();
      resetLightAdjustments();
      resetColorAdjustments();
+     resetToneCurve();
    },
 
   setWhiteBalance: (updates) => {
@@ -467,6 +551,55 @@ export const useCropStore = create<CropStore>((set, get) => ({
      }));
    },
 
+   setToneCurveMode: (mode) => {
+     set((state) => ({
+       toneCurve: {
+         ...state.toneCurve,
+         mode,
+       },
+     }));
+   },
+
+   setToneCurveChannel: (channel) => {
+     set((state) => ({
+       toneCurve: {
+         ...state.toneCurve,
+         activeChannel: channel,
+       },
+     }));
+   },
+
+   setToneCurvePoints: (channel, points) => {
+     set((state) => ({
+       toneCurve: {
+         ...state.toneCurve,
+         point: {
+           ...state.toneCurve.point,
+           [channel]: points,
+         },
+       },
+     }));
+   },
+
+   setToneCurveParametricRgb: (updates) => {
+     set((state) => ({
+       toneCurve: {
+         ...state.toneCurve,
+         parametric: {
+           ...state.toneCurve.parametric,
+           rgb: {
+             ...state.toneCurve.parametric.rgb,
+             ...updates,
+           },
+         },
+       },
+     }));
+   },
+
+   resetToneCurve: () => {
+     set({ toneCurve: cloneDefaultToneCurve() });
+   },
+
    getEdits: () => {
      const {
        cropRect,
@@ -474,6 +607,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
        whiteBalance,
        lightAdjustments,
        colorAdjustments,
+       toneCurve,
      } = get();
 
      return {
@@ -485,6 +619,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
        whiteBalance,
        light: lightAdjustments,
        color: colorAdjustments,
+       toneCurve,
      };
    },
 

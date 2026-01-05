@@ -72,6 +72,8 @@ describe("export-download applies white balance", () => {
         preset: "custom",
       },
       undefined,
+      undefined,
+      undefined,
     );
 
     expect(offscreen).toBeTruthy();

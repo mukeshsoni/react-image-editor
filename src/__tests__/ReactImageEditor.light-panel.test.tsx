@@ -8,6 +8,8 @@ import {
   within,
 } from "@testing-library/react";
 
+import { createMockToneCurve } from "./test-helpers/mockToneCurve";
+
 const mockSetLightAdjustment = vi.fn();
 const mockResetLightAdjustments = vi.fn();
 
@@ -51,6 +53,13 @@ vi.mock("../store/cropStore", () => ({
     setColorAdjustment: vi.fn(),
     resetColorAdjustments: vi.fn(),
     resetColorAdjustment: vi.fn(),
+
+    toneCurve: createMockToneCurve(),
+    setToneCurveMode: vi.fn(),
+    setToneCurveChannel: vi.fn(),
+    setToneCurvePoints: vi.fn(),
+    setToneCurveParametricRgb: vi.fn(),
+    resetToneCurve: vi.fn(),
 
     getEdits: vi.fn(),
   }),
@@ -237,41 +246,48 @@ describe("ReactImageEditor render integration", () => {
       applyLightAdjustmentsToRgbaBytes: applySpy,
     }));
 
-     const nonNeutralStore = {
-       resetAll: vi.fn(),
-       cropSettings: { rotation: 0, constrainCrop: true },
-       setRotation: vi.fn(),
-       resetRotation: vi.fn(),
-       whiteBalance: {
-         temperatureKelvin: 6500,
-         tint: 0,
-         preset: "custom",
-       },
-       setWhiteBalance: vi.fn(),
-       setWhiteBalancePreset: vi.fn(),
-       resetWhiteBalance: vi.fn(),
-       lightAdjustments: {
-         exposure: 1,
-         contrast: 0,
-         highlights: 0,
-         shadows: 0,
-         whites: 0,
-         blacks: 0,
-       },
-       setLightAdjustment: vi.fn(),
-       resetLightAdjustments: vi.fn(),
-       resetLightAdjustment: vi.fn(),
+      const nonNeutralStore = {
+        resetAll: vi.fn(),
+        cropSettings: { rotation: 0, constrainCrop: true },
+        setRotation: vi.fn(),
+        resetRotation: vi.fn(),
+        whiteBalance: {
+          temperatureKelvin: 6500,
+          tint: 0,
+          preset: "custom",
+        },
+        setWhiteBalance: vi.fn(),
+        setWhiteBalancePreset: vi.fn(),
+        resetWhiteBalance: vi.fn(),
+        lightAdjustments: {
+          exposure: 1,
+          contrast: 0,
+          highlights: 0,
+          shadows: 0,
+          whites: 0,
+          blacks: 0,
+        },
+        setLightAdjustment: vi.fn(),
+        resetLightAdjustments: vi.fn(),
+        resetLightAdjustment: vi.fn(),
 
-       colorAdjustments: {
-         vibrance: 0,
-         saturation: 0,
-       },
-       setColorAdjustment: vi.fn(),
-       resetColorAdjustments: vi.fn(),
-       resetColorAdjustment: vi.fn(),
+        colorAdjustments: {
+          vibrance: 0,
+          saturation: 0,
+        },
+        setColorAdjustment: vi.fn(),
+        resetColorAdjustments: vi.fn(),
+        resetColorAdjustment: vi.fn(),
 
-       getEdits: vi.fn(),
-     };
+        toneCurve: createMockToneCurve(),
+        setToneCurveMode: vi.fn(),
+        setToneCurveChannel: vi.fn(),
+        setToneCurvePoints: vi.fn(),
+        setToneCurveParametricRgb: vi.fn(),
+        resetToneCurve: vi.fn(),
+
+        getEdits: vi.fn(),
+      };
 
 
     vi.doMock("../store/cropStore", () => ({

@@ -31,6 +31,11 @@ import {
 } from "./lib/color-adjustments";
 import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
 import {
+  applyToneCurveToRgbaBytes,
+  createToneCurveLuts,
+  hasNonNeutralToneCurve,
+} from "./lib/tone-curve";
+import {
   applyWhiteBalanceToRgbaBytes,
   estimateWhiteBalanceFromRgb,
   hasNonNeutralWhiteBalance,
@@ -39,6 +44,7 @@ import {
 } from "./lib/white-balance";
 
 
+import { ToneCurveEditor } from "./components/ToneCurveEditor";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import { Cropper, CropOptions } from "./Cropper";
 import { useCropStore, type CropRect } from "./store/cropStore";
@@ -122,24 +128,27 @@ function LightSlider({
 
 // Given a canvas element ref and an Image instance, render the
 // image to the canvas
-function renderImageToCanvas(
-  canvasRef: HTMLCanvasElement | null,
-  imageRef: HTMLImageElement | HTMLCanvasElement,
-  zoomLevel: number,
-  offset: { x: number; y: number },
-  rotation: number,
-  whiteBalance?: Parameters<typeof applyWhiteBalanceToRgbaBytes>[2],
-  lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
-  colorAdjustments?: Parameters<typeof applyColorAdjustmentsToRgbaBytes>[2],
-  cache?: {
-    baseCanvas: HTMLCanvasElement;
-    baseKey: string;
-    adjustedCanvas: HTMLCanvasElement;
-    in: Uint8ClampedArray;
-    out: Uint8ClampedArray;
-    temp: Uint8ClampedArray;
-  },
-) {
+  function renderImageToCanvas(
+    canvasRef: HTMLCanvasElement | null,
+    imageRef: HTMLImageElement | HTMLCanvasElement,
+    zoomLevel: number,
+    offset: { x: number; y: number },
+    rotation: number,
+    whiteBalance?: Parameters<typeof applyWhiteBalanceToRgbaBytes>[2],
+    lightAdjustments?: Parameters<typeof applyLightAdjustmentsToRgbaBytes>[2],
+    toneCurve?: Parameters<typeof hasNonNeutralToneCurve>[0],
+    colorAdjustments?: Parameters<typeof applyColorAdjustmentsToRgbaBytes>[2],
+    cache?: {
+      baseCanvas: HTMLCanvasElement;
+      baseKey: string;
+      adjustedCanvas: HTMLCanvasElement;
+      in: Uint8ClampedArray;
+      out: Uint8ClampedArray;
+      temp: Uint8ClampedArray;
+      toneCurveKey?: string;
+      toneCurveLuts?: ReturnType<typeof createToneCurveLuts>;
+    },
+  ) {
   if (!canvasRef) return;
 
   const ctx = canvasRef.getContext("2d");
@@ -162,11 +171,14 @@ function renderImageToCanvas(
       lightAdjustments.whites !== 0 ||
       lightAdjustments.blacks !== 0);
 
+  const shouldApplyToneCurve = toneCurve != null && hasNonNeutralToneCurve(toneCurve);
+
   const shouldApplyColor =
     colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
 
   const shouldProcessPixels =
-    (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyColor) && cache;
+    (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyToneCurve || shouldApplyColor) &&
+    cache;
 
   if (!shouldProcessPixels) {
     ctx.save();
@@ -213,6 +225,21 @@ function renderImageToCanvas(
     }
 
     applyLightAdjustmentsToRgbaBytes(dest, cache.temp, lightAdjustments);
+    dest.set(cache.temp);
+  }
+
+  if (shouldApplyToneCurve && toneCurve) {
+    const toneCurveKey = JSON.stringify(toneCurve);
+    if (cache.toneCurveKey !== toneCurveKey || !cache.toneCurveLuts) {
+      cache.toneCurveLuts = createToneCurveLuts(toneCurve);
+      cache.toneCurveKey = toneCurveKey;
+    }
+
+    if (cache.temp.length !== dest.length) {
+      cache.temp = new Uint8ClampedArray(dest.length);
+    }
+
+    applyToneCurveToRgbaBytes(dest, cache.temp, cache.toneCurveLuts);
     dest.set(cache.temp);
   }
 
@@ -290,6 +317,12 @@ export function ReactImageEditor({ imageSrc }: Props) {
     colorAdjustments,
     setColorAdjustment,
     resetColorAdjustments,
+    toneCurve,
+    setToneCurveMode,
+    setToneCurveChannel,
+    setToneCurvePoints,
+    setToneCurveParametricRgb,
+    resetToneCurve,
   } = useCropStore();
   const rotation = cropSettings.rotation ?? 0;
 
@@ -414,20 +447,29 @@ export function ReactImageEditor({ imageSrc }: Props) {
     // We try to render the image to the canvas at 60fps
     renderRef.current = requestAnimationFrame(() => {
       if (imageRef.current) {
-        renderImageToCanvas(
-          canvasRef.current,
-          imageRef.current,
-          zoomLevel,
-          offset,
-           rotation,
-           whiteBalance,
-           lightAdjustments,
-           colorAdjustments,
-           lightRenderCacheRef.current ?? undefined,
-         );
+          renderImageToCanvas(
+            canvasRef.current,
+            imageRef.current,
+            zoomLevel,
+            offset,
+            rotation,
+            whiteBalance,
+            lightAdjustments,
+            toneCurve,
+            colorAdjustments,
+            lightRenderCacheRef.current ?? undefined,
+          );
       }
     });
-  }, [zoomLevel, offset, rotation, whiteBalance, lightAdjustments, colorAdjustments]);
+  }, [
+    zoomLevel,
+    offset,
+    rotation,
+    whiteBalance,
+    lightAdjustments,
+    toneCurve,
+    colorAdjustments,
+  ]);
 
   function handleResetZoomClick() {
     resetZoom();
@@ -490,6 +532,8 @@ export function ReactImageEditor({ imageSrc }: Props) {
         background,
         whiteBalance,
         lightAdjustments,
+        toneCurve,
+        colorAdjustments,
       );
       if (!offscreen) {
         setExportError("Failed to export image");
@@ -1022,6 +1066,7 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     </div>
                   </div>
 
+
                   <div className="mt-4 border-t pt-3" data-testid="color-section">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-medium text-gray-700">Color</div>
@@ -1062,6 +1107,169 @@ export function ReactImageEditor({ imageSrc }: Props) {
                         format={(value) => formatSignedInt(value)}
                         onValueChange={(value) => setColorAdjustment("saturation", value)}
                       />
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details
+                className="rounded-md border bg-white"
+                data-testid="tone-curve-accordion"
+              >
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Tone Curve</span>
+                  </span>
+                  <span className="text-xs text-gray-500">▾</span>
+                </summary>
+
+                <div className="px-3 pb-3">
+                  <div className="flex items-center justify-between py-2">
+                    <div className="text-xs font-medium text-gray-700">
+                      Tone Curve
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => resetToneCurve()}
+                      disabled={!isImageLoaded}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs text-gray-600">Mode:</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className={`h-7 rounded-md border px-2 text-xs ${
+                            toneCurve.mode === "point"
+                              ? "bg-gray-900 text-white"
+                              : "bg-white text-gray-700"
+                          }`}
+                          onClick={() => setToneCurveMode("point")}
+                          disabled={!isImageLoaded}
+                          aria-label="Tone Curve mode: Point"
+                        >
+                          Point
+                        </button>
+                        <button
+                          type="button"
+                          className={`h-7 rounded-md border px-2 text-xs ${
+                            toneCurve.mode === "parametric"
+                              ? "bg-gray-900 text-white"
+                              : "bg-white text-gray-700"
+                          }`}
+                          onClick={() => setToneCurveMode("parametric")}
+                          disabled={!isImageLoaded}
+                          aria-label="Tone Curve mode: Parametric"
+                        >
+                          Region
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs text-gray-600">Adjust:</div>
+                      <div className="flex items-center gap-2">
+                        {([
+                          { key: "rgb", label: "RGB" },
+                          { key: "r", label: "R" },
+                          { key: "g", label: "G" },
+                          { key: "b", label: "B" },
+                        ] as const).map((channel) => (
+                          <button
+                            key={channel.key}
+                            type="button"
+                            className={`h-7 rounded-md border px-2 text-xs ${
+                              toneCurve.activeChannel === channel.key
+                                ? "bg-gray-900 text-white"
+                                : "bg-white text-gray-700"
+                            }`}
+                            onClick={() => setToneCurveChannel(channel.key)}
+                            disabled={!isImageLoaded}
+                            aria-label={`Tone Curve channel: ${channel.label}`}
+                          >
+                            {channel.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <ToneCurveEditor
+                      points={toneCurve.point[toneCurve.activeChannel]}
+                      onChangePoints={(nextPoints) =>
+                        setToneCurvePoints(toneCurve.activeChannel, nextPoints)
+                      }
+                      disabled={!isImageLoaded || toneCurve.mode !== "point"}
+                    />
+
+                    <div className="border-t pt-3">
+                      <div className="text-xs font-medium text-gray-700">
+                        Region
+                      </div>
+                      <div className="mt-3 flex flex-col gap-3">
+                        <LightSlider
+                          label="Highlights"
+                          name="tone-curve-highlights"
+                          value={toneCurve.parametric.rgb.highlights}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
+                          format={(value) => formatSignedInt(value)}
+                          onValueChange={(value) =>
+                            setToneCurveParametricRgb({ highlights: value })
+                          }
+                        />
+                        <LightSlider
+                          label="Lights"
+                          name="tone-curve-lights"
+                          value={toneCurve.parametric.rgb.lights}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
+                          format={(value) => formatSignedInt(value)}
+                          onValueChange={(value) =>
+                            setToneCurveParametricRgb({ lights: value })
+                          }
+                        />
+                        <LightSlider
+                          label="Darks"
+                          name="tone-curve-darks"
+                          value={toneCurve.parametric.rgb.darks}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
+                          format={(value) => formatSignedInt(value)}
+                          onValueChange={(value) =>
+                            setToneCurveParametricRgb({ darks: value })
+                          }
+                        />
+                        <LightSlider
+                          label="Shadows"
+                          name="tone-curve-shadows"
+                          value={toneCurve.parametric.rgb.shadows}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          disabled={!isImageLoaded || toneCurve.mode !== "parametric"}
+                          format={(value) => formatSignedInt(value)}
+                          onValueChange={(value) =>
+                            setToneCurveParametricRgb({ shadows: value })
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
