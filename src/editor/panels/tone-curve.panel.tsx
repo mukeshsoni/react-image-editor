@@ -1,19 +1,20 @@
 import { ToneCurvePanel } from "@/editor/ToneCurvePanel";
+import { useToneCurveStore } from "@/store/toneCurveStore";
 
 import type { PanelContext } from "./context";
 import type { PanelDefinition } from "./types";
 
 function ToneCurvePanelFromContext({
   isImageLoaded,
-  toneCurve,
-  resetToneCurve,
-  setToneCurveMode,
-  setToneCurveChannel,
-  setToneCurvePoints,
-  setToneCurveParametricRgb,
   Slider,
   formatSignedInt,
 }: PanelContext) {
+  const toneCurve = useToneCurveStore((state) => state.toneCurve);
+  const resetToneCurve = useToneCurveStore((state) => state.resetToneCurve);
+  const setToneCurveMode = useToneCurveStore((state) => state.setToneCurveMode);
+  const setToneCurveChannel = useToneCurveStore((state) => state.setToneCurveChannel);
+  const setToneCurvePoints = useToneCurveStore((state) => state.setToneCurvePoints);
+  const setToneCurveParametricRgb = useToneCurveStore((state) => state.setToneCurveParametricRgb);
   return (
     <ToneCurvePanel
       isImageLoaded={isImageLoaded}

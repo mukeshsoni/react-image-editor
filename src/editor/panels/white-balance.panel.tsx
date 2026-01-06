@@ -1,5 +1,6 @@
 import { WhiteBalancePanel } from "@/editor/WhiteBalancePanel";
 import { WHITE_BALANCE_PRESETS } from "@/lib/white-balance";
+import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 import type { PanelContext } from "./context";
 import type { PanelDefinition } from "./types";
@@ -16,13 +17,13 @@ const WHITE_BALANCE_PRESETS_UI = [
 
 function WhiteBalancePanelFromContext({
   isImageLoaded,
-  whiteBalance,
-  resetWhiteBalance,
   setIsPickingWhiteBalance,
-  setWhiteBalance,
   formatSignedInt,
   Slider,
 }: PanelContext) {
+  const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
+  const resetWhiteBalance = useWhiteBalanceStore((state) => state.resetWhiteBalance);
+  const setWhiteBalance = useWhiteBalanceStore((state) => state.setWhiteBalance);
   return (
     <WhiteBalancePanel
       isImageLoaded={isImageLoaded}

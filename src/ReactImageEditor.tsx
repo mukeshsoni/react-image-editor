@@ -26,11 +26,11 @@ import {
   CropToolOptions,
   CropToolOverlay,
 } from "@/editor/CropTool";
+import { subscribeToEdits } from "./store";
 import { useResetAll } from "./store/editorActions";
 import { useColorStore } from "./store/colorStore";
 import { useCropStore } from "./store/cropStore";
 import { useLightStore } from "./store/lightStore";
-import { subscribeToEdits } from "./store";
 import { useToneCurveStore } from "./store/toneCurveStore";
 import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
 
@@ -150,22 +150,11 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
   const setWhiteBalance = useWhiteBalanceStore((state) => state.setWhiteBalance);
-  const resetWhiteBalance = useWhiteBalanceStore((state) => state.resetWhiteBalance);
 
+  // Prefer feature-owned selectors where possible.
   const lightAdjustments = useLightStore((state) => state.lightAdjustments);
-  const setLightAdjustment = useLightStore((state) => state.setLightAdjustment);
-  const resetLightAdjustments = useLightStore((state) => state.resetLightAdjustments);
-
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
-  const setColorAdjustment = useColorStore((state) => state.setColorAdjustment);
-  const resetColorAdjustments = useColorStore((state) => state.resetColorAdjustments);
-
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
-  const setToneCurveMode = useToneCurveStore((state) => state.setToneCurveMode);
-  const setToneCurveChannel = useToneCurveStore((state) => state.setToneCurveChannel);
-  const setToneCurvePoints = useToneCurveStore((state) => state.setToneCurvePoints);
-  const setToneCurveParametricRgb = useToneCurveStore((state) => state.setToneCurveParametricRgb);
-  const resetToneCurve = useToneCurveStore((state) => state.resetToneCurve);
 
   const rotation = cropSettings.rotation ?? 0;
 
@@ -553,24 +542,10 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                         Slider={LightSlider}
                         formatSigned={formatSigned}
                         formatSignedInt={formatSignedInt}
-                        whiteBalance={whiteBalance}
-                        resetWhiteBalance={resetWhiteBalance}
                         setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                        setWhiteBalance={setWhiteBalance}
-                        lightAdjustments={lightAdjustments}
-                        resetLightAdjustments={resetLightAdjustments}
-                        setLightAdjustment={setLightAdjustment}
-                        colorAdjustments={colorAdjustments}
-                        resetColorAdjustments={resetColorAdjustments}
-                        setColorAdjustment={setColorAdjustment}
-                        toneCurve={toneCurve}
-                        resetToneCurve={resetToneCurve}
-                        setToneCurveMode={setToneCurveMode}
-                        setToneCurveChannel={setToneCurveChannel}
-                        setToneCurvePoints={setToneCurvePoints}
-                        setToneCurveParametricRgb={setToneCurveParametricRgb}
                       />
                     ))}
+
                 </div>
               </details>
 
@@ -583,22 +558,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                     Slider={LightSlider}
                     formatSigned={formatSigned}
                     formatSignedInt={formatSignedInt}
-                    whiteBalance={whiteBalance}
-                    resetWhiteBalance={resetWhiteBalance}
                     setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                    setWhiteBalance={setWhiteBalance}
-                    lightAdjustments={lightAdjustments}
-                    resetLightAdjustments={resetLightAdjustments}
-                    setLightAdjustment={setLightAdjustment}
-                    colorAdjustments={colorAdjustments}
-                    resetColorAdjustments={resetColorAdjustments}
-                    setColorAdjustment={setColorAdjustment}
-                    toneCurve={toneCurve}
-                    resetToneCurve={resetToneCurve}
-                    setToneCurveMode={setToneCurveMode}
-                    setToneCurveChannel={setToneCurveChannel}
-                    setToneCurvePoints={setToneCurvePoints}
-                    setToneCurveParametricRgb={setToneCurveParametricRgb}
                   />
                 ))}
 

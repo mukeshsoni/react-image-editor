@@ -1,17 +1,18 @@
 import { LightPanel } from "@/editor/LightPanel";
+import { useLightStore } from "@/store/lightStore";
 
 import type { PanelContext } from "./context";
 import type { PanelDefinition } from "./types";
 
 function LightPanelFromContext({
   isImageLoaded,
-  lightAdjustments,
-  resetLightAdjustments,
-  setLightAdjustment,
   formatSigned,
   formatSignedInt,
   Slider,
 }: PanelContext) {
+  const lightAdjustments = useLightStore((state) => state.lightAdjustments);
+  const resetLightAdjustments = useLightStore((state) => state.resetLightAdjustments);
+  const setLightAdjustment = useLightStore((state) => state.setLightAdjustment);
   return (
     <LightPanel
       isImageLoaded={isImageLoaded}
