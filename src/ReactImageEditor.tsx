@@ -31,6 +31,7 @@ import {
   CropToolOverlay,
 } from "@/editor/CropTool";
 import { LightPanel } from "@/editor/LightPanel";
+import { ColorPanel } from "@/editor/ColorPanel";
 import { WhiteBalancePanel } from "@/editor/WhiteBalancePanel";
 import { useCropStore } from "./store/cropStore";
 
@@ -581,48 +582,14 @@ export function ReactImageEditor({ imageSrc }: Props) {
                   />
 
 
-                  <div className="mt-4 border-t pt-3" data-testid="color-section">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium text-gray-700">Color</div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => resetColorAdjustments()}
-                        disabled={!isImageLoaded}
-                      >
-                        Reset
-                      </Button>
-                    </div>
-
-                    <div className="mt-3 flex flex-col gap-3">
-                      <LightSlider
-                        label="Vibrance"
-                        name="vibrance"
-                        value={colorAdjustments.vibrance}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled={!isImageLoaded}
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={(value) => setColorAdjustment("vibrance", value)}
-                      />
-                      <LightSlider
-                        label="Saturation"
-                        name="saturation"
-                        value={colorAdjustments.saturation}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled={!isImageLoaded}
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={(value) => setColorAdjustment("saturation", value)}
-                      />
-                    </div>
-                  </div>
+                  <ColorPanel
+                    isImageLoaded={isImageLoaded}
+                    colorAdjustments={colorAdjustments}
+                    resetColorAdjustments={resetColorAdjustments}
+                    setColorAdjustment={setColorAdjustment}
+                    formatSignedInt={formatSignedInt}
+                    Slider={LightSlider}
+                  />
                 </div>
               </details>
 
