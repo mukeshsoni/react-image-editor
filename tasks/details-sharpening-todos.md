@@ -18,7 +18,7 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [x] Implement luminance-first sharpening to reduce color halos
 - [x] Implement `detail` control weighting (texture vs edges)
 - [x] Implement `masking` control (edge mask / threshold)
-- [ ] Preserve alpha channel in all operations
+- [x] Preserve alpha channel in all operations
 - [ ] Clamp output channels safely (avoid overflow/underflow)
 
 ## 3) Rendering Integration
