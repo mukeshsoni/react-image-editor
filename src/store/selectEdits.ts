@@ -3,6 +3,7 @@ import type { ImageEditorEdits } from "./edits";
 import { useColorStore } from "./colorStore";
 import { useCropStore } from "./cropStore";
 import { useLightStore } from "./lightStore";
+import { useSharpeningStore } from "./sharpeningStore";
 import { useToneCurveStore } from "./toneCurveStore";
 import { useWhiteBalanceStore } from "./whiteBalanceStore";
 
@@ -12,6 +13,7 @@ export function getImageEditorEdits(): ImageEditorEdits {
   const lightState = useLightStore.getState();
   const colorState = useColorStore.getState();
   const toneCurveState = useToneCurveStore.getState();
+  const sharpeningState = useSharpeningStore.getState();
 
   return {
     version: 1,
@@ -23,5 +25,6 @@ export function getImageEditorEdits(): ImageEditorEdits {
     light: lightState.lightAdjustments,
     color: colorState.colorAdjustments,
     toneCurve: toneCurveState.toneCurve,
+    sharpening: sharpeningState.sharpening,
   };
 }

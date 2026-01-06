@@ -3,6 +3,7 @@ import type {
   CropRect,
   CropSettings,
   LightAdjustments,
+  SharpeningSettings,
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "./cropStore";
@@ -17,4 +18,5 @@ export type ImageEditorEdits = {
   light: LightAdjustments;
   color: ColorAdjustments;
   toneCurve: ToneCurveSettings;
+  sharpening?: SharpeningSettings;
 };

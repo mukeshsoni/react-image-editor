@@ -9,7 +9,7 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [x] Add action: `setSharpening(partial)` (or reuse existing `setAdjustment` pattern)
 - [x] Add action: `resetSharpening()`
 - [x] Ensure settings persist across crop/zoom/pan interactions
-- [ ] Ensure export snapshot includes sharpening parameters (`getEdits()` or equivalent)
+- [x] Ensure export snapshot includes sharpening parameters (`getEdits()` or equivalent)
 
 ## 2) Sharpening Math (non-destructive)
 - [ ] Create pure helper module for sharpening math
