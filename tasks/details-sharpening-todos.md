@@ -16,7 +16,7 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [x] Implement blur (separable Gaussian or approximation)
 - [x] Implement unsharp mask: `out = original + amount * (original - blurred)`
 - [x] Implement luminance-first sharpening to reduce color halos
-- [ ] Implement `detail` control weighting (texture vs edges)
+- [x] Implement `detail` control weighting (texture vs edges)
 - [ ] Implement `masking` control (edge mask / threshold)
 - [ ] Preserve alpha channel in all operations
 - [ ] Clamp output channels safely (avoid overflow/underflow)
