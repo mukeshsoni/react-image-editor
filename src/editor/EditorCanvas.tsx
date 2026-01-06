@@ -15,6 +15,10 @@ import type {
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "@/store/cropStore";
+import { useColorStore } from "@/store/colorStore";
+import { useLightStore } from "@/store/lightStore";
+import { useToneCurveStore } from "@/store/toneCurveStore";
+import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 type RenderCache = {
   baseCanvas: HTMLCanvasElement;
@@ -42,7 +46,6 @@ function renderImageToCanvas(
   const ctx = canvasRef.getContext("2d");
   if (!ctx) return;
 
-  // We restrict the canvas width to the canvas container width
   const canvasWidth = canvasRef.width;
   const canvasHeight = canvasRef.height;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -80,7 +83,6 @@ function renderImageToCanvas(
     cache.baseKey = baseKey;
   }
 
-
   const context: PixelPipelineContext = {
     whiteBalance,
     lightAdjustments,
@@ -111,10 +113,6 @@ type Props = {
   zoomLevel: number;
   offset: { x: number; y: number };
   rotation: number;
-  whiteBalance: WhiteBalanceSettings;
-  lightAdjustments: LightAdjustments;
-  toneCurve: ToneCurveSettings;
-  colorAdjustments: ColorAdjustments;
   listeners: import("react").ComponentPropsWithoutRef<"canvas">;
   isPickingWhiteBalance: boolean;
   onPickWhiteBalance: import("react").MouseEventHandler<HTMLCanvasElement>;
@@ -126,14 +124,15 @@ export function EditorCanvas({
   zoomLevel,
   offset,
   rotation,
-  whiteBalance,
-  lightAdjustments,
-  toneCurve,
-  colorAdjustments,
   listeners,
   isPickingWhiteBalance,
   onPickWhiteBalance,
 }: Props) {
+  const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
+  const lightAdjustments = useLightStore((state) => state.lightAdjustments);
+  const colorAdjustments = useColorStore((state) => state.colorAdjustments);
+  const toneCurve = useToneCurveStore((state) => state.toneCurve);
+
   const renderRef = useRef<number | null>(null);
   const renderCacheRef = useRef<RenderCache | null>(null);
 

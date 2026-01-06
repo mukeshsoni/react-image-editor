@@ -28,10 +28,7 @@ import {
 } from "@/editor/CropTool";
 import { subscribeToEdits } from "./store";
 import { useResetAll } from "./store/editorActions";
-import { useColorStore } from "./store/colorStore";
 import { useCropStore } from "./store/cropStore";
-import { useLightStore } from "./store/lightStore";
-import { useToneCurveStore } from "./store/toneCurveStore";
 import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
 
 
@@ -148,13 +145,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   const resetAll = useResetAll();
 
-  const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
   const setWhiteBalance = useWhiteBalanceStore((state) => state.setWhiteBalance);
-
-  // Prefer feature-owned selectors where possible.
-  const lightAdjustments = useLightStore((state) => state.lightAdjustments);
-  const colorAdjustments = useColorStore((state) => state.colorAdjustments);
-  const toneCurve = useToneCurveStore((state) => state.toneCurve);
 
   const rotation = cropSettings.rotation ?? 0;
 
@@ -358,10 +349,6 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 zoomLevel={zoomLevel}
                 offset={offset}
                 rotation={rotation}
-                whiteBalance={whiteBalance}
-                lightAdjustments={lightAdjustments}
-                toneCurve={toneCurve}
-                colorAdjustments={colorAdjustments}
                 listeners={listeners}
                 isPickingWhiteBalance={isPickingWhiteBalance}
                 onPickWhiteBalance={(event) => {
@@ -479,10 +466,6 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                   isImageLoaded={isImageLoaded}
                   cropMode={cropMode}
                   rotation={rotation}
-                  whiteBalance={whiteBalance}
-                  lightAdjustments={lightAdjustments}
-                  toneCurve={toneCurve}
-                  colorAdjustments={colorAdjustments}
                   exportFormat={exportFormat}
                   setExportFormat={setExportFormat}
                   jpegQuality={jpegQuality}

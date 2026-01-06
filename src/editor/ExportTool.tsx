@@ -14,22 +14,16 @@ import {
   triggerDownload,
   type ExportFormat,
 } from "@/export-download";
-import type {
-  ColorAdjustments,
-  LightAdjustments,
-  ToneCurveSettings,
-  WhiteBalanceSettings,
-} from "@/store/cropStore";
+import { useColorStore } from "@/store/colorStore";
+import { useLightStore } from "@/store/lightStore";
+import { useToneCurveStore } from "@/store/toneCurveStore";
+import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 type Props = {
   imageRef: RefObject<HTMLImageElement | null>;
   isImageLoaded: boolean;
   cropMode: boolean;
   rotation: number;
-  whiteBalance: WhiteBalanceSettings;
-  lightAdjustments: LightAdjustments;
-  toneCurve: ToneCurveSettings;
-  colorAdjustments: ColorAdjustments;
 
   exportFormat: ExportFormat;
   setExportFormat: (format: ExportFormat) => void;
@@ -47,10 +41,6 @@ export function ExportTool({
   isImageLoaded,
   cropMode,
   rotation,
-  whiteBalance,
-  lightAdjustments,
-  toneCurve,
-  colorAdjustments,
   exportFormat,
   setExportFormat,
   jpegQuality,
@@ -60,6 +50,11 @@ export function ExportTool({
   exportError,
   setExportError,
 }: Props) {
+  const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
+  const lightAdjustments = useLightStore((state) => state.lightAdjustments);
+  const colorAdjustments = useColorStore((state) => state.colorAdjustments);
+  const toneCurve = useToneCurveStore((state) => state.toneCurve);
+
   async function handleDownload() {
     if (!imageRef.current) return;
     if (!isImageLoaded) return;
