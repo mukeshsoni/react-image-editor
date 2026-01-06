@@ -30,6 +30,7 @@ import { useResetAll } from "./store/editorActions";
 import { useColorStore } from "./store/colorStore";
 import { useCropStore } from "./store/cropStore";
 import { useLightStore } from "./store/lightStore";
+import { subscribeToEdits } from "./store";
 import { useToneCurveStore } from "./store/toneCurveStore";
 import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
 
@@ -105,9 +106,10 @@ function LightSlider({
 
 type Props = {
   imageSrc: string;
+  onEditsChange?: (edits: import("@/store").ImageEditorEdits) => void;
 };
 
-export function ReactImageEditor({ imageSrc }: Props) {
+export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [hasAppliedCrop, setHasAppliedCrop] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -249,6 +251,15 @@ export function ReactImageEditor({ imageSrc }: Props) {
       resetZoom();
     };
   }, [imageSrc, resetZoom]);
+
+  useEffect(() => {
+    if (!onEditsChange) {
+      return;
+    }
+
+    const unsubscribe = subscribeToEdits(onEditsChange);
+    return unsubscribe;
+  }, [onEditsChange]);
 
   useEffect(() => {
     return () => {

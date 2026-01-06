@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import path from "path";
 import { fileURLToPath } from "url";
 import react from "@vitejs/plugin-react";
@@ -12,9 +12,12 @@ const __dirname = path.dirname(__filename);
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      babel: {
+        plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
+      },
+    }),
     tailwindcss(),
-    [["babel-plugin-react-compiler", ReactCompilerConfig]],
   ],
   resolve: {
     alias: {

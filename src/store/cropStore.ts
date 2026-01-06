@@ -2,6 +2,8 @@ import { create } from "zustand";
 
 import type { Handle } from "../crop-handles";
 
+import type { ImageEditorEdits } from "./edits";
+
 export type Point = {
   x: number;
   y: number;
@@ -151,17 +153,7 @@ export const DEFAULT_WHITE_BALANCE: WhiteBalanceSettings = {
   preset: "custom",
 };
 
-export type ImageEditorEdits = {
-  version: 1;
-  crop: {
-    rect: CropRect;
-    settings: CropSettings;
-  };
-  whiteBalance: WhiteBalanceSettings;
-  light: LightAdjustments;
-  color: ColorAdjustments;
-  toneCurve: ToneCurveSettings;
-};
+export type { ImageEditorEdits } from "./edits";
 
 interface CropStore {
   // State

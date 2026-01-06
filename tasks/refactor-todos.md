@@ -57,16 +57,16 @@ Context:
 
 ## 5) Make “reset” and “edits snapshot” feature-owned
 - [x] Replace a single central `resetAll` that must be edited by every feature
-- [ ] Define `ImageEditorEdits` snapshot type for host apps
-- [ ] Add uncontrolled external API hooks:
-  - [ ] `onEditsChange?: (edits: ImageEditorEdits) => void`
+- [x] Define `ImageEditorEdits` snapshot type for host apps
+- [x] Add uncontrolled external API hooks:
+  - [x] `onEditsChange?: (edits: ImageEditorEdits) => void`
   - [ ] (Optional) `ref` API: `getEdits()`, `resetAll()`
 - [ ] Each store exports:
   - [ ] `reset()`
   - [ ] `selectEdits()` (or similar) for export/download/history
-- [ ] Add an aggregator helper that:
-  - [ ] Calls all resets
-  - [ ] Merges all edits into an `ImageEditorEdits` snapshot
+- [x] Add an aggregator helper that:
+  - [x] Calls all resets
+  - [x] Merges all edits into an `ImageEditorEdits` snapshot
 
 ## 6) Reduce top-level store destructuring in the editor shell
 - [ ] Move feature-specific selectors/actions into their feature components
