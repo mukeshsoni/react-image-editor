@@ -30,6 +30,7 @@ import {
   CropToolOptions,
   CropToolOverlay,
 } from "@/editor/CropTool";
+import { WhiteBalancePanel } from "@/editor/WhiteBalancePanel";
 import { useCropStore } from "./store/cropStore";
 
 
@@ -536,101 +537,36 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     </div>
                   </div>
 
-                    <div className="mt-4 border-t pt-3" data-testid="wb-section">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs font-medium text-gray-700">White Balance</div>
+                    <WhiteBalancePanel
+                      isImageLoaded={isImageLoaded}
+                      whiteBalance={whiteBalance}
+                      resetWhiteBalance={resetWhiteBalance}
+                      setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                      presets={WHITE_BALANCE_PRESETS_UI}
+                      formatSignedInt={formatSignedInt}
+                      Slider={LightSlider}
+                      onPresetChange={(nextPreset) => {
+                        const preset =
+                          nextPreset as (typeof WHITE_BALANCE_PRESETS_UI)[number]["value"];
 
-                       <Button
-                         type="button"
-                         size="sm"
-                         variant="outline"
-                         className="h-7 px-2 text-xs"
-                         onClick={() => resetWhiteBalance()}
-                         disabled={!isImageLoaded}
-                       >
-                         Reset
-                       </Button>
-                     </div>
+                        if (preset === "custom") {
+                          setWhiteBalance({ preset: "custom" });
+                          return;
+                        }
 
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <div className="text-xs text-gray-600">Preset:</div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            className="h-8 rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70"
-                            data-testid="wb-eyedropper"
-                            aria-label="Pick white balance from image"
-                            disabled={!isImageLoaded}
-                            onClick={() => {
-                              setIsPickingWhiteBalance((current) => !current);
-                            }}
-                          >
-                            Pick
-                          </button>
-
-                          <select
-                            value={whiteBalance.preset}
-                            onChange={(e) => {
-                              const preset =
-                                e.target.value as (typeof WHITE_BALANCE_PRESETS_UI)[number]["value"];
-
-                              if (preset === "custom") {
-                                setWhiteBalance({ preset: "custom" });
-                                return;
-                              }
-
-                              const presetKey = preset as keyof typeof WHITE_BALANCE_PRESETS;
-                              const presetValues = WHITE_BALANCE_PRESETS[presetKey];
-                              setWhiteBalance({
-                                preset,
-                                temperatureKelvin: presetValues.temperatureKelvin,
-                                tint: presetValues.tint,
-                              });
-                            }}
-                            disabled={!isImageLoaded}
-                            aria-label="White Balance"
-                            className="h-8 w-[140px] rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70"
-                          >
-                            {WHITE_BALANCE_PRESETS_UI.map((preset) => (
-                              <option key={preset.value} value={preset.value}>
-                                {preset.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-
-
-                     <div className="mt-3 flex flex-col gap-3">
-                        <LightSlider
-                          label="Temp"
-                          name="temp"
-                          value={whiteBalance.temperatureKelvin}
-                          defaultValue={6500}
-                          min={2000}
-                          max={10000}
-                          step={50}
-                          disabled={!isImageLoaded}
-                          format={(value) => `${Math.round(value)}K`}
-                          onValueChange={(value) =>
-                            setWhiteBalance({ temperatureKelvin: value })
-                          }
-                        />
-                        <LightSlider
-                          label="Tint"
-                          name="tint"
-                          value={whiteBalance.tint}
-                          defaultValue={0}
-                          min={-100}
-                          max={100}
-                          step={1}
-                          disabled={!isImageLoaded}
-                          format={(value) => formatSignedInt(value)}
-                          onValueChange={(value) => setWhiteBalance({ tint: value })}
-                        />
-                     </div>
-                   </div>
+                        const presetKey = preset as keyof typeof WHITE_BALANCE_PRESETS;
+                        const presetValues = WHITE_BALANCE_PRESETS[presetKey];
+                        setWhiteBalance({
+                          preset,
+                          temperatureKelvin: presetValues.temperatureKelvin,
+                          tint: presetValues.tint,
+                        });
+                      }}
+                      onTempChange={(value) =>
+                        setWhiteBalance({ temperatureKelvin: value })
+                      }
+                      onTintChange={(value) => setWhiteBalance({ tint: value })}
+                    />
 
 
                   <div className="mt-4 border-t pt-3" data-testid="tone-section">
