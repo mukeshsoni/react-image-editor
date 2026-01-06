@@ -41,8 +41,8 @@ Context:
 
 ## 4) Split Zustand store by domain (avoid conflicts in `src/store/cropStore.ts`)
 - [x] Choose approach:
-  - [x] Slice composition (one store, multiple slice files)
-  - [ ] Multiple stores (one store per feature domain)
+  - [ ] Slice composition (one store, multiple slice files)
+  - [x] Multiple stores (one store per feature domain)
 - [ ] If using slices:
   - [ ] Create `src/store/slices/` (e.g. `cropSlice`, `whiteBalanceSlice`, `lightSlice`, `colorSlice`, `toneCurveSlice`)
   - [ ] Keep types/defaults/actions close to each slice
