@@ -10,21 +10,11 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+import { ExportTool } from "@/editor/ExportTool";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 
-import {
-  canvasToBlob,
-  renderCommittedImageToOffscreenCanvas,
-  triggerDownload,
-  type ExportFormat,
-} from "./export-download";
+import type { ExportFormat } from "./export-download";
 
 import {
   estimateWhiteBalanceFromRgb,
@@ -301,51 +291,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
   }
 
 
-  async function handleDownload() {
-    if (!imageRef.current) return;
-    if (!isImageLoaded) return;
-
-    setExportError(null);
-    setIsDownloading(true);
-
-    try {
-      if (cropMode) {
-        setExportError("Apply crop to download");
-        return;
-      }
-
-      const mimeType = exportFormat === "png" ? "image/png" : "image/jpeg";
-      const extension = exportFormat === "png" ? "png" : "jpg";
-      const background = exportFormat === "png" ? "transparent" : "white";
-
-      const offscreen = renderCommittedImageToOffscreenCanvas(
-        imageRef.current,
-        rotation,
-        background,
-        whiteBalance,
-        lightAdjustments,
-        toneCurve,
-        colorAdjustments,
-      );
-      if (!offscreen) {
-        setExportError("Failed to export image");
-        return;
-      }
-
-      const quality = exportFormat === "jpeg" ? jpegQuality / 100 : undefined;
-      const blob = await canvasToBlob(offscreen, mimeType, quality);
-      if (!blob) {
-        setExportError("Failed to export image");
-        return;
-      }
-
-      triggerDownload(blob, `edited-image.${extension}`);
-    } catch {
-      setExportError("Failed to export image");
-    } finally {
-      setIsDownloading(false);
-    }
-  }
 
   const cropBounds = useMemo(() => {
     if (!imageRef.current) {
@@ -531,38 +476,24 @@ export function ReactImageEditor({ imageSrc }: Props) {
                   resetZoom={resetZoom}
                 />
 
-                <Button
-                  onClick={handleDownload}
-                  variant="default"
-                  size="sm"
-                  disabled={!isImageLoaded || isDownloading || cropMode}
-                  title={
-                    !isImageLoaded
-                      ? "Load an image to download"
-                      : cropMode
-                        ? "Apply crop to download"
-                        : undefined
-                  }
-                >
-                  {isDownloading ? "Downloading…" : "Download"}
-                </Button>
-
-                <Select
-                  value={exportFormat}
-                  onValueChange={(value) => setExportFormat(value as ExportFormat)}
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="w-[110px]"
-                    data-testid="export-format"
-                  >
-                    <SelectValue placeholder="Format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="png">PNG</SelectItem>
-                    <SelectItem value="jpeg">JPEG</SelectItem>
-                  </SelectContent>
-                </Select>
+                <ExportTool
+                  imageRef={imageRef}
+                  isImageLoaded={isImageLoaded}
+                  cropMode={cropMode}
+                  rotation={rotation}
+                  whiteBalance={whiteBalance}
+                  lightAdjustments={lightAdjustments}
+                  toneCurve={toneCurve}
+                  colorAdjustments={colorAdjustments}
+                  exportFormat={exportFormat}
+                  setExportFormat={setExportFormat}
+                  jpegQuality={jpegQuality}
+                  setJpegQuality={setJpegQuality}
+                  isDownloading={isDownloading}
+                  setIsDownloading={setIsDownloading}
+                  exportError={exportError}
+                  setExportError={setExportError}
+                />
               </div>
 
               <details className="rounded-md border bg-white" open>
@@ -1015,34 +946,6 @@ export function ReactImageEditor({ imageSrc }: Props) {
                 </div>
               </details>
 
-              {exportFormat === "jpeg" ? (
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-700" htmlFor="jpeg-quality">
-                  Quality
-                </label>
-                <input
-                  id="jpeg-quality"
-                  data-testid="jpeg-quality"
-                  type="range"
-                  min={10}
-                  max={100}
-                  step={1}
-                  value={jpegQuality}
-                  onChange={(e) => setJpegQuality(Number(e.target.value))}
-                />
-                <span className="text-xs tabular-nums text-gray-700 w-[40px] text-right">
-                  {jpegQuality}
-                </span>
-              </div>
-            ) : null}
-
-            {cropMode ? (
-              <div className="text-xs text-gray-700">Apply crop to download</div>
-            ) : null}
-
-            {exportError ? (
-              <div className="text-xs text-red-600">{exportError}</div>
-            ) : null}
           </div>
           <CropToolOptions
             cropMode={cropMode}
