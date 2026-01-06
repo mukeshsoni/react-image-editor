@@ -44,10 +44,10 @@ export function applySharpeningToRgbaBytes(
     return;
   }
 
-  const amount = clamp01(settings.amount / 150);
+  // Map UI "Amount" (0..150) into a more visible multiplier.
+  // Typical unsharp-mask implementations treat amount as a percentage.
+  const amount = clamp(settings.amount / 100, 0, 3);
 
-  // For v1, keep this purely 1D (row-wise) to provide a stable baseline implementation.
-  // A full 2D separable blur will come in follow-up commits.
   const radiusPx = clamp(settings.radius, 0.5, 3);
 
   // Radius maps to sigma, tuned so radius=1 feels meaningful.
@@ -86,13 +86,15 @@ export function applySharpeningToRgbaBytes(
 
     const highFreq = l0 - blurred;
 
-    // "Detail" biases toward fine texture by amplifying smaller high-frequency signals.
-    // detail=0 => damp small changes; detail=1 => preserve full signal.
     const hfAbs = Math.abs(highFreq);
-    const detailWeight = smoothstep(0.0, 0.08, hfAbs * (0.5 + detail));
+
+    // "Detail" controls how much we bias toward fine texture.
+    // Keep default (25) close to neutral.
+    const detailWeight = lerp(0.75, 1.75, detail);
 
     // "Masking" reduces effect in smooth areas.
-    const edgeStrength = smoothstep(0.02, 0.12, hfAbs);
+    // Use a lower threshold than before so the effect is visible at common radii.
+    const edgeStrength = smoothstep(0.005, 0.06, hfAbs);
     const mask = lerp(1, edgeStrength, masking);
 
     const delta = highFreq * amount * detailWeight * mask;
