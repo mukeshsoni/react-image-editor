@@ -20,6 +20,7 @@ type RenderCache = {
   baseCanvas: HTMLCanvasElement;
   baseKey: string;
   adjustedCanvas: HTMLCanvasElement;
+  basePixels: Uint8ClampedArray;
   pipeline: ReadonlyArray<import("@/editor/pixel-pipeline").PixelProcessor>;
   buffers: PipelineBuffers;
 };
@@ -70,8 +71,11 @@ function renderImageToCanvas(
     baseCtx.restore();
 
     const imageData = baseCtx.getImageData(0, 0, canvasWidth, canvasHeight);
+
+    cache.basePixels = new Uint8ClampedArray(imageData.data);
+
     ensurePipelineBufferCapacity(cache.buffers, imageData.data.length);
-    cache.buffers.in.set(imageData.data);
+    cache.buffers.in.set(cache.basePixels);
 
     cache.baseKey = baseKey;
   }
@@ -84,6 +88,7 @@ function renderImageToCanvas(
     colorAdjustments,
   };
 
+  cache.buffers.in.set(cache.basePixels);
   runPipeline(cache.pipeline, cache.buffers, context);
 
   cache.adjustedCanvas.width = canvasWidth;
@@ -137,6 +142,7 @@ export function EditorCanvas({
       baseCanvas: document.createElement("canvas"),
       baseKey: "",
       adjustedCanvas: document.createElement("canvas"),
+      basePixels: new Uint8ClampedArray(0),
       pipeline: createDefaultPipeline(),
       buffers: {
         in: new Uint8ClampedArray(0),
