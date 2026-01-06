@@ -11,6 +11,9 @@ export function runPipeline(
   buffers: PipelineBuffers,
   context: PixelPipelineContext,
 ): void {
+  // Default behavior: if no processor runs, preserve the original pixels.
+  buffers.out.set(buffers.in);
+
   const sorted = [...processors].sort(
     (a, b) => a.order - b.order || a.id.localeCompare(b.id),
   );
@@ -23,6 +26,6 @@ export function runPipeline(
     processor.apply(buffers, context);
 
     // Normalize so next processor reads from `out`.
-    buffers.in = buffers.out;
+    buffers.in.set(buffers.out);
   }
 }
