@@ -20,6 +20,7 @@ type Props = {
   sharpening: SharpeningSettings;
   setSharpening: (updates: Partial<SharpeningSettings>) => void;
   resetSharpening: () => void;
+  resetSharpeningSetting: (name: keyof SharpeningSettings) => void;
 
   Slider: (props: SliderProps) => import("react").ReactNode;
 };
@@ -29,6 +30,7 @@ export function DetailsPanel({
   sharpening,
   setSharpening,
   resetSharpening,
+  resetSharpeningSetting,
   Slider,
 }: Props) {
   return (
@@ -96,6 +98,52 @@ export function DetailsPanel({
           format={(value) => String(Math.round(value))}
           onValueChange={(value) => setSharpening({ masking: value })}
         />
+
+        <div className="flex items-center justify-between border-t pt-3">
+          <div className="text-xs font-medium text-gray-700">Manual reset</div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => resetSharpeningSetting("amount")}
+              disabled={!isImageLoaded}
+            >
+              Amount
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => resetSharpeningSetting("radius")}
+              disabled={!isImageLoaded}
+            >
+              Radius
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => resetSharpeningSetting("detail")}
+              disabled={!isImageLoaded}
+            >
+              Detail
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => resetSharpeningSetting("masking")}
+              disabled={!isImageLoaded}
+            >
+              Masking
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
