@@ -22,12 +22,12 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [x] Clamp output channels safely (avoid overflow/underflow)
 
 ## 3) Rendering Integration
-- [ ] Identify canonical “base image” source used for rendering
-- [ ] Apply sharpening in the same adjustment pipeline as WB/Light/Color
-- [ ] Ensure neutral settings produce identical output
-- [ ] Add/extend `requestAnimationFrame` throttling for slider updates
-- [ ] Avoid re-allocating large buffers per tick (reuse buffers where possible)
-- [ ] Confirm ordering with other adjustments is consistent (document chosen order)
+- [x] Identify canonical “base image” source used for rendering
+- [x] Apply sharpening in the same adjustment pipeline as WB/Light/Color
+- [x] Ensure neutral settings produce identical output
+- [x] Add/extend `requestAnimationFrame` throttling for slider updates
+- [x] Avoid re-allocating large buffers per tick (reuse buffers where possible)
+- [x] Confirm ordering with other adjustments is consistent (document chosen order)
 
 ## 4) UI: Details Accordion + Sharpening Section
 - [ ] Add an accordion item titled `Details`

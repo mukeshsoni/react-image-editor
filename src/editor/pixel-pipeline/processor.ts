@@ -4,7 +4,8 @@ export type PixelProcessorId =
   | "white-balance"
   | "light"
   | "tone-curve"
-  | "color";
+  | "color"
+  | "sharpening";
 
 export type PixelProcessor = {
   id: PixelProcessorId;

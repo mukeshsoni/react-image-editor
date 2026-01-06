@@ -1,4 +1,5 @@
 import { applyColorAdjustmentsToRgbaBytes, hasNonNeutralColorAdjustments } from "./lib/color-adjustments";
+import { applySharpeningToRgbaBytes, createSharpeningBuffers, isNeutralSharpening } from "./lib/sharpening";
 import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
 import {
   applyToneCurveToRgbaBytes,
@@ -10,6 +11,7 @@ import { applyWhiteBalanceToRgbaBytes, hasNonNeutralWhiteBalance } from "./lib/w
 import type {
   ColorAdjustments,
   LightAdjustments,
+  SharpeningSettings,
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "./store/cropStore";
@@ -105,6 +107,7 @@ export function renderCommittedImageToOffscreenCanvas(
   lightAdjustments?: LightAdjustments,
   toneCurve?: ToneCurveSettings,
   colorAdjustments?: ColorAdjustments,
+  sharpening?: SharpeningSettings,
 ): HTMLCanvasElement | null {
   const outputSize = getRotatedBoundingBoxSize(
     image.width,
@@ -152,7 +155,16 @@ export function renderCommittedImageToOffscreenCanvas(
   const shouldApplyColor =
     colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
 
-  if (shouldApplyWhiteBalance || shouldApplyLight || shouldApplyToneCurve || shouldApplyColor) {
+  const shouldApplySharpening =
+    sharpening != null && !isNeutralSharpening(sharpening);
+
+  if (
+    shouldApplyWhiteBalance ||
+    shouldApplyLight ||
+    shouldApplyToneCurve ||
+    shouldApplyColor ||
+    shouldApplySharpening
+  ) {
     const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
 
     const out = new Uint8ClampedArray(imageData.data.length);
@@ -180,6 +192,22 @@ export function renderCommittedImageToOffscreenCanvas(
       const colorOut = new Uint8ClampedArray(out.length);
       applyColorAdjustmentsToRgbaBytes(out, colorOut, colorAdjustments);
       out.set(colorOut);
+    }
+
+    if (shouldApplySharpening && sharpening) {
+      const buffers = createSharpeningBuffers(offscreen.width * offscreen.height);
+      const sharpened = new Uint8ClampedArray(out.length);
+
+      applySharpeningToRgbaBytes(
+        out,
+        sharpened,
+        offscreen.width,
+        offscreen.height,
+        sharpening,
+        buffers,
+      );
+
+      out.set(sharpened);
     }
 
     ctx.putImageData(new ImageData(out, offscreen.width, offscreen.height), 0, 0);
