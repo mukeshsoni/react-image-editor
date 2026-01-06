@@ -8,22 +8,14 @@ type CropToolButtonsProps = {
   cropMode: boolean;
   setCropMode: (next: boolean) => void;
   hasAppliedCrop: boolean;
-  imageRef: RefObject<HTMLImageElement | null>;
-  originalImageRef: RefObject<HTMLImageElement | null>;
-  setHasAppliedCrop: (next: boolean) => void;
-  resetRotation: () => void;
-  resetZoom: () => void;
+  onResetCrop: () => void;
 };
 
 export function CropToolButtons({
   cropMode,
   setCropMode,
   hasAppliedCrop,
-  imageRef,
-  originalImageRef,
-  setHasAppliedCrop,
-  resetRotation,
-  resetZoom,
+  onResetCrop,
 }: CropToolButtonsProps) {
   return (
     <>
@@ -43,13 +35,7 @@ export function CropToolButtons({
         <button
           type="button"
           className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
-          onClick={() => {
-            if (!originalImageRef.current) return;
-            imageRef.current = originalImageRef.current;
-            setHasAppliedCrop(false);
-            resetRotation();
-            resetZoom();
-          }}
+          onClick={onResetCrop}
         >
           Reset Crop
         </button>
@@ -76,30 +62,22 @@ type CropToolOptionsProps = {
   cropMode: boolean;
   imageRef: RefObject<HTMLImageElement | null>;
   bakedImageUrlRef: RefObject<string | null>;
-  setCropMode: (next: boolean) => void;
-  setHasAppliedCrop: (next: boolean) => void;
-  setIsImageLoaded: (next: boolean) => void;
   zoomLevel: number;
   offset: { x: number; y: number };
   rotation: number;
-  resetRotation: () => void;
-  resetZoom: () => void;
   resetAll: (bounds: Bounds) => void;
+  onCroppedImageReady: (image: HTMLImageElement) => void;
 };
 
 export function CropToolOptions({
   cropMode,
   imageRef,
   bakedImageUrlRef,
-  setCropMode,
-  setHasAppliedCrop,
-  setIsImageLoaded,
   zoomLevel,
   offset,
   rotation,
-  resetRotation,
-  resetZoom,
   resetAll,
+  onCroppedImageReady,
 }: CropToolOptionsProps) {
   function handleCropReset() {
     if (!imageRef.current) {
@@ -149,26 +127,17 @@ export function CropToolOptions({
     }
 
     const url = URL.createObjectURL(blob);
-    bakedImageUrlRef.current = url;
 
     const bakedImage = new Image();
     bakedImage.crossOrigin = "anonymous";
     bakedImage.src = url;
 
     bakedImage.onload = () => {
-      imageRef.current = bakedImage;
-      setHasAppliedCrop(true);
-      setIsImageLoaded(true);
-      setCropMode(false);
-      resetRotation();
-      resetZoom();
+      onCroppedImageReady(bakedImage);
     };
 
     bakedImage.onerror = () => {
-      if (bakedImageUrlRef.current) {
-        URL.revokeObjectURL(bakedImageUrlRef.current);
-        bakedImageUrlRef.current = null;
-      }
+      URL.revokeObjectURL(url);
     };
   }
 

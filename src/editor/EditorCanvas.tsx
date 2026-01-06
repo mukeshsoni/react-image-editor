@@ -166,8 +166,8 @@ function renderImageToCanvas(
 }
 
 type Props = {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  imageRef: React.RefObject<HTMLImageElement | null>;
+  canvasRef: import("react").RefObject<HTMLCanvasElement | null>;
+  imageRef: import("react").RefObject<HTMLImageElement | null>;
   zoomLevel: number;
   offset: { x: number; y: number };
   rotation: number;
@@ -175,9 +175,9 @@ type Props = {
   lightAdjustments: LightAdjustments;
   toneCurve: ToneCurveSettings;
   colorAdjustments: ColorAdjustments;
-  listeners: React.ComponentPropsWithoutRef<"canvas">;
+  listeners: import("react").ComponentPropsWithoutRef<"canvas">;
   isPickingWhiteBalance: boolean;
-  onPickWhiteBalance: React.MouseEventHandler<HTMLCanvasElement>;
+  onPickWhiteBalance: import("react").MouseEventHandler<HTMLCanvasElement>;
 };
 
 export function EditorCanvas({

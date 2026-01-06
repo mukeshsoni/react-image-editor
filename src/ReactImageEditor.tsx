@@ -472,11 +472,13 @@ export function ReactImageEditor({ imageSrc }: Props) {
                   cropMode={cropMode}
                   setCropMode={setCropMode}
                   hasAppliedCrop={hasAppliedCrop}
-                  imageRef={imageRef}
-                  originalImageRef={originalImageRef}
-                  setHasAppliedCrop={setHasAppliedCrop}
-                  resetRotation={resetRotation}
-                  resetZoom={resetZoom}
+                  onResetCrop={() => {
+                    if (!originalImageRef.current) return;
+                    imageRef.current = originalImageRef.current;
+                    setHasAppliedCrop(false);
+                    resetRotation();
+                    resetZoom();
+                  }}
                 />
 
                 <ExportTool
@@ -610,15 +612,23 @@ export function ReactImageEditor({ imageSrc }: Props) {
             cropMode={cropMode}
             imageRef={imageRef}
             bakedImageUrlRef={bakedImageUrlRef}
-            setCropMode={setCropMode}
-            setHasAppliedCrop={setHasAppliedCrop}
-            setIsImageLoaded={setIsImageLoaded}
             zoomLevel={zoomLevel}
             offset={offset}
             rotation={rotation}
-            resetRotation={resetRotation}
-            resetZoom={resetZoom}
             resetAll={resetAll}
+            onCroppedImageReady={(croppedImage) => {
+              if (bakedImageUrlRef.current) {
+                URL.revokeObjectURL(bakedImageUrlRef.current);
+              }
+
+              bakedImageUrlRef.current = croppedImage.src;
+              imageRef.current = croppedImage;
+              setHasAppliedCrop(true);
+              setIsImageLoaded(true);
+              setCropMode(false);
+              resetRotation();
+              resetZoom();
+            }}
           />
         </ResizablePanel>
       </ResizablePanelGroup>
