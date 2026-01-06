@@ -43,7 +43,12 @@ Context:
 - [x] Choose approach:
   - [ ] Slice composition (one store, multiple slice files)
   - [x] Multiple stores (one store per feature domain)
-- [ ] If using slices:
+- [x] If using multiple stores:
+  - [x] Create per-domain stores (`whiteBalanceStore`, `lightStore`, `colorStore`, `toneCurveStore`)
+  - [x] Add cross-store `resetAll` helper (`useResetAll`)
+  - [x] Migrate editor shell off `useCropStore()` mega-destructure
+  - [ ] Optional: migrate crop domain out of `cropStore`
+- [ ] If using slices (N/A if using multiple stores):
   - [ ] Create `src/store/slices/` (e.g. `cropSlice`, `whiteBalanceSlice`, `lightSlice`, `colorSlice`, `toneCurveSlice`)
   - [ ] Keep types/defaults/actions close to each slice
   - [ ] Compose slices in a small `src/store/editorStore.ts`
@@ -51,8 +56,12 @@ Context:
 
 
 ## 5) Make “reset” and “edits snapshot” feature-owned
-- [ ] Replace a single central `resetAll` that must be edited by every feature
-- [ ] Each slice/store exports:
+- [x] Replace a single central `resetAll` that must be edited by every feature
+- [ ] Define `ImageEditorEdits` snapshot type for host apps
+- [ ] Add uncontrolled external API hooks:
+  - [ ] `onEditsChange?: (edits: ImageEditorEdits) => void`
+  - [ ] (Optional) `ref` API: `getEdits()`, `resetAll()`
+- [ ] Each store exports:
   - [ ] `reset()`
   - [ ] `selectEdits()` (or similar) for export/download/history
 - [ ] Add an aggregator helper that:
