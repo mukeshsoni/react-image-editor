@@ -3,11 +3,11 @@
 Source PRD: `prds/details-sharpening-prd.md`
 
 ## 1) State + Types
-- [ ] Add `SharpeningSettings` type (`amount`, `radius`, `detail`, `masking`)
-- [ ] Define `DEFAULT_SHARPENING_SETTINGS` (neutral defaults)
-- [ ] Add `sharpening` to Zustand store state (or extend existing `adjustments`)
-- [ ] Add action: `setSharpening(partial)` (or reuse existing `setAdjustment` pattern)
-- [ ] Add action: `resetSharpening()`
+- [x] Add `SharpeningSettings` type (`amount`, `radius`, `detail`, `masking`)
+- [x] Define `DEFAULT_SHARPENING_SETTINGS` (neutral defaults)
+- [x] Add `sharpening` to Zustand store state (or extend existing `adjustments`)
+- [x] Add action: `setSharpening(partial)` (or reuse existing `setAdjustment` pattern)
+- [x] Add action: `resetSharpening()`
 - [ ] Ensure settings persist across crop/zoom/pan interactions
 - [ ] Ensure export snapshot includes sharpening parameters (`getEdits()` or equivalent)
 
