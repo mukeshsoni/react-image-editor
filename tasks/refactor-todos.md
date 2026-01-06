@@ -69,8 +69,8 @@ Context:
   - [x] Merges all edits into an `ImageEditorEdits` snapshot
 
 ## 6) Reduce top-level store destructuring in the editor shell
-- [ ] Move feature-specific selectors/actions into their feature components
-- [ ] Ensure `src/ReactImageEditor.tsx` doesn’t grow a giant `useCropStore()` destructure list
+- [x] Move feature-specific selectors/actions into their feature components
+- [x] Ensure `src/ReactImageEditor.tsx` doesn’t grow a giant `useCropStore()` destructure list
 
 ## 7) Testing / verification
 - [x] Keep existing tests passing after each extraction step
