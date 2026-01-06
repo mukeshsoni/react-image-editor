@@ -72,9 +72,34 @@ describe("ReactImageEditor Basic panel (WB)", () => {
 
     mockStore = createMockStore();
 
-    vi.doMock("../store/cropStore", () => ({
-      useCropStore: () => mockStore!,
-    }));
+vi.doMock("../store/cropStore", async () => {
+  const actual = await vi.importActual<typeof import("../store/cropStore")>(
+    "../store/cropStore",
+  );
+
+  return {
+    ...actual,
+    useCropStore: () => mockStore!,
+  };
+});
+
+vi.doMock("../store/whiteBalanceStore", async () => {
+  const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+  return {
+    useWhiteBalanceStore: createMockZustandHook({
+      whiteBalance: mockStore!.whiteBalance,
+      setWhiteBalance: mockStore!.setWhiteBalance,
+      setWhiteBalancePreset: vi.fn(),
+      resetWhiteBalance: mockStore!.resetWhiteBalance,
+    }),
+  };
+});
+
+vi.doMock("../store/editorActions", () => ({
+  useResetAll: () => mockStore!.resetAll,
+}));
+
 
     vi.doMock("../Cropper", () => ({
       Cropper: () => null,

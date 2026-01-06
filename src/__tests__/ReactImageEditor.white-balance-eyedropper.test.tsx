@@ -11,51 +11,93 @@ describe("ReactImageEditor white balance eyedropper", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.doMock("../store/cropStore", () => ({
-      useCropStore: () => ({
-        resetAll: vi.fn(),
-        cropSettings: { rotation: 0, constrainCrop: true },
-        setRotation: vi.fn(),
-        resetRotation: vi.fn(),
+    vi.doMock("../store/cropStore", async () => {
+      const actual = await vi.importActual<typeof import("../store/cropStore")>(
+        "../store/cropStore",
+      );
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
 
-        whiteBalance: {
-          temperatureKelvin: 6500,
-          tint: 0,
-          preset: "custom",
-        },
-        setWhiteBalance: mockSetWhiteBalance,
-        resetWhiteBalance: vi.fn(),
+      return {
+        ...actual,
+        useCropStore: createMockZustandHook({
+          cropSettings: { rotation: 0, constrainCrop: true },
+          setRotation: vi.fn(),
+          resetRotation: vi.fn(),
+        }),
+      };
+    });
 
-        lightAdjustments: {
-          exposure: 0,
-          contrast: 0,
-          highlights: 0,
-          shadows: 0,
-          whites: 0,
-          blacks: 0,
-        },
-        setLightAdjustment: vi.fn(),
-        resetLightAdjustments: vi.fn(),
-        resetLightAdjustment: vi.fn(),
-
-        colorAdjustments: {
-          vibrance: 0,
-          saturation: 0,
-        },
-        setColorAdjustment: vi.fn(),
-        resetColorAdjustments: vi.fn(),
-        resetColorAdjustment: vi.fn(),
-
-        toneCurve: createMockToneCurve(),
-        setToneCurveMode: vi.fn(),
-        setToneCurveChannel: vi.fn(),
-        setToneCurvePoints: vi.fn(),
-        setToneCurveParametricRgb: vi.fn(),
-        resetToneCurve: vi.fn(),
-
-        getEdits: vi.fn(),
-      }),
+    vi.doMock("../store/editorActions", () => ({
+      useResetAll: () => vi.fn(),
     }));
+
+    vi.doMock("../store/whiteBalanceStore", async () => {
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        useWhiteBalanceStore: createMockZustandHook({
+          whiteBalance: {
+            temperatureKelvin: 6500,
+            tint: 0,
+            preset: "custom",
+          },
+          setWhiteBalance: mockSetWhiteBalance,
+          setWhiteBalancePreset: vi.fn(),
+          resetWhiteBalance: vi.fn(),
+        }),
+      };
+    });
+
+    vi.doMock("../store/lightStore", async () => {
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        useLightStore: createMockZustandHook({
+          lightAdjustments: {
+            exposure: 0,
+            contrast: 0,
+            highlights: 0,
+            shadows: 0,
+            whites: 0,
+            blacks: 0,
+          },
+          setLightAdjustment: vi.fn(),
+          resetLightAdjustments: vi.fn(),
+          resetLightAdjustment: vi.fn(),
+        }),
+      };
+    });
+
+    vi.doMock("../store/colorStore", async () => {
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        useColorStore: createMockZustandHook({
+          colorAdjustments: {
+            vibrance: 0,
+            saturation: 0,
+          },
+          setColorAdjustment: vi.fn(),
+          resetColorAdjustments: vi.fn(),
+          resetColorAdjustment: vi.fn(),
+        }),
+      };
+    });
+
+    vi.doMock("../store/toneCurveStore", async () => {
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        useToneCurveStore: createMockZustandHook({
+          toneCurve: createMockToneCurve(),
+          setToneCurveMode: vi.fn(),
+          setToneCurveChannel: vi.fn(),
+          setToneCurvePoints: vi.fn(),
+          setToneCurveParametricRgb: vi.fn(),
+          resetToneCurve: vi.fn(),
+        }),
+      };
+    });
 
     vi.doMock("../Cropper", () => ({
       Cropper: () => null,

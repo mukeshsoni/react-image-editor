@@ -26,7 +26,12 @@ import {
   CropToolOptions,
   CropToolOverlay,
 } from "@/editor/CropTool";
+import { useResetAll } from "./store/editorActions";
+import { useColorStore } from "./store/colorStore";
 import { useCropStore } from "./store/cropStore";
+import { useLightStore } from "./store/lightStore";
+import { useToneCurveStore } from "./store/toneCurveStore";
+import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
 
 
 function formatSigned(value: number, digits: number) {
@@ -135,27 +140,31 @@ export function ReactImageEditor({ imageSrc }: Props) {
   const originalImageRef = useRef<HTMLImageElement | null>(null);
   const bakedImageUrlRef = useRef<string | null>(null);
 
-  const {
-    resetAll,
-    cropSettings,
-    setRotation,
-    resetRotation,
-    whiteBalance,
-    setWhiteBalance,
-    resetWhiteBalance,
-    lightAdjustments,
-    setLightAdjustment,
-    resetLightAdjustments,
-    colorAdjustments,
-    setColorAdjustment,
-    resetColorAdjustments,
-    toneCurve,
-    setToneCurveMode,
-    setToneCurveChannel,
-    setToneCurvePoints,
-    setToneCurveParametricRgb,
-    resetToneCurve,
-  } = useCropStore();
+  const cropSettings = useCropStore((state) => state.cropSettings);
+  const setRotation = useCropStore((state) => state.setRotation);
+  const resetRotation = useCropStore((state) => state.resetRotation);
+
+  const resetAll = useResetAll();
+
+  const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
+  const setWhiteBalance = useWhiteBalanceStore((state) => state.setWhiteBalance);
+  const resetWhiteBalance = useWhiteBalanceStore((state) => state.resetWhiteBalance);
+
+  const lightAdjustments = useLightStore((state) => state.lightAdjustments);
+  const setLightAdjustment = useLightStore((state) => state.setLightAdjustment);
+  const resetLightAdjustments = useLightStore((state) => state.resetLightAdjustments);
+
+  const colorAdjustments = useColorStore((state) => state.colorAdjustments);
+  const setColorAdjustment = useColorStore((state) => state.setColorAdjustment);
+  const resetColorAdjustments = useColorStore((state) => state.resetColorAdjustments);
+
+  const toneCurve = useToneCurveStore((state) => state.toneCurve);
+  const setToneCurveMode = useToneCurveStore((state) => state.setToneCurveMode);
+  const setToneCurveChannel = useToneCurveStore((state) => state.setToneCurveChannel);
+  const setToneCurvePoints = useToneCurveStore((state) => state.setToneCurvePoints);
+  const setToneCurveParametricRgb = useToneCurveStore((state) => state.setToneCurveParametricRgb);
+  const resetToneCurve = useToneCurveStore((state) => state.resetToneCurve);
+
   const rotation = cropSettings.rotation ?? 0;
 
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
