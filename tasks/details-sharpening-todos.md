@@ -12,7 +12,7 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [x] Ensure export snapshot includes sharpening parameters (`getEdits()` or equivalent)
 
 ## 2) Sharpening Math (non-destructive)
-- [ ] Create pure helper module for sharpening math
+- [x] Create pure helper module for sharpening math
 - [ ] Implement blur (separable Gaussian or approximation)
 - [ ] Implement unsharp mask: `out = original + amount * (original - blurred)`
 - [ ] Implement luminance-first sharpening to reduce color halos
