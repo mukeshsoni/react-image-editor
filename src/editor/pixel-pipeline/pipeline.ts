@@ -1,19 +1,9 @@
 import type { PixelProcessor } from "./processor";
-import {
-  colorProcessor,
-  lightProcessor,
-  toneCurveProcessor,
-  whiteBalanceProcessor,
-} from "./processors";
+import { getProcessorRegistry } from "./processors";
 import type { PipelineBuffers, PixelPipelineContext } from "./types";
 
 export function createDefaultPipeline(): Array<PixelProcessor> {
-  return [
-    whiteBalanceProcessor,
-    lightProcessor,
-    toneCurveProcessor,
-    colorProcessor,
-  ];
+  return getProcessorRegistry();
 }
 
 export function runPipeline(
