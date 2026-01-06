@@ -16,23 +16,16 @@ import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 
 import type { ExportFormat } from "./export-download";
 
-import {
-  estimateWhiteBalanceFromRgb,
-  sampleAverageRgb,
-  WHITE_BALANCE_PRESETS,
-} from "./lib/white-balance";
+import { estimateWhiteBalanceFromRgb, sampleAverageRgb } from "./lib/white-balance";
 
 
-import { ToneCurvePanel } from "@/editor/ToneCurvePanel";
+import { getPanelRegistry } from "@/editor/panels";
 import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import {
   CropToolButtons,
   CropToolOptions,
   CropToolOverlay,
 } from "@/editor/CropTool";
-import { LightPanel } from "@/editor/LightPanel";
-import { ColorPanel } from "@/editor/ColorPanel";
-import { WhiteBalancePanel } from "@/editor/WhiteBalancePanel";
 import { useCropStore } from "./store/cropStore";
 
 
@@ -48,15 +41,6 @@ function formatSignedInt(value: number) {
   return `${sign}${Math.abs(rounded)}`;
 }
 
-const WHITE_BALANCE_PRESETS_UI = [
-  { value: "daylight", label: "Daylight" },
-  { value: "cloudy", label: "Cloudy" },
-  { value: "shade", label: "Shade" },
-  { value: "tungsten", label: "Tungsten" },
-  { value: "fluorescent", label: "Fluorescent" },
-  { value: "flash", label: "Flash" },
-  { value: "custom", label: "Custom" },
-] as const;
 
 const WHITE_BALANCE_PICKER_RADIUS = 2;
 
@@ -540,72 +524,64 @@ export function ReactImageEditor({ imageSrc }: Props) {
                       />
                     </div>
                   </div>
-
-                    <WhiteBalancePanel
-                      isImageLoaded={isImageLoaded}
-                      whiteBalance={whiteBalance}
-                      resetWhiteBalance={resetWhiteBalance}
-                      setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                      presets={WHITE_BALANCE_PRESETS_UI}
-                      formatSignedInt={formatSignedInt}
-                      Slider={LightSlider}
-                      onPresetChange={(nextPreset) => {
-                        const preset =
-                          nextPreset as (typeof WHITE_BALANCE_PRESETS_UI)[number]["value"];
-
-                        if (preset === "custom") {
-                          setWhiteBalance({ preset: "custom" });
-                          return;
-                        }
-
-                        const presetKey = preset as keyof typeof WHITE_BALANCE_PRESETS;
-                        const presetValues = WHITE_BALANCE_PRESETS[presetKey];
-                        setWhiteBalance({
-                          preset,
-                          temperatureKelvin: presetValues.temperatureKelvin,
-                          tint: presetValues.tint,
-                        });
-                      }}
-                      onTempChange={(value) =>
-                        setWhiteBalance({ temperatureKelvin: value })
-                      }
-                      onTintChange={(value) => setWhiteBalance({ tint: value })}
-                    />
-
-
-                  <LightPanel
-                    isImageLoaded={isImageLoaded}
-                    lightAdjustments={lightAdjustments}
-                    resetLightAdjustments={resetLightAdjustments}
-                    setLightAdjustment={setLightAdjustment}
-                    formatSigned={formatSigned}
-                    formatSignedInt={formatSignedInt}
-                    Slider={LightSlider}
-                  />
-
-
-                  <ColorPanel
-                    isImageLoaded={isImageLoaded}
-                    colorAdjustments={colorAdjustments}
-                    resetColorAdjustments={resetColorAdjustments}
-                    setColorAdjustment={setColorAdjustment}
-                    formatSignedInt={formatSignedInt}
-                    Slider={LightSlider}
-                  />
+                  {getPanelRegistry()
+                    .filter((panel) => panel.groupId === "basic")
+                    .map((panel) => (
+                      <panel.Component
+                        key={panel.id}
+                        isImageLoaded={isImageLoaded}
+                        Slider={LightSlider}
+                        formatSigned={formatSigned}
+                        formatSignedInt={formatSignedInt}
+                        whiteBalance={whiteBalance}
+                        resetWhiteBalance={resetWhiteBalance}
+                        setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                        setWhiteBalance={setWhiteBalance}
+                        lightAdjustments={lightAdjustments}
+                        resetLightAdjustments={resetLightAdjustments}
+                        setLightAdjustment={setLightAdjustment}
+                        colorAdjustments={colorAdjustments}
+                        resetColorAdjustments={resetColorAdjustments}
+                        setColorAdjustment={setColorAdjustment}
+                        toneCurve={toneCurve}
+                        resetToneCurve={resetToneCurve}
+                        setToneCurveMode={setToneCurveMode}
+                        setToneCurveChannel={setToneCurveChannel}
+                        setToneCurvePoints={setToneCurvePoints}
+                        setToneCurveParametricRgb={setToneCurveParametricRgb}
+                      />
+                    ))}
                 </div>
               </details>
 
-              <ToneCurvePanel
-                isImageLoaded={isImageLoaded}
-                toneCurve={toneCurve}
-                resetToneCurve={resetToneCurve}
-                setToneCurveMode={setToneCurveMode}
-                setToneCurveChannel={setToneCurveChannel}
-                setToneCurvePoints={setToneCurvePoints}
-                setToneCurveParametricRgb={setToneCurveParametricRgb}
-                Slider={LightSlider}
-                formatSignedInt={formatSignedInt}
-              />
+              {getPanelRegistry()
+                .filter((panel) => panel.groupId !== "basic")
+                .map((panel) => (
+                  <panel.Component
+                    key={panel.id}
+                    isImageLoaded={isImageLoaded}
+                    Slider={LightSlider}
+                    formatSigned={formatSigned}
+                    formatSignedInt={formatSignedInt}
+                    whiteBalance={whiteBalance}
+                    resetWhiteBalance={resetWhiteBalance}
+                    setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                    setWhiteBalance={setWhiteBalance}
+                    lightAdjustments={lightAdjustments}
+                    resetLightAdjustments={resetLightAdjustments}
+                    setLightAdjustment={setLightAdjustment}
+                    colorAdjustments={colorAdjustments}
+                    resetColorAdjustments={resetColorAdjustments}
+                    setColorAdjustment={setColorAdjustment}
+                    toneCurve={toneCurve}
+                    resetToneCurve={resetToneCurve}
+                    setToneCurveMode={setToneCurveMode}
+                    setToneCurveChannel={setToneCurveChannel}
+                    setToneCurvePoints={setToneCurvePoints}
+                    setToneCurveParametricRgb={setToneCurveParametricRgb}
+                  />
+                ))}
+
 
           </div>
           <CropToolOptions
