@@ -8,7 +8,6 @@ function DetailsPanelFromContext({ isImageLoaded, Slider }: PanelContext) {
   const sharpening = useSharpeningStore((state) => state.sharpening);
   const setSharpening = useSharpeningStore((state) => state.setSharpening);
   const resetSharpening = useSharpeningStore((state) => state.resetSharpening);
-  const resetSharpeningSetting = useSharpeningStore((state) => state.resetSharpeningSetting);
 
   return (
     <details className="rounded-md border bg-white" data-testid="details-accordion">
@@ -25,7 +24,6 @@ function DetailsPanelFromContext({ isImageLoaded, Slider }: PanelContext) {
           sharpening={sharpening}
           setSharpening={setSharpening}
           resetSharpening={resetSharpening}
-          resetSharpeningSetting={resetSharpeningSetting}
           Slider={Slider}
         />
       </div>
