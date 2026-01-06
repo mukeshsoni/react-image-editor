@@ -94,9 +94,79 @@ describe("ReactImageEditor render integration (white balance)", () => {
       getEdits: vi.fn(),
     };
 
-    vi.doMock("../store/cropStore", () => ({
-      useCropStore: () => nonNeutralStore,
+    vi.doMock("../store/cropStore", async () => {
+      const actual = await vi.importActual<typeof import("../store/cropStore")>(
+        "../store/cropStore",
+      );
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        ...actual,
+        useCropStore: createMockZustandHook({
+          cropSettings: nonNeutralStore.cropSettings,
+          setRotation: nonNeutralStore.setRotation,
+          resetRotation: nonNeutralStore.resetRotation,
+        }),
+      };
+    });
+
+    vi.doMock("../store/editorActions", () => ({
+      useResetAll: () => nonNeutralStore.resetAll,
     }));
+
+    vi.doMock("../store/whiteBalanceStore", async () => {
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        useWhiteBalanceStore: createMockZustandHook({
+          whiteBalance: nonNeutralStore.whiteBalance,
+          setWhiteBalance: nonNeutralStore.setWhiteBalance,
+          setWhiteBalancePreset: nonNeutralStore.setWhiteBalancePreset,
+          resetWhiteBalance: nonNeutralStore.resetWhiteBalance,
+        }),
+      };
+    });
+
+    vi.doMock("../store/lightStore", async () => {
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        useLightStore: createMockZustandHook({
+          lightAdjustments: nonNeutralStore.lightAdjustments,
+          setLightAdjustment: nonNeutralStore.setLightAdjustment,
+          resetLightAdjustments: nonNeutralStore.resetLightAdjustments,
+          resetLightAdjustment: nonNeutralStore.resetLightAdjustment,
+        }),
+      };
+    });
+
+    vi.doMock("../store/colorStore", async () => {
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        useColorStore: createMockZustandHook({
+          colorAdjustments: nonNeutralStore.colorAdjustments,
+          setColorAdjustment: nonNeutralStore.setColorAdjustment,
+          resetColorAdjustments: nonNeutralStore.resetColorAdjustments,
+          resetColorAdjustment: nonNeutralStore.resetColorAdjustment,
+        }),
+      };
+    });
+
+    vi.doMock("../store/toneCurveStore", async () => {
+      const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+      return {
+        useToneCurveStore: createMockZustandHook({
+          toneCurve: nonNeutralStore.toneCurve,
+          setToneCurveMode: nonNeutralStore.setToneCurveMode,
+          setToneCurveChannel: nonNeutralStore.setToneCurveChannel,
+          setToneCurvePoints: nonNeutralStore.setToneCurvePoints,
+          setToneCurveParametricRgb: nonNeutralStore.setToneCurveParametricRgb,
+          resetToneCurve: nonNeutralStore.resetToneCurve,
+        }),
+      };
+    });
 
     vi.doMock("../Cropper", () => ({
       Cropper: () => null,

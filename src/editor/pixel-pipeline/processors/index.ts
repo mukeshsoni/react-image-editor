@@ -1,0 +1,1 @@
+export { getProcessorRegistry } from "./registry";

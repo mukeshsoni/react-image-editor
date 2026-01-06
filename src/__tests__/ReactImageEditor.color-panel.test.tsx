@@ -61,9 +61,79 @@ const mockStore = {
   getEdits: vi.fn(),
 };
 
-vi.mock("../store/cropStore", () => ({
-  useCropStore: () => mockStore,
+vi.mock("../store/cropStore", async () => {
+  const actual = await vi.importActual<typeof import("../store/cropStore")>(
+    "../store/cropStore",
+  );
+  const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+  return {
+    ...actual,
+    useCropStore: createMockZustandHook({
+      cropSettings: mockStore.cropSettings,
+      setRotation: mockStore.setRotation,
+      resetRotation: mockStore.resetRotation,
+    }),
+  };
+});
+
+vi.mock("../store/editorActions", () => ({
+  useResetAll: () => mockStore.resetAll,
 }));
+
+vi.mock("../store/whiteBalanceStore", async () => {
+  const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+  return {
+    useWhiteBalanceStore: createMockZustandHook({
+      whiteBalance: mockStore.whiteBalance,
+      setWhiteBalance: mockStore.setWhiteBalance,
+      setWhiteBalancePreset: mockStore.setWhiteBalancePreset,
+      resetWhiteBalance: mockStore.resetWhiteBalance,
+    }),
+  };
+});
+
+vi.mock("../store/lightStore", async () => {
+  const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+  return {
+    useLightStore: createMockZustandHook({
+      lightAdjustments: mockStore.lightAdjustments,
+      setLightAdjustment: mockStore.setLightAdjustment,
+      resetLightAdjustments: mockStore.resetLightAdjustments,
+      resetLightAdjustment: mockStore.resetLightAdjustment,
+    }),
+  };
+});
+
+vi.mock("../store/colorStore", async () => {
+  const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+  return {
+    useColorStore: createMockZustandHook({
+      colorAdjustments: mockStore.colorAdjustments,
+      setColorAdjustment: mockStore.setColorAdjustment,
+      resetColorAdjustments: mockStore.resetColorAdjustments,
+      resetColorAdjustment: mockStore.resetColorAdjustment,
+    }),
+  };
+});
+
+vi.mock("../store/toneCurveStore", async () => {
+  const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
+
+  return {
+    useToneCurveStore: createMockZustandHook({
+      toneCurve: mockStore.toneCurve,
+      setToneCurveMode: mockStore.setToneCurveMode,
+      setToneCurveChannel: mockStore.setToneCurveChannel,
+      setToneCurvePoints: mockStore.setToneCurvePoints,
+      setToneCurveParametricRgb: mockStore.setToneCurveParametricRgb,
+      resetToneCurve: mockStore.resetToneCurve,
+    }),
+  };
+});
 
 vi.mock("../Cropper", () => ({
   Cropper: () => null,
