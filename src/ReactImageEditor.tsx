@@ -30,6 +30,7 @@ import {
   CropToolOptions,
   CropToolOverlay,
 } from "@/editor/CropTool";
+import { LightPanel } from "@/editor/LightPanel";
 import { WhiteBalancePanel } from "@/editor/WhiteBalancePanel";
 import { useCropStore } from "./store/cropStore";
 
@@ -569,109 +570,15 @@ export function ReactImageEditor({ imageSrc }: Props) {
                     />
 
 
-                  <div className="mt-4 border-t pt-3" data-testid="tone-section">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium text-gray-700">Tone</div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => resetLightAdjustments()}
-                        disabled={!isImageLoaded}
-                      >
-                        Reset
-                      </Button>
-                    </div>
-
-                    <div className="mt-3 flex flex-col gap-3">
-                      <LightSlider
-                        label="Exposure"
-                        name="exposure"
-                        value={lightAdjustments.exposure}
-                        defaultValue={0}
-                        min={-2}
-                        max={2}
-                        step={0.01}
-                        disabled={!isImageLoaded}
-                        format={(value) => formatSigned(value, 2)}
-                        onValueChange={(value) =>
-                          setLightAdjustment("exposure", value)
-                        }
-                      />
-
-                      <LightSlider
-                        label="Contrast"
-                        name="contrast"
-                        value={lightAdjustments.contrast}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled={!isImageLoaded}
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={(value) =>
-                          setLightAdjustment("contrast", value)
-                        }
-                      />
-
-                      <LightSlider
-                        label="Highlights"
-                        name="highlights"
-                        value={lightAdjustments.highlights}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled={!isImageLoaded}
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={(value) =>
-                          setLightAdjustment("highlights", value)
-                        }
-                      />
-
-                      <LightSlider
-                        label="Shadows"
-                        name="shadows"
-                        value={lightAdjustments.shadows}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled={!isImageLoaded}
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={(value) =>
-                          setLightAdjustment("shadows", value)
-                        }
-                      />
-
-                      <LightSlider
-                        label="Whites"
-                        name="whites"
-                        value={lightAdjustments.whites}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled={!isImageLoaded}
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={(value) => setLightAdjustment("whites", value)}
-                      />
-
-                      <LightSlider
-                        label="Blacks"
-                        name="blacks"
-                        value={lightAdjustments.blacks}
-                        defaultValue={0}
-                        min={-100}
-                        max={100}
-                        step={1}
-                        disabled={!isImageLoaded}
-                        format={(value) => formatSignedInt(value)}
-                        onValueChange={(value) => setLightAdjustment("blacks", value)}
-                      />
-                    </div>
-                  </div>
+                  <LightPanel
+                    isImageLoaded={isImageLoaded}
+                    lightAdjustments={lightAdjustments}
+                    resetLightAdjustments={resetLightAdjustments}
+                    setLightAdjustment={setLightAdjustment}
+                    formatSigned={formatSigned}
+                    formatSignedInt={formatSignedInt}
+                    Slider={LightSlider}
+                  />
 
 
                   <div className="mt-4 border-t pt-3" data-testid="color-section">
