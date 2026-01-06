@@ -19,7 +19,7 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [x] Implement `detail` control weighting (texture vs edges)
 - [x] Implement `masking` control (edge mask / threshold)
 - [x] Preserve alpha channel in all operations
-- [ ] Clamp output channels safely (avoid overflow/underflow)
+- [x] Clamp output channels safely (avoid overflow/underflow)
 
 ## 3) Rendering Integration
 - [ ] Identify canonical “base image” source used for rendering
