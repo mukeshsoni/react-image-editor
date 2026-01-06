@@ -13,7 +13,7 @@ Source PRD: `prds/details-sharpening-prd.md`
 
 ## 2) Sharpening Math (non-destructive)
 - [x] Create pure helper module for sharpening math
-- [ ] Implement blur (separable Gaussian or approximation)
+- [x] Implement blur (separable Gaussian or approximation)
 - [ ] Implement unsharp mask: `out = original + amount * (original - blurred)`
 - [ ] Implement luminance-first sharpening to reduce color halos
 - [ ] Implement `detail` control weighting (texture vs edges)

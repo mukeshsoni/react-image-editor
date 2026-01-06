@@ -1,22 +1,24 @@
 import type { SharpeningSettings } from "@/store/cropStore";
 
 export type SharpeningBuffers = {
-  temp: Float32Array;
   blurred: Float32Array;
   luma: Float32Array;
+  scratch: Float32Array;
 };
 
 export function createSharpeningBuffers(pixelCount: number): SharpeningBuffers {
   return {
-    temp: new Float32Array(pixelCount),
     blurred: new Float32Array(pixelCount),
     luma: new Float32Array(pixelCount),
+    scratch: new Float32Array(pixelCount),
   };
 }
 
 export function applySharpeningToRgbaBytes(
   input: Uint8ClampedArray,
   output: Uint8ClampedArray,
+  width: number,
+  height: number,
   settings: SharpeningSettings,
   buffers: SharpeningBuffers,
 ): void {
@@ -27,6 +29,10 @@ export function applySharpeningToRgbaBytes(
   const pixelCount = input.length / 4;
   if (!Number.isInteger(pixelCount)) {
     throw new Error("Input buffer must be RGBA");
+  }
+
+  if (width <= 0 || height <= 0 || width * height !== pixelCount) {
+    throw new Error("Width/height must match input buffer");
   }
 
   if (buffers.luma.length !== pixelCount) {
@@ -59,8 +65,14 @@ export function applySharpeningToRgbaBytes(
     buffers.luma[p] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
-  // Placeholder blur: 1D gaussian along the luma array.
-  gaussianBlur1d(buffers.luma, buffers.blurred, buffers.temp, sigma);
+  gaussianBlurLumaSeparable(
+    buffers.luma,
+    buffers.blurred,
+    buffers.scratch,
+    width,
+    height,
+    sigma,
+  );
 
   // Apply unsharp mask in luma space, then map back to RGB by scaling.
   for (let p = 0, i = 0; p < pixelCount; p += 1, i += 4) {
@@ -100,40 +112,70 @@ export function isNeutralSharpening(settings: SharpeningSettings): boolean {
   return settings.amount === 0;
 }
 
-function gaussianBlur1d(
+function gaussianBlurLumaSeparable(
   input: Float32Array,
   output: Float32Array,
-  temp: Float32Array,
+  scratch: Float32Array,
+  width: number,
+  height: number,
   sigma: number,
 ): void {
-  if (input.length !== output.length || input.length !== temp.length) {
+  if (input.length !== output.length || input.length !== scratch.length) {
     throw new Error("Blur buffers must match");
   }
 
-  const radius = Math.max(1, Math.ceil(sigma * 3));
-  const kernelSize = radius * 2 + 1;
+  const { kernel, radius } = createGaussianKernel(sigma);
 
-  // Build kernel into temp[0..kernelSize).
+  // Horizontal pass: input -> scratch
+  for (let y = 0; y < height; y += 1) {
+    const rowStart = y * width;
+
+    for (let x = 0; x < width; x += 1) {
+      let acc = 0;
+      for (let k = -radius; k <= radius; k += 1) {
+        const sx = clampInt(x + k, 0, width - 1);
+        const w = kernel[k + radius] ?? 0;
+        acc += (input[rowStart + sx] ?? 0) * w;
+      }
+      scratch[rowStart + x] = acc;
+    }
+  }
+
+  // Vertical pass: scratch -> output
+  for (let y = 0; y < height; y += 1) {
+    const rowStart = y * width;
+
+    for (let x = 0; x < width; x += 1) {
+      let acc = 0;
+      for (let k = -radius; k <= radius; k += 1) {
+        const sy = clampInt(y + k, 0, height - 1);
+        const w = kernel[k + radius] ?? 0;
+        acc += (scratch[sy * width + x] ?? 0) * w;
+      }
+      output[rowStart + x] = acc;
+    }
+  }
+}
+
+function createGaussianKernel(sigma: number): { kernel: Float32Array; radius: number } {
+  const safeSigma = Math.max(0.001, sigma);
+  const radius = Math.max(1, Math.ceil(safeSigma * 3));
+  const size = radius * 2 + 1;
+
+  const kernel = new Float32Array(size);
+
   let sum = 0;
   for (let k = -radius; k <= radius; k += 1) {
-    const w = Math.exp(-(k * k) / (2 * sigma * sigma));
-    temp[k + radius] = w;
+    const w = Math.exp(-(k * k) / (2 * safeSigma * safeSigma));
+    kernel[k + radius] = w;
     sum += w;
   }
-  for (let idx = 0; idx < kernelSize; idx += 1) {
-    temp[idx] = (temp[idx] ?? 0) / sum;
+
+  for (let i = 0; i < size; i += 1) {
+    kernel[i] = (kernel[i] ?? 0) / sum;
   }
 
-  // Convolve.
-  for (let i = 0; i < input.length; i += 1) {
-    let acc = 0;
-    for (let k = -radius; k <= radius; k += 1) {
-      const j = clampInt(i + k, 0, input.length - 1);
-      const w = temp[k + radius] ?? 0;
-      acc += (input[j] ?? 0) * w;
-    }
-    output[i] = acc;
-  }
+  return { kernel, radius };
 }
 
 function floatToByte(value: number): number {
