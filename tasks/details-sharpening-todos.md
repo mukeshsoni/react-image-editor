@@ -8,7 +8,7 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [x] Add `sharpening` to Zustand store state (or extend existing `adjustments`)
 - [x] Add action: `setSharpening(partial)` (or reuse existing `setAdjustment` pattern)
 - [x] Add action: `resetSharpening()`
-- [ ] Ensure settings persist across crop/zoom/pan interactions
+- [x] Ensure settings persist across crop/zoom/pan interactions
 - [ ] Ensure export snapshot includes sharpening parameters (`getEdits()` or equivalent)
 
 ## 2) Sharpening Math (non-destructive)
