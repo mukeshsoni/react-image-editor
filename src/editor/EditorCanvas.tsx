@@ -1,21 +1,14 @@
 import { useEffect, useRef } from "react";
 
-import {
-  applyColorAdjustmentsToRgbaBytes,
-  hasNonNeutralColorAdjustments,
-} from "@/lib/color-adjustments";
-import { applyLightAdjustmentsToRgbaBytes } from "@/lib/light-adjustments";
-import {
-  applyToneCurveToRgbaBytes,
-  createToneCurveLuts,
-  hasNonNeutralToneCurve,
-} from "@/lib/tone-curve";
-import {
-  applyWhiteBalanceToRgbaBytes,
-  hasNonNeutralWhiteBalance,
-} from "@/lib/white-balance";
-
 import { drawImageWithRotation } from "@/export-download";
+
+import {
+  createDefaultPipeline,
+  ensurePipelineBufferCapacity,
+  runPipeline,
+} from "@/editor/pixel-pipeline";
+import type { PixelPipelineContext, PipelineBuffers } from "@/editor/pixel-pipeline";
+
 import type {
   ColorAdjustments,
   LightAdjustments,
@@ -27,11 +20,8 @@ type RenderCache = {
   baseCanvas: HTMLCanvasElement;
   baseKey: string;
   adjustedCanvas: HTMLCanvasElement;
-  in: Uint8ClampedArray;
-  out: Uint8ClampedArray;
-  temp: Uint8ClampedArray;
-  toneCurveKey?: string;
-  toneCurveLuts?: ReturnType<typeof createToneCurveLuts>;
+  pipeline: ReadonlyArray<import("@/editor/pixel-pipeline").PixelProcessor>;
+  buffers: PipelineBuffers;
 };
 
 function renderImageToCanvas(
@@ -56,29 +46,7 @@ function renderImageToCanvas(
   const canvasHeight = canvasRef.height;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-  const shouldApplyWhiteBalance =
-    whiteBalance != null && hasNonNeutralWhiteBalance(whiteBalance);
-
-  const shouldApplyLight =
-    lightAdjustments != null &&
-    (lightAdjustments.exposure !== 0 ||
-      lightAdjustments.contrast !== 0 ||
-      lightAdjustments.highlights !== 0 ||
-      lightAdjustments.shadows !== 0 ||
-      lightAdjustments.whites !== 0 ||
-      lightAdjustments.blacks !== 0);
-
-  const shouldApplyToneCurve = toneCurve != null && hasNonNeutralToneCurve(toneCurve);
-
-  const shouldApplyColor =
-    colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
-
-  const shouldProcessPixels =
-    (shouldApplyWhiteBalance ||
-      shouldApplyLight ||
-      shouldApplyToneCurve ||
-      shouldApplyColor) &&
-    cache;
+  const shouldProcessPixels = cache != null;
 
   if (!shouldProcessPixels) {
     ctx.save();
@@ -102,54 +70,21 @@ function renderImageToCanvas(
     baseCtx.restore();
 
     const imageData = baseCtx.getImageData(0, 0, canvasWidth, canvasHeight);
-    cache.in = imageData.data;
-    cache.out = new Uint8ClampedArray(cache.in.length);
-    cache.temp = new Uint8ClampedArray(cache.in.length);
+    ensurePipelineBufferCapacity(cache.buffers, imageData.data.length);
+    cache.buffers.in.set(imageData.data);
 
     cache.baseKey = baseKey;
   }
 
-  const source = cache.in;
-  const dest = cache.out;
 
-  if (shouldApplyWhiteBalance && whiteBalance) {
-    applyWhiteBalanceToRgbaBytes(source, dest, whiteBalance);
-  } else {
-    dest.set(source);
-  }
+  const context: PixelPipelineContext = {
+    whiteBalance,
+    lightAdjustments,
+    toneCurve,
+    colorAdjustments,
+  };
 
-  if (shouldApplyLight && lightAdjustments) {
-    if (cache.temp.length !== dest.length) {
-      cache.temp = new Uint8ClampedArray(dest.length);
-    }
-
-    applyLightAdjustmentsToRgbaBytes(dest, cache.temp, lightAdjustments);
-    dest.set(cache.temp);
-  }
-
-  if (shouldApplyToneCurve && toneCurve) {
-    const toneCurveKey = JSON.stringify(toneCurve);
-    if (cache.toneCurveKey !== toneCurveKey || !cache.toneCurveLuts) {
-      cache.toneCurveLuts = createToneCurveLuts(toneCurve);
-      cache.toneCurveKey = toneCurveKey;
-    }
-
-    if (cache.temp.length !== dest.length) {
-      cache.temp = new Uint8ClampedArray(dest.length);
-    }
-
-    applyToneCurveToRgbaBytes(dest, cache.temp, cache.toneCurveLuts);
-    dest.set(cache.temp);
-  }
-
-  if (shouldApplyColor && colorAdjustments) {
-    if (cache.temp.length !== dest.length) {
-      cache.temp = new Uint8ClampedArray(dest.length);
-    }
-
-    applyColorAdjustmentsToRgbaBytes(dest, cache.temp, colorAdjustments);
-    dest.set(cache.temp);
-  }
+  runPipeline(cache.pipeline, cache.buffers, context);
 
   cache.adjustedCanvas.width = canvasWidth;
   cache.adjustedCanvas.height = canvasHeight;
@@ -157,7 +92,7 @@ function renderImageToCanvas(
   const adjustedCtx = cache.adjustedCanvas.getContext("2d");
   if (!adjustedCtx) return;
 
-  const adjustedData = new ImageData(dest, canvasWidth, canvasHeight);
+  const adjustedData = new ImageData(cache.buffers.out, canvasWidth, canvasHeight);
   adjustedCtx.putImageData(adjustedData, 0, 0);
 
   ctx.save();
@@ -202,9 +137,12 @@ export function EditorCanvas({
       baseCanvas: document.createElement("canvas"),
       baseKey: "",
       adjustedCanvas: document.createElement("canvas"),
-      in: new Uint8ClampedArray(0),
-      out: new Uint8ClampedArray(0),
-      temp: new Uint8ClampedArray(0),
+      pipeline: createDefaultPipeline(),
+      buffers: {
+        in: new Uint8ClampedArray(0),
+        out: new Uint8ClampedArray(0),
+        temp: new Uint8ClampedArray(0),
+      },
     };
   }
 
