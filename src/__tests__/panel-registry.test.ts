@@ -10,6 +10,7 @@ describe("panel registry", () => {
       "white-balance",
       "light",
       "color",
+      "details",
       "tone-curve",
     ]);
   });
