@@ -30,17 +30,17 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [x] Confirm ordering with other adjustments is consistent (document chosen order)
 
 ## 4) UI: Details Accordion + Sharpening Section
-- [ ] Add an accordion item titled `Details`
-- [ ] Add a section titled `Sharpening`
-- [ ] Add four labeled rows: Amount, Radius, Detail, Masking
-- [ ] Add slider component for each row
-- [ ] Show current numeric value on the right of each row
-- [ ] Define slider min/max/step per control (match PRD ranges)
-- [ ] Wire slider changes to store action
-- [ ] Add “Reset” control to restore defaults (section-level or Details-level)
-- [ ] Disable/guard controls when no image is loaded
-- [ ] Add `aria-label`/`aria-labelledby` for each slider
-- [ ] Confirm keyboard operation (arrow keys adjust by step)
+- [x] Add an accordion item titled `Details`
+- [x] Add a section titled `Sharpening`
+- [x] Add four labeled rows: Amount, Radius, Detail, Masking
+- [x] Add slider component for each row
+- [x] Show current numeric value on the right of each row
+- [x] Define slider min/max/step per control (match PRD ranges)
+- [x] Wire slider changes to store action
+- [x] Add “Reset” control to restore defaults (section-level or Details-level)
+- [x] Disable/guard controls when no image is loaded
+- [x] Add `aria-label`/`aria-labelledby` for each slider
+- [x] Confirm keyboard operation (arrow keys adjust by step)
 
 ## 5) Behavior + UX Validation (Manual QA)
 - [ ] Verify sharpening updates live while zoomed in (no lag spikes)

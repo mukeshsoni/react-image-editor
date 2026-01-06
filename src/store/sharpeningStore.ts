@@ -7,7 +7,6 @@ type SharpeningStore = {
 
   setSharpening: (updates: Partial<SharpeningSettings>) => void;
   resetSharpening: () => void;
-  resetSharpeningSetting: (name: keyof SharpeningSettings) => void;
 };
 
 export const useSharpeningStore = create<SharpeningStore>((set) => ({
@@ -24,14 +23,5 @@ export const useSharpeningStore = create<SharpeningStore>((set) => ({
 
   resetSharpening: () => {
     set({ sharpening: { ...DEFAULT_SHARPENING_SETTINGS } });
-  },
-
-  resetSharpeningSetting: (name) => {
-    set((state) => ({
-      sharpening: {
-        ...state.sharpening,
-        [name]: DEFAULT_SHARPENING_SETTINGS[name],
-      },
-    }));
   },
 }));
