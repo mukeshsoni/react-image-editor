@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
+vi.useFakeTimers();
+
 import type { PanelSliderProps } from "@/editor/panels/context";
 import { DetailsPanel } from "@/editor/DetailsPanel";
 
@@ -122,15 +124,18 @@ describe("DetailsPanel", () => {
     expect(setSharpening).toHaveBeenCalledWith({ masking: 80 });
 
     fireEvent.change(within(section).getByLabelText("Luminance"), { target: { value: "15" } });
-    expect(setDenoise).toHaveBeenCalledWith({ luminance: 15 });
+    vi.advanceTimersByTime(200);
+    expect(setDenoise).toHaveBeenCalledWith({ luminance: 15, color: 0, detail: 50 });
 
     fireEvent.change(within(section).getByLabelText("Color"), { target: { value: "35" } });
-    expect(setDenoise).toHaveBeenCalledWith({ color: 35 });
+    vi.advanceTimersByTime(200);
+    expect(setDenoise).toHaveBeenCalledWith({ luminance: 15, color: 35, detail: 50 });
 
     fireEvent.change(within(section).getByLabelText("Detail", { selector: "#denoise-detail" }), {
       target: { value: "90" },
     });
-    expect(setDenoise).toHaveBeenCalledWith({ detail: 90 });
+    vi.advanceTimersByTime(200);
+    expect(setDenoise).toHaveBeenCalledWith({ luminance: 15, color: 35, detail: 90 });
   });
 
   test("reset buttons call correct reset actions", () => {
