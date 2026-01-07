@@ -3,6 +3,7 @@ import type { ImageEditorEdits } from "./edits";
 import { useColorStore } from "./colorStore";
 import { useCropStore } from "./cropStore";
 import { useLightStore } from "./lightStore";
+import { useDenoiseStore } from "./denoiseStore";
 import { getImageEditorEdits } from "./selectEdits";
 import { useSharpeningStore } from "./sharpeningStore";
 import { useToneCurveStore } from "./toneCurveStore";
@@ -34,6 +35,7 @@ export function subscribeToEdits(onChange: (edits: ImageEditorEdits) => void): U
     useColorStore.subscribe(scheduleEmit),
     useToneCurveStore.subscribe(scheduleEmit),
     useSharpeningStore.subscribe(scheduleEmit),
+    useDenoiseStore.subscribe(scheduleEmit),
   ];
 
   return () => {

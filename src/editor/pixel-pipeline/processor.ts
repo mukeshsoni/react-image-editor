@@ -5,6 +5,7 @@ export type PixelProcessorId =
   | "light"
   | "tone-curve"
   | "color"
+  | "denoise"
   | "sharpening";
 
 export type PixelProcessor = {

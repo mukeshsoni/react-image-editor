@@ -69,11 +69,23 @@ export type SharpeningSettings = {
   masking: number;
 };
 
+export type DenoiseSettings = {
+  luminance: number;
+  color: number;
+  detail: number;
+};
+
 export const DEFAULT_SHARPENING_SETTINGS: SharpeningSettings = {
   amount: 0,
   radius: 1,
   detail: 25,
   masking: 0,
+};
+
+export const DEFAULT_DENOISE_SETTINGS: DenoiseSettings = {
+  luminance: 0,
+  color: 0,
+  detail: 50,
 };
 
 export type ToneCurveChannel = "rgb" | "r" | "g" | "b";

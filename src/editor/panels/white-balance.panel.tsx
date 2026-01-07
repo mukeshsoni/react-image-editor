@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { WhiteBalancePanel } from "@/editor/WhiteBalancePanel";
 import { WHITE_BALANCE_PRESETS } from "@/lib/white-balance";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";

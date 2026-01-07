@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { LightPanel } from "@/editor/LightPanel";
 import { useLightStore } from "@/store/lightStore";
 

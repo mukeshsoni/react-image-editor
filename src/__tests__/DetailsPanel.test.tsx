@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
+
 import type { PanelSliderProps } from "@/editor/panels/context";
 import { DetailsPanel } from "@/editor/DetailsPanel";
 
@@ -43,6 +44,9 @@ describe("DetailsPanel", () => {
         sharpening={{ amount: 0, radius: 1, detail: 25, masking: 0 }}
         setSharpening={() => {}}
         resetSharpening={() => {}}
+        denoise={{ luminance: 0, color: 0, detail: 50 }}
+        setDenoise={() => {}}
+        resetDenoise={() => {}}
         Slider={TestSlider}
       />,
     );
@@ -52,10 +56,15 @@ describe("DetailsPanel", () => {
 
     expect(within(section).getByLabelText("Amount")).toBeTruthy();
     expect(within(section).getByLabelText("Radius")).toBeTruthy();
-    expect(within(section).getByLabelText("Detail")).toBeTruthy();
+    expect(within(section).getByLabelText("Detail", { selector: "#sharpening-detail" })).toBeTruthy();
     expect(within(section).getByLabelText("Masking")).toBeTruthy();
 
-    expect(within(section).getByRole("button", { name: "Reset" })).toBeTruthy();
+    expect(within(section).getAllByRole("button", { name: "Reset" })).toHaveLength(2);
+
+    expect(within(section).getByText("Noise Reduction")).toBeTruthy();
+    expect(within(section).getByLabelText("Luminance")).toBeTruthy();
+    expect(within(section).getByLabelText("Color")).toBeTruthy();
+    expect(within(section).getByLabelText("Detail", { selector: "#denoise-detail" })).toBeTruthy();
   });
 
   test("disables controls when image is not loaded", () => {
@@ -65,6 +74,9 @@ describe("DetailsPanel", () => {
         sharpening={{ amount: 0, radius: 1, detail: 25, masking: 0 }}
         setSharpening={() => {}}
         resetSharpening={() => {}}
+        denoise={{ luminance: 0, color: 0, detail: 50 }}
+        setDenoise={() => {}}
+        resetDenoise={() => {}}
         Slider={TestSlider}
       />,
     );
@@ -72,11 +84,14 @@ describe("DetailsPanel", () => {
     const section = screen.getByTestId("details-section");
 
     expect((within(section).getByLabelText("Amount") as HTMLInputElement).disabled).toBe(true);
-    expect((within(section).getByRole("button", { name: "Reset" }) as HTMLButtonElement).disabled).toBe(true);
+    for (const button of within(section).getAllByRole("button", { name: "Reset" })) {
+      expect((button as HTMLButtonElement).disabled).toBe(true);
+    }
   });
 
-  test("slider changes call setSharpening", () => {
+  test("slider changes call setSharpening and setDenoise", () => {
     const setSharpening = vi.fn();
+    const setDenoise = vi.fn();
 
     render(
       <DetailsPanel
@@ -84,6 +99,9 @@ describe("DetailsPanel", () => {
         sharpening={{ amount: 0, radius: 1, detail: 25, masking: 0 }}
         setSharpening={setSharpening}
         resetSharpening={() => {}}
+        denoise={{ luminance: 0, color: 0, detail: 50 }}
+        setDenoise={setDenoise}
+        resetDenoise={() => {}}
         Slider={TestSlider}
       />,
     );
@@ -96,15 +114,31 @@ describe("DetailsPanel", () => {
     fireEvent.change(within(section).getByLabelText("Radius"), { target: { value: "2.3" } });
     expect(setSharpening).toHaveBeenCalledWith({ radius: 2.3 });
 
-    fireEvent.change(within(section).getByLabelText("Detail"), { target: { value: "50" } });
+    fireEvent.change(within(section).getByLabelText("Detail", { selector: "#sharpening-detail" }), {
+      target: { value: "50" },
+    });
     expect(setSharpening).toHaveBeenCalledWith({ detail: 50 });
 
     fireEvent.change(within(section).getByLabelText("Masking"), { target: { value: "80" } });
     expect(setSharpening).toHaveBeenCalledWith({ masking: 80 });
+
+    fireEvent.change(within(section).getByLabelText("Luminance"), { target: { value: "15" } });
+    fireEvent.pointerUp(within(section).getByLabelText("Luminance"));
+    expect(setDenoise).toHaveBeenCalledWith({ luminance: 15 });
+
+    fireEvent.change(within(section).getByLabelText("Color"), { target: { value: "35" } });
+    fireEvent.pointerUp(within(section).getByLabelText("Color"));
+    expect(setDenoise).toHaveBeenCalledWith({ color: 35 });
+
+    const denoiseDetail = within(section).getByLabelText("Detail", { selector: "#denoise-detail" });
+    fireEvent.change(denoiseDetail, { target: { value: "90" } });
+    fireEvent.pointerUp(denoiseDetail);
+    expect(setDenoise).toHaveBeenCalledWith({ detail: 90 });
   });
 
-  test("reset button calls resetSharpening", () => {
+  test("reset buttons call correct reset actions", () => {
     const resetSharpening = vi.fn();
+    const resetDenoise = vi.fn();
 
     render(
       <DetailsPanel
@@ -112,13 +146,22 @@ describe("DetailsPanel", () => {
         sharpening={{ amount: 10, radius: 1, detail: 25, masking: 0 }}
         setSharpening={() => {}}
         resetSharpening={resetSharpening}
+        denoise={{ luminance: 10, color: 20, detail: 50 }}
+        setDenoise={() => {}}
+        resetDenoise={resetDenoise}
         Slider={TestSlider}
       />,
     );
 
     const section = screen.getByTestId("details-section");
 
-    fireEvent.click(within(section).getByRole("button", { name: "Reset" }));
+    const buttons = within(section).getAllByRole("button", { name: "Reset" });
+    expect(buttons).toHaveLength(2);
+
+    fireEvent.click(buttons[0] as HTMLButtonElement);
     expect(resetSharpening).toHaveBeenCalled();
+
+    fireEvent.click(buttons[1] as HTMLButtonElement);
+    expect(resetDenoise).toHaveBeenCalled();
   });
 });

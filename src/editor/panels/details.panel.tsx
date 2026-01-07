@@ -1,4 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import { DetailsPanel } from "@/editor/DetailsPanel";
+import { useDenoiseStore } from "@/store/denoiseStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 
 import type { PanelContext } from "./context";
@@ -8,6 +10,10 @@ function DetailsPanelFromContext({ isImageLoaded, Slider }: PanelContext) {
   const sharpening = useSharpeningStore((state) => state.sharpening);
   const setSharpening = useSharpeningStore((state) => state.setSharpening);
   const resetSharpening = useSharpeningStore((state) => state.resetSharpening);
+
+  const denoise = useDenoiseStore((state) => state.denoise);
+  const setDenoise = useDenoiseStore((state) => state.setDenoise);
+  const resetDenoise = useDenoiseStore((state) => state.resetDenoise);
 
   return (
     <details className="rounded-md border bg-white" data-testid="details-accordion">
@@ -24,6 +30,9 @@ function DetailsPanelFromContext({ isImageLoaded, Slider }: PanelContext) {
           sharpening={sharpening}
           setSharpening={setSharpening}
           resetSharpening={resetSharpening}
+          denoise={denoise}
+          setDenoise={setDenoise}
+          resetDenoise={resetDenoise}
           Slider={Slider}
         />
       </div>

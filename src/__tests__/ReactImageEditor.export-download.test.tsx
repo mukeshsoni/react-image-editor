@@ -330,6 +330,7 @@ describe("ReactImageEditor export/download", () => {
     // Slider should now render.
     const qualitySlider = await waitFor(() => getByTestId("jpeg-quality"));
     fireEvent.change(qualitySlider, { target: { value: "80" } });
+    fireEvent.pointerUp(qualitySlider);
 
     fireEvent.click(getByRole("button", { name: "Download" }));
 

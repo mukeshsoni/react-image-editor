@@ -72,6 +72,50 @@ function LightSlider({
   format,
   onValueChange,
 }: LightSliderProps) {
+  const [draftValue, setDraftValue] = useState(value);
+  const draftValueRef = useRef(value);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setDraftValue(value);
+    draftValueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleCommit = useMemo(() => {
+    return (nextValue: number) => {
+      draftValueRef.current = nextValue;
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        onValueChange(draftValueRef.current);
+      }, 150);
+    };
+  }, [onValueChange]);
+
+  const flushCommit = useMemo(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
+      // Commit the latest draft value immediately.
+      onValueChange(draftValueRef.current);
+    };
+  }, [onValueChange]);
+
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
@@ -79,7 +123,7 @@ function LightSlider({
           {label}
         </label>
         <span className="text-xs tabular-nums text-gray-700 w-[52px] text-right">
-          {format(value)}
+          {format(draftValue)}
         </span>
       </div>
       <input
@@ -88,9 +132,22 @@ function LightSlider({
         min={min}
         max={max}
         step={step}
-        value={value}
-        onChange={(e) => onValueChange(Number(e.target.value))}
-        onDoubleClick={() => onValueChange(defaultValue)}
+        value={draftValue}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          setDraftValue(next);
+          scheduleCommit(next);
+        }}
+        onPointerUp={flushCommit}
+        onMouseUp={flushCommit}
+        onTouchEnd={flushCommit}
+        onKeyUp={flushCommit}
+        onBlur={flushCommit}
+        onDoubleClick={() => {
+          setDraftValue(defaultValue);
+          scheduleCommit(defaultValue);
+          flushCommit();
+        }}
         disabled={disabled}
         aria-label={label}
         className="w-full"
@@ -324,14 +381,14 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   }, [cropSettings.constrainCrop, offset.x, offset.y, rotation, zoomLevel]);
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col overflow-hidden">
       <ResizablePanelGroup
         id="container-panel"
         direction="horizontal"
-        className="flex flex-1"
+        className="flex flex-1 min-h-0 overflow-hidden"
       >
         <ResizablePanel
-          className="flex flex-col"
+          className="flex flex-col min-h-0 overflow-hidden"
           defaultSize={75}
           onResize={handleImagePanelResize}
         >
@@ -445,8 +502,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
           </div>
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
-          <ResizablePanel defaultSize={25}>
-            <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2">
+          <ResizablePanel defaultSize={25} className="min-h-0">
+            <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
               <div className="flex flex-wrap items-center gap-2">
                 <CropToolButtons
                   cropMode={cropMode}

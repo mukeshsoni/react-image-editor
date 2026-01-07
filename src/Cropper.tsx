@@ -9,6 +9,7 @@ import {
 
 import { Muted } from "@/components/ui/typography";
 import { Separator } from "@/components/ui/separator";
+import { DebouncedRange } from "@/components/DebouncedRange";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LockOpen1Icon, LockClosedIcon } from "@radix-ui/react-icons";
@@ -512,16 +513,18 @@ export function CropOptions({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <label className="text-xs">Rotation</label>
-          <span className="text-xs font-medium">{cropSettings.rotation}°</span>
+          <span className="text-xs font-medium">{cropSettings.rotation ?? 0}°</span>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="range"
-            min="-45"
-            max="45"
-            step="1"
-            value={cropSettings.rotation}
-            onChange={(e) => setRotation(Number(e.target.value))}
+          <DebouncedRange
+            id="crop-rotation"
+            label="Rotation"
+            value={cropSettings.rotation ?? 0}
+            defaultValue={0}
+            min={-45}
+            max={45}
+            step={1}
+            onValueChange={setRotation}
             className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
           />
         </div>

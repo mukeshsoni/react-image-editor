@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { ColorPanel } from "@/editor/ColorPanel";
 import { useColorStore } from "@/store/colorStore";
 

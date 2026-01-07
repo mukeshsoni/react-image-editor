@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 
+import { DebouncedRange } from "@/components/DebouncedRange";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -145,15 +146,16 @@ export function ExportTool({
           <label className="text-xs text-gray-700" htmlFor="jpeg-quality">
             Quality
           </label>
-          <input
+          <DebouncedRange
             id="jpeg-quality"
-            data-testid="jpeg-quality"
-            type="range"
+            label="Quality"
+            value={jpegQuality}
+            defaultValue={92}
             min={10}
             max={100}
             step={1}
-            value={jpegQuality}
-            onChange={(e) => setJpegQuality(Number(e.target.value))}
+            onValueChange={setJpegQuality}
+            data-testid="jpeg-quality"
           />
           <span className="text-xs tabular-nums text-gray-700 w-[40px] text-right">
             {jpegQuality}
