@@ -11,18 +11,18 @@ Source PRD: `prds/undo-redo-prd.md`
 - Bounded history (default: last 50 steps).
 
 ## 1) State model + store
-- [ ] Define serializable `EditorSerializableState` snapshot shape (edits + camera: zoom/pan + crop/rotation as applicable)
-- [ ] Create history store (Zustand) with:
-  - [ ] `entries: HistoryEntry[]`
-  - [ ] `index: number`
-  - [ ] `push(entry)`
-  - [ ] `undo()` / `redo()`
-  - [ ] `jumpTo(index)` (for clicking history rows)
-  - [ ] `resetToBaseline(baselineState)` (used for image load + revert)
-  - [ ] history cap enforcement (50)
-- [ ] Add helpers:
-  - [ ] `canUndo` / `canRedo` selectors
-  - [ ] `currentEntry` selector
+- [x] Define serializable `EditorSerializableState` snapshot shape (edits + camera: zoom/pan + crop/rotation as applicable)
+- [x] Create history store (Zustand) with:
+  - [x] `entries: HistoryEntry[]`
+  - [x] `index: number`
+  - [x] `push(entry)`
+  - [x] `undo()` / `redo()`
+  - [x] `jumpTo(index)` (for clicking history rows)
+  - [x] `resetToBaseline(baselineState)` (used for image load + revert)
+  - [x] history cap enforcement (50)
+- [x] Add helpers:
+  - [x] `canUndo` / `canRedo` selectors
+  - [x] `currentEntry` selector
 
 ## 2) Baseline capture + lifecycle
 - [ ] On image load, capture baseline state as `Original`
