@@ -8,7 +8,7 @@ Source PRD: `prds/details-denoise-prd.md`
 - [x] Add `denoise` to Zustand store state (or extend existing `adjustments`)
 - [x] Add action: `setDenoise(partial)` (or reuse existing `setAdjustment` pattern)
 - [x] Add action: `resetDenoise()`
-- [ ] Ensure settings persist across crop/zoom/pan interactions
+- [x] Ensure settings persist across crop/zoom/pan interactions
 - [ ] Ensure export snapshot includes denoise parameters (`getEdits()` or equivalent)
 
 ## 2) Denoise Math (non-destructive)
