@@ -40,15 +40,15 @@ Source PRD: `prds/details-denoise-prd.md`
 - [x] Confirm ordering with other adjustments is consistent (document chosen order)
 
 ## 4) UI: Details Panel — Noise Reduction Section
-- [ ] Add a section titled `Noise Reduction` under `Details`, below `Sharpening`
-- [ ] Add three labeled rows: Luminance, Color, Detail
-- [ ] Add slider component for each row
+- [x] Add a section titled `Noise Reduction` under `Details`, below `Sharpening`
+- [x] Add three labeled rows: Luminance, Color, Detail
+- [x] Add slider component for each row
 - [ ] Show current numeric value on the right of each row
-- [ ] Define slider min/max/step per control (match PRD ranges)
-- [ ] Wire slider changes to store action
-- [ ] Add “Reset” control to restore defaults (section-level required)
-- [ ] Disable/guard controls when no image is loaded
-- [ ] Add `aria-label`/`aria-labelledby` for each slider
+- [x] Define slider min/max/step per control (match PRD ranges)
+- [x] Wire slider changes to store action
+- [x] Add “Reset” control to restore defaults (section-level required)
+- [x] Disable/guard controls when no image is loaded
+- [x] Add `aria-label`/`aria-labelledby` for each slider
 - [ ] Confirm keyboard operation (arrow keys adjust by step)
 
 ## 5) Behavior + UX Validation (Manual QA)

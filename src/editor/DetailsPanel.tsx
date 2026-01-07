@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import type { SharpeningSettings } from "@/store/cropStore";
+import type { DenoiseSettings, SharpeningSettings } from "@/store/cropStore";
 
 type SliderProps = {
   label: string;
@@ -21,6 +21,10 @@ type Props = {
   setSharpening: (updates: Partial<SharpeningSettings>) => void;
   resetSharpening: () => void;
 
+  denoise: DenoiseSettings;
+  setDenoise: (updates: Partial<DenoiseSettings>) => void;
+  resetDenoise: () => void;
+
   Slider: (props: SliderProps) => import("react").ReactNode;
 };
 
@@ -29,6 +33,9 @@ export function DetailsPanel({
   sharpening,
   setSharpening,
   resetSharpening,
+  denoise,
+  setDenoise,
+  resetDenoise,
   Slider,
 }: Props) {
   return (
@@ -96,7 +103,59 @@ export function DetailsPanel({
           format={(value) => String(Math.round(value))}
           onValueChange={(value) => setSharpening({ masking: value })}
         />
+      </div>
 
+      <div className="mt-6 flex items-center justify-between">
+        <div className="text-xs font-medium text-gray-700">Noise Reduction</div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-xs"
+          onClick={() => resetDenoise()}
+          disabled={!isImageLoaded}
+        >
+          Reset
+        </Button>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3">
+        <Slider
+          label="Luminance"
+          name="denoise-luminance"
+          value={denoise.luminance}
+          defaultValue={0}
+          min={0}
+          max={100}
+          step={1}
+          disabled={!isImageLoaded}
+          format={(value) => String(Math.round(value))}
+          onValueChange={(value) => setDenoise({ luminance: value })}
+        />
+        <Slider
+          label="Color"
+          name="denoise-color"
+          value={denoise.color}
+          defaultValue={0}
+          min={0}
+          max={100}
+          step={1}
+          disabled={!isImageLoaded}
+          format={(value) => String(Math.round(value))}
+          onValueChange={(value) => setDenoise({ color: value })}
+        />
+        <Slider
+          label="Detail"
+          name="denoise-detail"
+          value={denoise.detail}
+          defaultValue={50}
+          min={0}
+          max={100}
+          step={1}
+          disabled={!isImageLoaded}
+          format={(value) => String(Math.round(value))}
+          onValueChange={(value) => setDenoise({ detail: value })}
+        />
       </div>
     </div>
   );
