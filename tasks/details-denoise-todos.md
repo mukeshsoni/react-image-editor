@@ -5,9 +5,9 @@ Source PRD: `prds/details-denoise-prd.md`
 ## 1) State + Types
 - [x] Add `DenoiseSettings` type (`luminance`, `color`, `detail`)
 - [x] Define `DEFAULT_DENOISE_SETTINGS` (neutral defaults)
-- [ ] Add `denoise` to Zustand store state (or extend existing `adjustments`)
-- [ ] Add action: `setDenoise(partial)` (or reuse existing `setAdjustment` pattern)
-- [ ] Add action: `resetDenoise()`
+- [x] Add `denoise` to Zustand store state (or extend existing `adjustments`)
+- [x] Add action: `setDenoise(partial)` (or reuse existing `setAdjustment` pattern)
+- [x] Add action: `resetDenoise()`
 - [ ] Ensure settings persist across crop/zoom/pan interactions
 - [ ] Ensure export snapshot includes denoise parameters (`getEdits()` or equivalent)
 
