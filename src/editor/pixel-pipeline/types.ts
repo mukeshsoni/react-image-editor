@@ -1,5 +1,6 @@
 import type {
   ColorAdjustments,
+  DenoiseSettings,
   LightAdjustments,
   SharpeningSettings,
   ToneCurveSettings,
@@ -37,6 +38,7 @@ export type PixelPipelineContext = {
   lightAdjustments?: LightAdjustments;
   toneCurve?: ToneCurveSettings;
   colorAdjustments?: ColorAdjustments;
+  denoise?: DenoiseSettings;
 
   sharpening?: SharpeningSettings;
 };
