@@ -1,9 +1,16 @@
 export function createMockZustandHook<State>(state: State) {
-  return ((selector?: (state: State) => unknown) => {
+  const hook = ((selector?: (state: State) => unknown) => {
     if (selector) {
       return selector(state);
     }
 
     return state;
-  }) as unknown;
+  }) as unknown as {
+    (selector?: (state: State) => unknown): unknown;
+    getState: () => State;
+  };
+
+  hook.getState = () => state;
+
+  return hook;
 }

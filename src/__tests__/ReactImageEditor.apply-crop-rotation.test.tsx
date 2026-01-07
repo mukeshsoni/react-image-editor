@@ -5,12 +5,13 @@ import { createMockToneCurve } from "./test-helpers/mockToneCurve";
 
 import { ReactImageEditor } from "../ReactImageEditor";
 
-const hoisted = vi.hoisted(() => ({
-  mockResetAll: vi.fn(),
-  mockSetRotation: vi.fn(),
-  mockResetRotation: vi.fn(),
-  rotation: 30,
-}));
+  const hoisted = vi.hoisted(() => ({
+    mockResetAll: vi.fn(),
+    mockSetRotation: vi.fn(),
+    mockResetRotation: vi.fn(),
+    mockCommitCrop: vi.fn(),
+    rotation: 30,
+  }));
 
 const cropRect = { x: 20, y: 30, width: 100, height: 80 };
 
@@ -27,6 +28,10 @@ vi.mock("../store/cropStore", async () => {
         rotation: hoisted.rotation,
         constrainCrop: true,
       },
+      cropCommitted: false,
+      cropCommit: null,
+      commitCrop: hoisted.mockCommitCrop,
+      clearCommittedCrop: vi.fn(),
       setRotation: hoisted.mockSetRotation,
       resetRotation: hoisted.mockResetRotation,
     }),
@@ -126,16 +131,23 @@ vi.mock("../Cropper", () => ({
 }));
 
 const mockResetZoom = vi.fn();
-vi.mock("../use-canvas-zoom-pan", () => ({
-  useCanvasZoomPan: () => ({
-    zoomLevel: 2,
-    offset: { x: 50, y: 70 },
-    zoomIn: vi.fn(),
-    zoomOut: vi.fn(),
-    resetZoom: mockResetZoom,
-    listeners: {},
-  }),
-}));
+vi.mock("../use-canvas-zoom-pan", async () => {
+  const actual = await vi.importActual<typeof import("../use-canvas-zoom-pan")>(
+    "../use-canvas-zoom-pan",
+  );
+
+  return {
+    ...actual,
+    useCanvasZoomPan: () => ({
+      zoomLevel: 2,
+      offset: { x: 50, y: 70 },
+      zoomIn: vi.fn(),
+      zoomOut: vi.fn(),
+      resetZoom: mockResetZoom,
+      listeners: {},
+    }),
+  };
+});
 
 describe("ReactImageEditor apply crop + rotation mapping", () => {
   let createdCanvases: HTMLCanvasElement[];
@@ -238,7 +250,7 @@ describe("ReactImageEditor apply crop + rotation mapping", () => {
     vi.restoreAllMocks();
   });
 
-  test("bakes crop with correct offset, size, and rotation", async () => {
+  test("commits crop with correct offset, size, and rotation", async () => {
     const { getByText } = render(
       <ReactImageEditor imageSrc="data:image/png;base64,AAA=" />,
     );
@@ -250,32 +262,18 @@ describe("ReactImageEditor apply crop + rotation mapping", () => {
     // Enable crop mode (shows CropOptions with Apply).
     fireEvent.click(getByText("Crop"));
 
-    // Apply crop to trigger offscreen baking.
+    // Apply crop to commit crop state.
     fireEvent.click(getByText("Apply"));
 
     await waitFor(() => {
-      expect(URL.createObjectURL).toHaveBeenCalled();
+      expect(hoisted.mockResetAll).toHaveBeenCalled();
     });
 
-    const offscreenCanvas = createdCanvases.at(-1);
-    expect(offscreenCanvas).toBeTruthy();
-
-    // output size = cropRect / zoomLevel
-    expect(offscreenCanvas?.width).toBe(50);
-    expect(offscreenCanvas?.height).toBe(40);
-
-    // bakedOffset = (offset - cropRect) / zoomLevel
-    // offset = {50,70}, cropRect = {20,30}, zoomLevel=2
-    // bakedOffset = {15,20}
-    expect(drawImage).toHaveBeenCalledWith(
-      expect.any(Object),
-      15,
-      20,
-      200,
-      150,
-    );
-
-    // rotation of 30° applied during baking.
-    expect(rotate).toHaveBeenCalledWith((30 * Math.PI) / 180);
+    expect(hoisted.mockCommitCrop).toHaveBeenCalledWith({
+      outputWidth: 50,
+      outputHeight: 40,
+      bakedOffset: { x: 15, y: 20 },
+      rotationDegrees: 30,
+    });
   });
 });

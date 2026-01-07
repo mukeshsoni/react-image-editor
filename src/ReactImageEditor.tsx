@@ -170,7 +170,7 @@ type Props = {
 
 export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [cropMode, setCropMode] = useState(false);
-  const [hasAppliedCrop, setHasAppliedCrop] = useState(false);
+  const cropCommitted = useCropStore((state) => state.cropCommitted);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
@@ -199,7 +199,6 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
-  const bakedImageUrlRef = useRef<string | null>(null);
 
   const cropSettings = useCropStore((state) => state.cropSettings);
   const setRotation = useCropStore((state) => state.setRotation);
@@ -320,12 +319,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
     img.onload = () => {
       imageRef.current = img;
       originalImageRef.current = img;
-      setHasAppliedCrop(false);
+      useCropStore.getState().clearCommittedCrop();
       setCropMode(false);
-      if (bakedImageUrlRef.current) {
-        URL.revokeObjectURL(bakedImageUrlRef.current);
-        bakedImageUrlRef.current = null;
-      }
 
       const initialZoomLevel = calculateInitialZoomLevel(canvasRef.current, img);
       const initialOffset = calculateInitialImageStartOffset(
@@ -390,13 +385,6 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
     return unsubscribe;
   }, [editsPush, onEditsChange]);
 
-  useEffect(() => {
-    return () => {
-      if (bakedImageUrlRef.current) {
-        URL.revokeObjectURL(bakedImageUrlRef.current);
-      }
-    };
-  }, []);
 
 
   function handleResetZoomClick() {
@@ -597,18 +585,18 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
           <ResizablePanel defaultSize={25} className="min-h-0">
             <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
               <div className="flex flex-wrap items-center gap-2">
-                <CropToolButtons
-                  cropMode={cropMode}
-                  setCropMode={setCropMode}
-                  hasAppliedCrop={hasAppliedCrop}
-                  onResetCrop={() => {
-                    if (!originalImageRef.current) return;
-                    imageRef.current = originalImageRef.current;
-                    setHasAppliedCrop(false);
-                    resetRotation();
-                    resetZoom();
-                  }}
-                />
+                  <CropToolButtons
+                    cropMode={cropMode}
+                    setCropMode={setCropMode}
+                    hasAppliedCrop={cropCommitted}
+                    onResetCrop={() => {
+                      if (!originalImageRef.current) return;
+                      imageRef.current = originalImageRef.current;
+                      useCropStore.getState().clearCommittedCrop();
+                      resetRotation();
+                      resetZoom();
+                    }}
+                  />
 
                 <ExportTool
                   imageRef={imageRef}
@@ -699,19 +687,11 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
           <CropToolOptions
             cropMode={cropMode}
             imageRef={imageRef}
-            bakedImageUrlRef={bakedImageUrlRef}
             zoomLevel={zoomLevel}
             offset={offset}
             rotation={rotation}
             resetAll={resetAll}
-            onCroppedImageReady={(croppedImage) => {
-              if (bakedImageUrlRef.current) {
-                URL.revokeObjectURL(bakedImageUrlRef.current);
-              }
-
-              bakedImageUrlRef.current = croppedImage.src;
-              imageRef.current = croppedImage;
-              setHasAppliedCrop(true);
+            onCropCommitted={() => {
               setIsImageLoaded(true);
               setCropMode(false);
               resetRotation();
