@@ -15,10 +15,12 @@ import {
   triggerDownload,
   type ExportFormat,
 } from "@/export-download";
+import { createOffscreenCropCanvas } from "@/editor/exportCrop";
 import { useColorStore } from "@/store/colorStore";
 import { useLightStore } from "@/store/lightStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
+import { useCropStore } from "@/store/cropStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 type Props = {
@@ -52,6 +54,8 @@ export function ExportTool({
   exportError,
   setExportError,
 }: Props) {
+  const cropCommitted = useCropStore((state) => state.cropCommitted);
+  const cropCommit = useCropStore((state) => state.cropCommit);
   const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
   const lightAdjustments = useLightStore((state) => state.lightAdjustments);
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
@@ -75,16 +79,27 @@ export function ExportTool({
       const extension = exportFormat === "png" ? "png" : "jpg";
       const background = exportFormat === "png" ? "transparent" : "white";
 
-        const offscreen = renderCommittedImageToOffscreenCanvas(
-          imageRef.current,
-          rotation,
-          background,
-          whiteBalance,
-          lightAdjustments,
-          toneCurve,
-          colorAdjustments,
-          sharpening,
-        );
+      const baseImage = imageRef.current;
+
+      const cropCanvas =
+        cropCommitted && cropCommit
+          ? createOffscreenCropCanvas({
+              image: baseImage,
+              commit: cropCommit,
+              background,
+            })
+          : null;
+
+      const offscreen = renderCommittedImageToOffscreenCanvas(
+        cropCanvas ?? baseImage,
+        cropCanvas ? 0 : rotation,
+        background,
+        whiteBalance,
+        lightAdjustments,
+        toneCurve,
+        colorAdjustments,
+        sharpening,
+      );
 
       if (!offscreen) {
         setExportError("Failed to export image");
