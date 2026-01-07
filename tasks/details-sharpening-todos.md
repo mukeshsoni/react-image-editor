@@ -51,15 +51,15 @@ Source PRD: `prds/details-sharpening-prd.md`
 - [ ] Validate reset returns image to original appearance
 
 ## 6) Tests
-- [ ] Unit test: amount=0 produces identical output
-- [ ] Unit test: clamping behavior at extreme values
-- [ ] Unit test: alpha preservation
-- [ ] Golden pixel tests on small synthetic buffers (e.g., 5x5) for unsharp mask
-- [ ] Component test: Details accordion renders and contains Sharpening controls
-- [ ] Component test: sliders start at defaults
-- [ ] Component test: slider change updates store state
-- [ ] Component test: Reset restores defaults
-- [ ] Integration-ish test ensuring render path consumes sharpening settings
+- [x] Unit test: amount=0 produces identical output
+- [x] Unit test: clamping behavior at extreme values
+- [x] Unit test: alpha preservation
+- [x] Golden pixel tests on small synthetic buffers (e.g., 5x5) for unsharp mask
+- [x] Component test: Details accordion renders and contains Sharpening controls
+- [x] Component test: sliders start at defaults
+- [x] Component test: slider change updates store state
+- [x] Component test: Reset restores defaults
+- [x] Integration-ish test ensuring render path consumes sharpening settings
 
 ## 7) Follow-ups (out of scope, but next)
 - [ ] Add denoising section + PRD alignment
