@@ -1,6 +1,7 @@
 import type {
   ColorAdjustments,
   LightAdjustments,
+  SharpeningSettings,
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "@/store/cropStore";
@@ -29,8 +30,13 @@ export function ensurePipelineBufferCapacity(
 }
 
 export type PixelPipelineContext = {
+  width?: number;
+  height?: number;
+
   whiteBalance?: WhiteBalanceSettings;
   lightAdjustments?: LightAdjustments;
   toneCurve?: ToneCurveSettings;
   colorAdjustments?: ColorAdjustments;
+
+  sharpening?: SharpeningSettings;
 };

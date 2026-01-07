@@ -62,6 +62,20 @@ export const DEFAULT_COLOR_ADJUSTMENTS: ColorAdjustments = {
   saturation: 0,
 };
 
+export type SharpeningSettings = {
+  amount: number;
+  radius: number;
+  detail: number;
+  masking: number;
+};
+
+export const DEFAULT_SHARPENING_SETTINGS: SharpeningSettings = {
+  amount: 0,
+  radius: 1,
+  detail: 25,
+  masking: 0,
+};
+
 export type ToneCurveChannel = "rgb" | "r" | "g" | "b";
 
 export type CurvePoint = {

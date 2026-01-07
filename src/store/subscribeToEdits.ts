@@ -4,6 +4,7 @@ import { useColorStore } from "./colorStore";
 import { useCropStore } from "./cropStore";
 import { useLightStore } from "./lightStore";
 import { getImageEditorEdits } from "./selectEdits";
+import { useSharpeningStore } from "./sharpeningStore";
 import { useToneCurveStore } from "./toneCurveStore";
 import { useWhiteBalanceStore } from "./whiteBalanceStore";
 
@@ -32,6 +33,7 @@ export function subscribeToEdits(onChange: (edits: ImageEditorEdits) => void): U
     useLightStore.subscribe(scheduleEmit),
     useColorStore.subscribe(scheduleEmit),
     useToneCurveStore.subscribe(scheduleEmit),
+    useSharpeningStore.subscribe(scheduleEmit),
   ];
 
   return () => {

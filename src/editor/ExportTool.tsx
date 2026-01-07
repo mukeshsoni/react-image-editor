@@ -16,6 +16,7 @@ import {
 } from "@/export-download";
 import { useColorStore } from "@/store/colorStore";
 import { useLightStore } from "@/store/lightStore";
+import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
@@ -54,6 +55,7 @@ export function ExportTool({
   const lightAdjustments = useLightStore((state) => state.lightAdjustments);
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
+  const sharpening = useSharpeningStore((state) => state.sharpening);
 
   async function handleDownload() {
     if (!imageRef.current) return;
@@ -72,15 +74,17 @@ export function ExportTool({
       const extension = exportFormat === "png" ? "png" : "jpg";
       const background = exportFormat === "png" ? "transparent" : "white";
 
-      const offscreen = renderCommittedImageToOffscreenCanvas(
-        imageRef.current,
-        rotation,
-        background,
-        whiteBalance,
-        lightAdjustments,
-        toneCurve,
-        colorAdjustments,
-      );
+        const offscreen = renderCommittedImageToOffscreenCanvas(
+          imageRef.current,
+          rotation,
+          background,
+          whiteBalance,
+          lightAdjustments,
+          toneCurve,
+          colorAdjustments,
+          sharpening,
+        );
+
       if (!offscreen) {
         setExportError("Failed to export image");
         return;

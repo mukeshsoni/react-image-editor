@@ -12,11 +12,13 @@ import type { PixelPipelineContext, PipelineBuffers } from "@/editor/pixel-pipel
 import type {
   ColorAdjustments,
   LightAdjustments,
+  SharpeningSettings,
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "@/store/cropStore";
 import { useColorStore } from "@/store/colorStore";
 import { useLightStore } from "@/store/lightStore";
+import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
@@ -39,6 +41,7 @@ function renderImageToCanvas(
   lightAdjustments?: LightAdjustments,
   toneCurve?: ToneCurveSettings,
   colorAdjustments?: ColorAdjustments,
+  sharpening?: SharpeningSettings,
   cache?: RenderCache,
 ) {
   if (!canvasRef) return;
@@ -84,10 +87,14 @@ function renderImageToCanvas(
   }
 
   const context: PixelPipelineContext = {
+    width: canvasWidth,
+    height: canvasHeight,
+
     whiteBalance,
     lightAdjustments,
     toneCurve,
     colorAdjustments,
+    sharpening,
   };
 
   cache.buffers.in.set(cache.basePixels);
@@ -132,6 +139,7 @@ export function EditorCanvas({
   const lightAdjustments = useLightStore((state) => state.lightAdjustments);
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
+  const sharpening = useSharpeningStore((state) => state.sharpening);
 
   const renderRef = useRef<number | null>(null);
   const renderCacheRef = useRef<RenderCache | null>(null);
@@ -169,6 +177,7 @@ export function EditorCanvas({
         lightAdjustments,
         toneCurve,
         colorAdjustments,
+        sharpening,
         renderCacheRef.current ?? undefined,
       );
     });
@@ -182,6 +191,7 @@ export function EditorCanvas({
     toneCurve,
     whiteBalance,
     zoomLevel,
+    sharpening,
   ]);
 
   return (

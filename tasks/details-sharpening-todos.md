@@ -1,0 +1,67 @@
+# Details — Sharpening — Task Checklist
+
+Source PRD: `prds/details-sharpening-prd.md`
+
+## 1) State + Types
+- [x] Add `SharpeningSettings` type (`amount`, `radius`, `detail`, `masking`)
+- [x] Define `DEFAULT_SHARPENING_SETTINGS` (neutral defaults)
+- [x] Add `sharpening` to Zustand store state (or extend existing `adjustments`)
+- [x] Add action: `setSharpening(partial)` (or reuse existing `setAdjustment` pattern)
+- [x] Add action: `resetSharpening()`
+- [x] Ensure settings persist across crop/zoom/pan interactions
+- [x] Ensure export snapshot includes sharpening parameters (`getEdits()` or equivalent)
+
+## 2) Sharpening Math (non-destructive)
+- [x] Create pure helper module for sharpening math
+- [x] Implement blur (separable Gaussian or approximation)
+- [x] Implement unsharp mask: `out = original + amount * (original - blurred)`
+- [x] Implement luminance-first sharpening to reduce color halos
+- [x] Implement `detail` control weighting (texture vs edges)
+- [x] Implement `masking` control (edge mask / threshold)
+- [x] Preserve alpha channel in all operations
+- [x] Clamp output channels safely (avoid overflow/underflow)
+
+## 3) Rendering Integration
+- [x] Identify canonical “base image” source used for rendering
+- [x] Apply sharpening in the same adjustment pipeline as WB/Light/Color
+- [x] Ensure neutral settings produce identical output
+- [x] Add/extend `requestAnimationFrame` throttling for slider updates
+- [x] Avoid re-allocating large buffers per tick (reuse buffers where possible)
+- [x] Confirm ordering with other adjustments is consistent (document chosen order)
+
+## 4) UI: Details Accordion + Sharpening Section
+- [x] Add an accordion item titled `Details`
+- [x] Add a section titled `Sharpening`
+- [x] Add four labeled rows: Amount, Radius, Detail, Masking
+- [x] Add slider component for each row
+- [x] Show current numeric value on the right of each row
+- [x] Define slider min/max/step per control (match PRD ranges)
+- [x] Wire slider changes to store action
+- [x] Add “Reset” control to restore defaults (section-level or Details-level)
+- [x] Disable/guard controls when no image is loaded
+- [x] Add `aria-label`/`aria-labelledby` for each slider
+- [x] Confirm keyboard operation (arrow keys adjust by step)
+
+## 5) Behavior + UX Validation (Manual QA)
+- [ ] Verify sharpening updates live while zoomed in (no lag spikes)
+- [ ] Verify sharpening while panning (no flicker)
+- [ ] Verify switching between modes/panels doesn’t reset values
+- [ ] Confirm slider drag feels responsive on large images (target smooth drag)
+- [ ] Validate extremes don’t look broken (halos/noise/clipping sanity check)
+- [ ] Validate reset returns image to original appearance
+
+## 6) Tests
+- [x] Unit test: amount=0 produces identical output
+- [x] Unit test: clamping behavior at extreme values
+- [x] Unit test: alpha preservation
+- [x] Golden pixel tests on small synthetic buffers (e.g., 5x5) for unsharp mask
+- [x] Component test: Details accordion renders and contains Sharpening controls
+- [x] Component test: sliders start at defaults
+- [x] Component test: slider change updates store state
+- [x] Component test: Reset restores defaults
+- [x] Integration-ish test ensuring render path consumes sharpening settings
+
+## 7) Follow-ups (out of scope, but next)
+- [ ] Add denoising section + PRD alignment
+- [ ] Consider WebGL shader path if CPU performance is insufficient
+- [ ] Add output sharpening (resize-aware) for export
