@@ -3,6 +3,7 @@ import type {
   CropRect,
   CropSettings,
   LightAdjustments,
+  DenoiseSettings,
   SharpeningSettings,
   ToneCurveSettings,
   WhiteBalanceSettings,
@@ -19,4 +20,5 @@ export type ImageEditorEdits = {
   color: ColorAdjustments;
   toneCurve: ToneCurveSettings;
   sharpening?: SharpeningSettings;
+  denoise?: DenoiseSettings;
 };
