@@ -21,11 +21,11 @@
 - **Impact**: Better UX consistency
 
 ### Undo/Redo Functionality
-- Store operation history (zoom, pan, crop, all future adjustments)
-- Allow users to revert or restore edits
-- Keyboard shortcuts: Ctrl+Z (undo), Ctrl+Shift+Z / Ctrl+Y (redo)
-- Visual history panel showing all edits
-- Limit history to last N operations (e.g., 50)
+- Add a left panel (Lightroom-style) with a **History** accordion listing all edits
+- Track operation history (zoom, pan, crop, and future adjustments) and limit to last N operations (e.g., 50)
+- Add **Undo** and **Redo** buttons on the right side of the right panel header
+- Add a **Revert** button at the bottom of the right panel to restore the original image state
+- Keyboard shortcuts: Cmd+Z (undo), Shift+Cmd+Z (redo)
 - **Impact**: Essential for non-destructive editing workflow
 
 ## In Progress
