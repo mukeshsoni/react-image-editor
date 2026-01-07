@@ -230,6 +230,7 @@ describe("ReactImageEditor Color panel", () => {
 
     const slider = await screen.findByLabelText("Vibrance");
     fireEvent.change(slider, { target: { value: "10" } });
+    fireEvent.pointerUp(slider);
 
     expect(mockSetColorAdjustment).toHaveBeenCalledWith("vibrance", 10);
   });

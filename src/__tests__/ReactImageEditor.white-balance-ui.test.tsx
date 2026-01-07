@@ -185,6 +185,7 @@ vi.doMock("../store/editorActions", () => ({
     const temp = within(wbSection).getByLabelText("Temp");
 
     fireEvent.change(temp, { target: { value: "7000" } });
+    fireEvent.pointerUp(temp);
     expect(mockSetWhiteBalance).toHaveBeenCalledWith({ temperatureKelvin: 7000 });
 
     // Simulate store update after first change.

@@ -221,6 +221,7 @@ describe("ReactImageEditor Basic panel (Tone)", () => {
     const exposure = within(toneSection).getByLabelText("Exposure");
 
     fireEvent.change(exposure, { target: { value: "1" } });
+    fireEvent.pointerUp(exposure);
 
     expect(mockSetLightAdjustment).toHaveBeenCalledWith("exposure", 1);
   });

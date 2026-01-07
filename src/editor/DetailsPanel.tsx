@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import type { DenoiseSettings, SharpeningSettings } from "@/store/cropStore";
 
@@ -40,36 +38,6 @@ export function DetailsPanel({
   resetDenoise,
   Slider,
 }: Props) {
-  const [denoiseDraft, setDenoiseDraft] = useState<DenoiseSettings>(denoise);
-  const denoiseDraftRef = useRef<DenoiseSettings>(denoise);
-  const denoiseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    setDenoiseDraft(denoise);
-    denoiseDraftRef.current = denoise;
-  }, [denoise]);
-
-  useEffect(() => {
-    return () => {
-      if (denoiseTimeoutRef.current) {
-        clearTimeout(denoiseTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const commitDenoise = useMemo(() => {
-    return (next: DenoiseSettings) => {
-      denoiseDraftRef.current = next;
-      if (denoiseTimeoutRef.current) {
-        clearTimeout(denoiseTimeoutRef.current);
-      }
-
-      // Debounce expensive pixel processing during active slider drag.
-      denoiseTimeoutRef.current = setTimeout(() => {
-        setDenoise(denoiseDraftRef.current);
-      }, 150);
-    };
-  }, [setDenoise]);
   return (
     <div className="mt-4 border-t pt-3" data-testid="details-section">
       <div className="flex items-center justify-between">
@@ -155,59 +123,38 @@ export function DetailsPanel({
         <Slider
           label="Luminance"
           name="denoise-luminance"
-          value={denoiseDraft.luminance}
+          value={denoise.luminance}
           defaultValue={0}
           min={0}
           max={100}
           step={1}
           disabled={!isImageLoaded}
           format={(value) => String(Math.round(value))}
-          onValueChange={(value) => {
-            const next = {
-              ...denoiseDraftRef.current,
-              luminance: value,
-            };
-            setDenoiseDraft(next);
-            commitDenoise(next);
-          }}
+          onValueChange={(value) => setDenoise({ luminance: value })}
         />
         <Slider
           label="Color"
           name="denoise-color"
-          value={denoiseDraft.color}
+          value={denoise.color}
           defaultValue={0}
           min={0}
           max={100}
           step={1}
           disabled={!isImageLoaded}
           format={(value) => String(Math.round(value))}
-          onValueChange={(value) => {
-            const next = {
-              ...denoiseDraftRef.current,
-              color: value,
-            };
-            setDenoiseDraft(next);
-            commitDenoise(next);
-          }}
+          onValueChange={(value) => setDenoise({ color: value })}
         />
         <Slider
           label="Detail"
           name="denoise-detail"
-          value={denoiseDraft.detail}
+          value={denoise.detail}
           defaultValue={50}
           min={0}
           max={100}
           step={1}
           disabled={!isImageLoaded}
           format={(value) => String(Math.round(value))}
-          onValueChange={(value) => {
-            const next = {
-              ...denoiseDraftRef.current,
-              detail: value,
-            };
-            setDenoiseDraft(next);
-            commitDenoise(next);
-          }}
+          onValueChange={(value) => setDenoise({ detail: value })}
         />
       </div>
     </div>
