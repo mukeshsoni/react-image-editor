@@ -9,7 +9,7 @@ Source PRD: `prds/details-denoise-prd.md`
 - [x] Add action: `setDenoise(partial)` (or reuse existing `setAdjustment` pattern)
 - [x] Add action: `resetDenoise()`
 - [x] Ensure settings persist across crop/zoom/pan interactions
-- [ ] Ensure export snapshot includes denoise parameters (`getEdits()` or equivalent)
+- [x] Ensure export snapshot includes denoise parameters (`getEdits()` or equivalent)
 
 ## 2) Denoise Math (non-destructive)
 - [ ] Create pure helper module for denoise math
