@@ -8,5 +8,11 @@ export {
   useHistoryStore,
 } from "./historyStore";
 
+export {
+  areEditsEqual,
+  createEditorSerializableState,
+  getHistoryLabelForEditsChange,
+} from "./historyRecording";
+
 export { getImageEditorEdits } from "./selectEdits";
 export { subscribeToEdits } from "./subscribeToEdits";

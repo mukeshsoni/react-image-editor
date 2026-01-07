@@ -1,34 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { EditorCanvas } from "@/editor/EditorCanvas";
-
+import { MinusIcon, PlusIcon } from "@radix-ui/react-icons";
 import { getPanelGroupElement } from "react-resizable-panels";
-import { PlusIcon, MinusIcon } from "@radix-ui/react-icons";
+
+import { Button } from "@/components/ui/button";
 import {
-  ResizablePanel,
   ResizableHandle,
+  ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Button } from "@/components/ui/button";
-
+import { CropToolButtons, CropToolOptions, CropToolOverlay } from "@/editor/CropTool";
+import { EditorCanvas } from "@/editor/EditorCanvas";
 import { ExportTool } from "@/editor/ExportTool";
+import { getPanelRegistry } from "@/editor/panels";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
+import { createEditorSerializableState } from "@/store/historyRecording";
 
 import type { ExportFormat } from "./export-download";
-
 import { estimateWhiteBalanceFromRgb, sampleAverageRgb } from "./lib/white-balance";
-
-
-import { getPanelRegistry } from "@/editor/panels";
-import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import {
-  CropToolButtons,
-  CropToolOptions,
-  CropToolOverlay,
-} from "@/editor/CropTool";
-import { subscribeToEdits } from "./store";
+  calculateInitialImageStartOffset,
+  calculateInitialZoomLevel,
+  useCanvasZoomPan,
+} from "./use-canvas-zoom-pan";
+import { getImageEditorEdits, subscribeToEdits, useHistoryStore } from "./store";
 import { useResetAll } from "./store/editorActions";
-import { useCropStore } from "./store/cropStore";
+import { type Bounds, useCropStore } from "./store/cropStore";
+import { useDenoiseStore } from "./store/denoiseStore";
+import { useSharpeningStore } from "./store/sharpeningStore";
 import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
 
 
@@ -200,6 +199,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const setRotation = useCropStore((state) => state.setRotation);
   const resetRotation = useCropStore((state) => state.resetRotation);
 
+  const resetHistoryToBaseline = useHistoryStore((state) => state.resetToBaseline);
+
   const resetAll = useResetAll();
 
   const setWhiteBalance = useWhiteBalanceStore((state) => state.setWhiteBalance);
@@ -275,11 +276,42 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       imageRef.current = img;
       originalImageRef.current = img;
       setHasAppliedCrop(false);
-      setIsImageLoaded(true);
+      setCropMode(false);
       if (bakedImageUrlRef.current) {
         URL.revokeObjectURL(bakedImageUrlRef.current);
         bakedImageUrlRef.current = null;
       }
+
+      const initialZoomLevel = calculateInitialZoomLevel(canvasRef.current, img);
+      const initialOffset = calculateInitialImageStartOffset(
+        canvasRef.current,
+        img,
+        initialZoomLevel,
+      );
+
+      const bounds: Bounds = {
+        minX: initialOffset.x,
+        minY: initialOffset.y,
+        maxX: initialOffset.x + img.width * initialZoomLevel,
+        maxY: initialOffset.y + img.height * initialZoomLevel,
+      };
+
+      resetAll(bounds);
+      useSharpeningStore.getState().resetSharpening();
+      useDenoiseStore.getState().resetDenoise();
+
+      const baselineState = createEditorSerializableState({
+        edits: getImageEditorEdits(),
+        zoomLevel: initialZoomLevel,
+        offset: initialOffset,
+      });
+
+      resetHistoryToBaseline({
+        label: "Original",
+        state: baselineState,
+      });
+
+      setIsImageLoaded(true);
 
       // We trigger a recalculation of zoomLevel and image offset by calling resetZoom
       // Otherwise the useEffect which renders the image on change on zoom level might not be called
@@ -287,7 +319,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       // Once the image is loaded, we need to calculate the zoom level and image offset once more
       resetZoom();
     };
-  }, [imageSrc, resetZoom]);
+  }, [imageSrc, resetAll, resetHistoryToBaseline, resetZoom]);
 
   useEffect(() => {
     if (!onEditsChange) {
