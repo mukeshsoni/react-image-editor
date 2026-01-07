@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { DetailsPanel } from "@/editor/DetailsPanel";
 import { useDenoiseStore } from "@/store/denoiseStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";

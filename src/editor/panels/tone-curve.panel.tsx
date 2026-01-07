@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { ToneCurvePanel } from "@/editor/ToneCurvePanel";
 import { useToneCurveStore } from "@/store/toneCurveStore";
 

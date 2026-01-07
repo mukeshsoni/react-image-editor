@@ -2,6 +2,11 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 import type { PanelSliderProps } from "@/editor/panels/context";
+import type { useDenoiseStore } from "@/store/denoiseStore";
+import type { useSharpeningStore } from "@/store/sharpeningStore";
+
+type SharpeningState = ReturnType<typeof useSharpeningStore.getState>;
+type DenoiseState = ReturnType<typeof useDenoiseStore.getState>;
 
 const mockSetSharpening = vi.fn();
 const mockResetSharpening = vi.fn();
@@ -14,12 +19,12 @@ vi.mock("@/store/sharpeningStore", async () => {
 
   return {
     ...actual,
-    useSharpeningStore: (selector: (state: any) => any) =>
+    useSharpeningStore: <T,>(selector: (state: SharpeningState) => T) =>
       selector({
         sharpening: { amount: 0, radius: 1, detail: 25, masking: 0 },
         setSharpening: mockSetSharpening,
         resetSharpening: mockResetSharpening,
-      }),
+      } satisfies SharpeningState),
   };
 });
 
@@ -28,12 +33,12 @@ vi.mock("@/store/denoiseStore", async () => {
 
   return {
     ...actual,
-    useDenoiseStore: (selector: (state: any) => any) =>
+    useDenoiseStore: <T,>(selector: (state: DenoiseState) => T) =>
       selector({
         denoise: { luminance: 0, color: 0, detail: 50 },
         setDenoise: mockSetDenoise,
         resetDenoise: mockResetDenoise,
-      }),
+      } satisfies DenoiseState),
   };
 });
 
