@@ -29,15 +29,15 @@ Source PRD: `prds/details-denoise-prd.md`
 - [x] Ensure neutral settings (`luminance=0`, `color=0`) produce identical output
 
 ## 3) Rendering Integration
-- [ ] Identify canonical “base image” source used for rendering
-- [ ] Insert denoise into the render pipeline
-- [ ] Ensure denoise runs before sharpening (recommended order)
-- [ ] Ensure neutral denoise produces identical output
-- [ ] Add/extend `requestAnimationFrame` throttling for slider updates
-- [ ] Avoid re-allocating large buffers per tick (reuse buffers where possible)
-- [ ] Cache intermediate raster(s) to reduce repeated work during drag
+- [x] Identify canonical “base image” source used for rendering
+- [x] Insert denoise into the render pipeline
+- [x] Ensure denoise runs before sharpening (recommended order)
+- [x] Ensure neutral denoise produces identical output
+- [x] Add/extend `requestAnimationFrame` throttling for slider updates
+- [x] Avoid re-allocating large buffers per tick (reuse buffers where possible)
+- [x] Cache intermediate raster(s) to reduce repeated work during drag
 - [ ] Optional: reduce resolution during active drag; re-render full quality on pointer-up
-- [ ] Confirm ordering with other adjustments is consistent (document chosen order)
+- [x] Confirm ordering with other adjustments is consistent (document chosen order)
 
 ## 4) UI: Details Panel — Noise Reduction Section
 - [ ] Add a section titled `Noise Reduction` under `Details`, below `Sharpening`
