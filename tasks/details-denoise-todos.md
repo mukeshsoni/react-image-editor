@@ -3,8 +3,8 @@
 Source PRD: `prds/details-denoise-prd.md`
 
 ## 1) State + Types
-- [ ] Add `DenoiseSettings` type (`luminance`, `color`, `detail`)
-- [ ] Define `DEFAULT_DENOISE_SETTINGS` (neutral defaults)
+- [x] Add `DenoiseSettings` type (`luminance`, `color`, `detail`)
+- [x] Define `DEFAULT_DENOISE_SETTINGS` (neutral defaults)
 - [ ] Add `denoise` to Zustand store state (or extend existing `adjustments`)
 - [ ] Add action: `setDenoise(partial)` (or reuse existing `setAdjustment` pattern)
 - [ ] Add action: `resetDenoise()`
