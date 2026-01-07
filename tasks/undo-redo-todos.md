@@ -25,19 +25,19 @@ Source PRD: `prds/undo-redo-prd.md`
   - [x] `currentEntry` selector
 
 ## 2) Baseline capture + lifecycle
-- [ ] On image load, capture baseline state as `Original`
-- [ ] Ensure switching images resets history + baseline
-- [ ] Decide whether history keeps explicit `Original` entry (recommended) and enforce consistently
+- [x] On image load, capture baseline state as `Original`
+- [x] Ensure switching images resets history + baseline
+- [x] Decide whether history keeps explicit `Original` entry (recommended) and enforce consistently
 
 ## 3) Commit points (history recording)
-- [ ] Define “commit” semantics so high-frequency changes don’t spam history
-- [ ] Implement commit points for:
-  - [ ] Slider interactions (one entry on drag end)
-  - [ ] Crop apply / reset crop
-  - [ ] Rotation changes (if present)
-  - [ ] Zoom/pan settle (debounced)
-- [ ] Clear redo stack when pushing a new entry after undo
-- [ ] Ensure history writes don’t disrupt live preview updates
+- [x] Define “commit” semantics so high-frequency changes don’t spam history
+- [x] Implement commit points for:
+  - [x] Slider interactions (debounced; one entry after settle)
+  - [x] Crop apply / reset crop (captured via edits snapshot change)
+  - [x] Rotation changes (captured via crop settings snapshot change)
+  - [x] Zoom/pan settle (debounced)
+- [x] Clear redo stack when pushing a new entry after undo
+- [x] Ensure history writes don’t disrupt live preview updates
 
 ## 4) Undo/Redo + Revert actions
 - [ ] Wire `undo()` to restore snapshot state into editor stores

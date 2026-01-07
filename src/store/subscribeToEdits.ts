@@ -9,6 +9,8 @@ import { useSharpeningStore } from "./sharpeningStore";
 import { useToneCurveStore } from "./toneCurveStore";
 import { useWhiteBalanceStore } from "./whiteBalanceStore";
 
+const HISTORY_COMMIT_DEBOUNCE_MS = 250;
+
 type Unsubscribe = () => void;
 
 export function subscribeToEdits(onChange: (edits: ImageEditorEdits) => void): Unsubscribe {
@@ -25,7 +27,7 @@ export function subscribeToEdits(onChange: (edits: ImageEditorEdits) => void): U
     }
 
     scheduled = true;
-    queueMicrotask(emit);
+    setTimeout(emit, HISTORY_COMMIT_DEBOUNCE_MS);
   };
 
   const unsubscribes: Unsubscribe[] = [

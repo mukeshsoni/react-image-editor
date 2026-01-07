@@ -35,8 +35,13 @@ export type HistoryStore = {
 function createHistoryEntry(
   entry: Omit<HistoryEntry, "id" | "timestamp">,
 ): HistoryEntry {
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`;
+
   return {
-    id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+    id,
     timestamp: Date.now(),
     ...entry,
   };

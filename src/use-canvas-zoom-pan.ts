@@ -175,6 +175,7 @@ export type ZoomPanOptions = {
   zoomStep: number; // zoom increment/decrement amount
   enableWheel: boolean; // enable mouse wheel zoom
   enableTouch: boolean; // enable touch gestures
+  onCameraChange?: (camera: { zoomLevel: number; offset: { x: number; y: number } }) => void;
 };
 const defaultZoomPanConfig: ZoomPanOptions = {
   minZoom: 0.1,
@@ -182,6 +183,7 @@ const defaultZoomPanConfig: ZoomPanOptions = {
   zoomStep: 0.1,
   enableWheel: false,
   enableTouch: true,
+  onCameraChange: undefined,
 };
 
 // Hook which maintains the zoom state of the image
@@ -203,6 +205,34 @@ export const useCanvasZoomPan = (
     x: 0,
     y: 0,
   });
+
+  const cameraRef = useRef({ zoomLevel: 1, offset: { x: 0, y: 0 } });
+  const onCameraChangeRef = useRef(zoomPanConfig.onCameraChange);
+
+  useEffect(() => {
+    onCameraChangeRef.current = zoomPanConfig.onCameraChange;
+  }, [zoomPanConfig.onCameraChange]);
+
+  const notifyCameraChange = useCallback((next: {
+    zoomLevel: number;
+    offset: { x: number; y: number };
+  }) => {
+    cameraRef.current = next;
+    onCameraChangeRef.current?.(next);
+  }, []);
+
+  const setCamera = useCallback(
+    (nextZoomLevel: number, nextOffset: { x: number; y: number }) => {
+      setZoomLevel(nextZoomLevel);
+      setOffset(nextOffset);
+      notifyCameraChange({ zoomLevel: nextZoomLevel, offset: nextOffset });
+    },
+    [notifyCameraChange],
+  );
+
+  useEffect(() => {
+    notifyCameraChange({ zoomLevel, offset });
+  }, [notifyCameraChange, offset, zoomLevel]);
   const isDragging = useRef(false);
   // We will store the last mouse position when the user starts dragging the image
   // We use it to pan the image on mouse move event
@@ -260,7 +290,7 @@ export const useCanvasZoomPan = (
           zoomLevel,
         );
         const clampedOffset = clampOffset(offset, panBounds);
-        setOffset(clampedOffset);
+        setCamera(zoomLevel, clampedOffset);
         animationFrameId.current = requestAnimationFrame(
           // We need to bind the new offset to the callback because otherwise the updatePosition closure
           // will keep using the old offset
@@ -268,7 +298,7 @@ export const useCanvasZoomPan = (
         );
       }
     },
-    [canvasRef, imageRef, zoomLevel],
+    [canvasRef, imageRef, setCamera, zoomLevel],
   );
 
   const cancelZoomAnimation = useCallback(() => {
@@ -303,8 +333,7 @@ export const useCanvasZoomPan = (
         y: startOffset.y + (targetOffset.y - startOffset.y) * easedProgress,
       };
 
-      setZoomLevel(currentZoom);
-      setOffset(currentOffset);
+      setCamera(currentZoom, currentOffset);
 
       if (progress < 1) {
         zoomAnimationId.current = requestAnimationFrame(() =>
@@ -319,7 +348,7 @@ export const useCanvasZoomPan = (
         );
       }
     },
-    [cancelZoomAnimation],
+    [cancelZoomAnimation, setCamera],
   );
   const zoomToPoint = useCallback(
     (newZoomLevel: number, point: { x: number; y: number }) => {
@@ -408,6 +437,7 @@ export const useCanvasZoomPan = (
     startPan({ pageX: event.pageX, pageY: event.pageY });
   }
   const touchState = useRef<{ startDistance?: number }>({});
+
   // We will pan the image if the mouse moves and the user is dragging the mouse
   const handlePointerMove = useCallback(
     ({ pageX, pageY }: { pageX: number; pageY: number }) => {
@@ -441,99 +471,95 @@ export const useCanvasZoomPan = (
         zoomLevel,
       );
       const clampedOffset = clampOffset(newOffset, panBounds);
-      setOffset(clampedOffset);
+      setCamera(zoomLevel, clampedOffset);
       velocity.current = newVelocity;
       lastMousePos.current = { x: pageX, y: pageY };
       lastTimeRef.current = currentTime;
     },
-    [canvasRef, imageRef, zoomLevel, offset.x, offset.y],
+    [canvasRef, imageRef, setCamera, zoomLevel, offset.x, offset.y],
   );
-
   const handleTouchStart = useCallback(
     (event: TouchEvent) => {
-      if (isMouseInCanvas(canvasRef.current, event)) {
-        event.preventDefault();
-        // If user is using 2 fingers, it's probably for pinch and zoom
-        // We will store the original distance between the 2 fingers
-        if (event.touches.length === 2) {
-          touchState.current.startDistance = getTouchDistance(event.touches);
-        } else {
-          startPan({
-            // To use pageX/pageY or clientX/clientY?
-            // pageX is the distance from the left edge of the viewport
-            // But if our component is used in a page which has been scrolled,
-            // pageX might give the wrong value
-            // pageX is the distance from the left edge of the document
-            // Only way to fix this is by putting the component in a page which has been scrolled
-            // https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
-            // Experiment done: Looks like pageX and pageY work fine even if the component is loaded in a page bigger than the
-            // viewport and has been scrolled
-            pageX: event.touches[0].pageX,
-            pageY: event.touches[0].pageY,
-          });
-        }
+      if (!isMouseInCanvas(canvasRef.current, event)) {
+        return;
       }
+
+      event.preventDefault();
+
+      // If user is using 2 fingers, it's probably for pinch and zoom.
+      if (event.touches.length === 2) {
+        touchState.current.startDistance = getTouchDistance(event.touches);
+        return;
+      }
+
+      startPan({
+        pageX: event.touches[0].pageX,
+        pageY: event.touches[0].pageY,
+      });
     },
     [canvasRef, startPan],
   );
+
   const handleTouchMove = useCallback(
     (event: TouchEvent) => {
-      if (isMouseInCanvas(canvasRef.current, event)) {
-        event.preventDefault();
-
-        // if there are 2 fingers and we also have a startDistance, it's probably a pinch and zoom
-        if (
-          event.touches.length === 2 &&
-          touchState.current.startDistance &&
-          canvasRef.current
-        ) {
-          const currentDistance = getTouchDistance(event.touches);
-          const scale = currentDistance / touchState.current.startDistance;
-          const newZoomLevel = zoomLevel * scale;
-          const centerX = (event.touches[0].pageX + event.touches[1].pageX) / 2;
-          const centerY = (event.touches[0].pageY + event.touches[1].pageY) / 2;
-
-          const canvas = canvasRef.current;
-          const rect = canvas.getBoundingClientRect();
-          const canvasPoint = {
-            x: centerX - rect.left,
-            y: centerY - rect.top,
-          };
-
-          const newOffset = calculateImageStartOffsetAroundAReferencePoint(
-            zoomLevel,
-            newZoomLevel,
-            offset,
-            canvasPoint,
-          );
-          setZoomLevel(newZoomLevel);
-          const canvasWidth = canvasRef.current.width;
-          const canvasHeight = canvasRef.current.height;
-          const imageWidth = imageRef.current?.width || 0;
-          const imageHeight = imageRef.current?.height || 0;
-          const clampedOffset = clampOffset(
-            newOffset,
-            calculatePanBounds(
-              canvasWidth,
-              canvasHeight,
-              imageWidth,
-              imageHeight,
-              zoomLevel,
-            ),
-          );
-          setOffset(clampedOffset);
-          // In case the user wants to zoom in further, we need to adjust the startDistance
-          touchState.current.startDistance = currentDistance;
-        } else {
-          handlePointerMove({
-            pageX: event.touches[0].pageX,
-            pageY: event.touches[0].pageY,
-          });
-        }
+      if (!isMouseInCanvas(canvasRef.current, event)) {
+        return;
       }
+
+      event.preventDefault();
+
+      if (
+        event.touches.length === 2 &&
+        touchState.current.startDistance &&
+        canvasRef.current
+      ) {
+        const currentDistance = getTouchDistance(event.touches);
+        const scale = currentDistance / touchState.current.startDistance;
+        const newZoomLevel = zoomLevel * scale;
+        const centerX = (event.touches[0].pageX + event.touches[1].pageX) / 2;
+        const centerY = (event.touches[0].pageY + event.touches[1].pageY) / 2;
+
+        const rect = canvasRef.current.getBoundingClientRect();
+        const canvasPoint = {
+          x: centerX - rect.left,
+          y: centerY - rect.top,
+        };
+
+        const newOffset = calculateImageStartOffsetAroundAReferencePoint(
+          zoomLevel,
+          newZoomLevel,
+          offset,
+          canvasPoint,
+        );
+
+        const canvasWidth = canvasRef.current.width;
+        const canvasHeight = canvasRef.current.height;
+        const imageWidth = imageRef.current?.width || 0;
+        const imageHeight = imageRef.current?.height || 0;
+        const clampedOffset = clampOffset(
+          newOffset,
+          calculatePanBounds(
+            canvasWidth,
+            canvasHeight,
+            imageWidth,
+            imageHeight,
+            newZoomLevel,
+          ),
+        );
+
+        setCamera(newZoomLevel, clampedOffset);
+        touchState.current.startDistance = currentDistance;
+        return;
+      }
+
+      handlePointerMove({
+        pageX: event.touches[0].pageX,
+        pageY: event.touches[0].pageY,
+      });
     },
-    [canvasRef, imageRef, handlePointerMove, offset, zoomLevel],
+    [canvasRef, imageRef, offset, setCamera, handlePointerMove, zoomLevel],
   );
+
   const handleMouseUp = useCallback(() => {
     touchState.current.startDistance = undefined;
     isDragging.current = false;
@@ -594,10 +620,9 @@ export const useCanvasZoomPan = (
         initialZoomLevel,
       );
       cancelZoomAnimation();
-      setZoomLevel(initialZoomLevel);
-      setOffset(initialOffset);
+      setCamera(initialZoomLevel, initialOffset);
     }
-  }, [cancelZoomAnimation, canvasRef, imageRef]);
+  }, [cancelZoomAnimation, canvasRef, imageRef, setCamera]);
 
   const lastTapTime = useRef(0);
   const handleTouchEnd = useCallback(
@@ -784,10 +809,9 @@ export const useCanvasZoomPan = (
         imageRef.current,
         initialZoomLevel,
       );
-      setZoomLevel(initialZoomLevel);
-      setOffset(initialOffset);
+      setCamera(initialZoomLevel, initialOffset);
     }
-  }, [canvasRef, imageRef]);
+  }, [canvasRef, imageRef, setCamera]);
 
   return {
     // zoom state

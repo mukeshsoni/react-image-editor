@@ -14,7 +14,11 @@ import { EditorCanvas } from "@/editor/EditorCanvas";
 import { ExportTool } from "@/editor/ExportTool";
 import { getPanelRegistry } from "@/editor/panels";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
-import { createEditorSerializableState } from "@/store/historyRecording";
+import {
+  areEditsEqual,
+  createEditorSerializableState,
+  getHistoryLabelForEditsChange,
+} from "@/store/historyRecording";
 
 import type { ExportFormat } from "./export-download";
 import { estimateWhiteBalanceFromRgb, sampleAverageRgb } from "./lib/white-balance";
@@ -23,6 +27,8 @@ import {
   calculateInitialZoomLevel,
   useCanvasZoomPan,
 } from "./use-canvas-zoom-pan";
+
+const HISTORY_COMMIT_DEBOUNCE_MS = 250;
 import { getImageEditorEdits, subscribeToEdits, useHistoryStore } from "./store";
 import { useResetAll } from "./store/editorActions";
 import { type Bounds, useCropStore } from "./store/cropStore";
@@ -207,8 +213,47 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   const rotation = cropSettings.rotation ?? 0;
 
-  const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
-    useCanvasZoomPan(canvasRef, imageRef);
+  const editsPush = useHistoryStore((state) => state.push);
+
+  const lastCommittedEditsRef = useRef(getImageEditorEdits());
+
+  const zoomPanStateRef = useRef({ zoomLevel: 1, offset: { x: 0, y: 0 } });
+  const commitCameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } = useCanvasZoomPan(
+    canvasRef,
+    imageRef,
+    {
+      enableWheel: true,
+      onCameraChange: (camera) => {
+        zoomPanStateRef.current = camera;
+
+        if (commitCameraTimeoutRef.current) {
+          clearTimeout(commitCameraTimeoutRef.current);
+        }
+
+        commitCameraTimeoutRef.current = setTimeout(() => {
+          commitCameraTimeoutRef.current = null;
+          editsPush({
+            label: "Zoom/Pan",
+            state: createEditorSerializableState({
+              edits: lastCommittedEditsRef.current,
+              zoomLevel: camera.zoomLevel,
+              offset: camera.offset,
+            }),
+          });
+        }, HISTORY_COMMIT_DEBOUNCE_MS);
+      },
+    },
+  );
+
+  useEffect(() => {
+    return () => {
+      if (commitCameraTimeoutRef.current) {
+        clearTimeout(commitCameraTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Reset zoom when in crop mode
   useEffect(() => {
@@ -326,9 +371,24 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       return;
     }
 
-    const unsubscribe = subscribeToEdits(onEditsChange);
+    const unsubscribe = subscribeToEdits((nextEdits) => {
+      if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
+        editsPush({
+          label: getHistoryLabelForEditsChange(lastCommittedEditsRef.current, nextEdits),
+          state: createEditorSerializableState({
+            edits: nextEdits,
+            zoomLevel: zoomPanStateRef.current.zoomLevel,
+            offset: zoomPanStateRef.current.offset,
+          }),
+        });
+        lastCommittedEditsRef.current = nextEdits;
+      }
+
+      onEditsChange(nextEdits);
+    });
+
     return unsubscribe;
-  }, [onEditsChange]);
+  }, [editsPush, onEditsChange]);
 
   useEffect(() => {
     return () => {
