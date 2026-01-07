@@ -12,21 +12,21 @@ Source PRD: `prds/details-denoise-prd.md`
 - [x] Ensure export snapshot includes denoise parameters (`getEdits()` or equivalent)
 
 ## 2) Denoise Math (non-destructive)
-- [ ] Create pure helper module for denoise math
-- [ ] Decide internal representation (0–255 vs 0–1 floats); keep consistent with other adjustments
-- [ ] Add RGB <-> luma/chroma conversion helpers (preserve alpha)
-- [ ] Implement luminance denoise:
-  - [ ] Edge-aware smoothing approximation (small kernel / low taps)
-  - [ ] Map `luminance` slider to smoothing strength
-- [ ] Implement color denoise:
-  - [ ] Smooth chroma channels separately
-  - [ ] Map `color` slider to smoothing strength
-- [ ] Implement `detail` control:
-  - [ ] Increase edge preservation at higher values
-  - [ ] Ensure low detail increases smoothing in flat areas
-- [ ] Preserve alpha channel in all operations
-- [ ] Clamp output channels safely (avoid overflow/underflow)
-- [ ] Ensure neutral settings (`luminance=0`, `color=0`) produce identical output
+- [x] Create pure helper module for denoise math
+- [x] Decide internal representation (0–255 vs 0–1 floats); keep consistent with other adjustments
+- [x] Add RGB <-> luma/chroma conversion helpers (preserve alpha)
+- [x] Implement luminance denoise:
+  - [x] Edge-aware smoothing approximation (small kernel / low taps)
+  - [x] Map `luminance` slider to smoothing strength
+- [x] Implement color denoise:
+  - [x] Smooth chroma channels separately
+  - [x] Map `color` slider to smoothing strength
+- [x] Implement `detail` control:
+  - [x] Increase edge preservation at higher values
+  - [x] Ensure low detail increases smoothing in flat areas
+- [x] Preserve alpha channel in all operations
+- [x] Clamp output channels safely (avoid overflow/underflow)
+- [x] Ensure neutral settings (`luminance=0`, `color=0`) produce identical output
 
 ## 3) Rendering Integration
 - [ ] Identify canonical “base image” source used for rendering
