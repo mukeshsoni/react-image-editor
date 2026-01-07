@@ -48,18 +48,18 @@ Source PRD: `prds/undo-redo-prd.md`
   - [ ] Clear redo stack
 
 ## 4.5) Make crop non-destructive (required for undoable crop apply)
-- [ ] Stop baking crop into a new image on “Apply”
-  - [ ] Keep `imageRef.current` pointing to the original loaded image
-  - [ ] Represent “applied crop” as editor state only (crop rect + settings + committed flag)
-- [ ] Update render pipeline to respect committed crop
-  - [ ] Apply crop as a source-rect when drawing/processing (not by swapping images)
+- [x] Stop baking crop into a new image on “Apply”
+  - [x] Keep `imageRef.current` pointing to the original loaded image
+  - [x] Represent “applied crop” as editor state only (crop rect + settings + committed flag)
+- [x] Update render pipeline to respect committed crop
+  - [x] Apply crop as a source-rect when drawing/processing (not by swapping images)
   - [ ] Ensure rotation + crop ordering is well-defined (rotate then crop vs crop then rotate)
-- [ ] Update export pipeline to bake crop at export time only
-  - [ ] Export output matches preview (crop + rotation + edits)
-- [ ] Update “Reset Crop” to clear committed crop state (no image swap / URL revoke)
-- [ ] Ensure history snapshots include all state needed to restore crop
-  - [ ] Crop committed flag (or equivalent)
-  - [ ] Crop rect + crop settings
+- [x] Update export pipeline to bake crop at export time only
+  - [x] Export output matches preview (crop + rotation + edits)
+- [x] Update “Reset Crop” to clear committed crop state (no image swap / URL revoke)
+- [x] Ensure history snapshots include all state needed to restore crop
+  - [x] Crop committed flag (or equivalent)
+  - [x] Crop rect + crop settings
 - [ ] Manual QA
   - [ ] Apply crop, undo, redo (image pixels should match expectations)
   - [ ] Apply crop, adjust sliders, undo/redo across both
