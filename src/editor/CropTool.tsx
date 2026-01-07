@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 
 import { CropOptions, Cropper } from "@/Cropper";
+import { buildCropCommitFromCanvasRect } from "@/editor/cropCommitted";
 import { useCropStore } from "@/store/cropStore";
 import type { Bounds, CropRect } from "@/store/cropStore";
 
@@ -95,21 +96,14 @@ export function CropToolOptions({
     if (!imageRef.current) return;
     if (!Number.isFinite(zoomLevel) || zoomLevel <= 0) return;
 
-    const outputWidth = Math.max(1, Math.round(cropRect.width / zoomLevel));
-    const outputHeight = Math.max(1, Math.round(cropRect.height / zoomLevel));
-
-    // Convert canvas-space offset/cropRect into image-pixel space, so we render at zoom=1.
-    const bakedOffset = {
-      x: (offset.x - cropRect.x) / zoomLevel,
-      y: (offset.y - cropRect.y) / zoomLevel,
-    };
-
-    commitCrop({
-      outputWidth,
-      outputHeight,
-      bakedOffset,
-      rotationDegrees: rotation,
-    });
+    commitCrop(
+      buildCropCommitFromCanvasRect({
+        cropRect,
+        zoomLevel,
+        offset,
+        rotationDegrees: rotation,
+      }),
+    );
 
     onCropCommitted();
   }
