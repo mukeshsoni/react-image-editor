@@ -44,9 +44,9 @@ export function applySharpeningToRgbaBytes(
     return;
   }
 
-  // Map UI "Amount" (0..150) into a more visible multiplier.
-  // Typical unsharp-mask implementations treat amount as a percentage.
-  const amount = clamp(settings.amount / 100, 0, 3);
+  // Map UI "Amount" (0..150) into a more aggressive multiplier.
+  // This is intentionally stronger than typical USM so each slider step is visible.
+  const amount = clamp(settings.amount / 35, 0, 6);
 
   const radiusPx = clamp(settings.radius, 0.5, 3);
 
