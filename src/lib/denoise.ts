@@ -4,9 +4,12 @@ export type DenoiseBuffers = {
   y: Float32Array;
   cb: Float32Array;
   cr: Float32Array;
-  outY: Float32Array;
-  outCb: Float32Array;
-  outCr: Float32Array;
+
+  blurredY: Float32Array;
+  blurredCb: Float32Array;
+  blurredCr: Float32Array;
+
+  scratch: Float32Array;
 };
 
 export function createDenoiseBuffers(pixelCount: number): DenoiseBuffers {
@@ -14,9 +17,12 @@ export function createDenoiseBuffers(pixelCount: number): DenoiseBuffers {
     y: new Float32Array(pixelCount),
     cb: new Float32Array(pixelCount),
     cr: new Float32Array(pixelCount),
-    outY: new Float32Array(pixelCount),
-    outCb: new Float32Array(pixelCount),
-    outCr: new Float32Array(pixelCount),
+
+    blurredY: new Float32Array(pixelCount),
+    blurredCb: new Float32Array(pixelCount),
+    blurredCr: new Float32Array(pixelCount),
+
+    scratch: new Float32Array(pixelCount),
   };
 }
 
@@ -67,46 +73,84 @@ export function applyDenoiseToRgbaBytes(
     buffers.cr[p] = cr;
   }
 
-  // Edge-aware smoothing using a tiny bilateral-like filter.
-  // We use a 3x3 neighborhood (radius=1) and weight neighbors by similarity.
-  // "Detail" tightens the similarity threshold (more edge preservation).
-  const sigmaBase = lerp(0.02, 0.12, 1 - detail);
-  const sigmaY = sigmaBase;
-  const sigmaC = sigmaBase * 1.5;
+  // Fast denoise strategy:
+  // - Blur luma/chroma with separable gaussian.
+  // - Compute a per-pixel edge mask from |original - blurred|.
+  // - Blend blurred->original based on mask (edge preservation), then blend by amount.
+  //
+  // This is much faster than a true bilateral filter (no per-neighbor exp).
+  const sigmaY = lerp(0.6, 1.6, 1 - detail);
+  const sigmaC = sigmaY * 1.25;
+
+  // Convert slider to a slightly stronger blend so low slider values are visible.
+  const luminanceStrength = clamp01(Math.pow(luminanceAmount, 0.6));
+  const colorStrength = clamp01(Math.pow(colorAmount, 0.6));
 
   if (luminanceAmount > 0) {
-    denoiseChannelEdgeAware(
+    gaussianBlurSeparable(
       buffers.y,
-      buffers.outY,
+      buffers.blurredY,
+      buffers.scratch,
       width,
       height,
       sigmaY,
-      luminanceAmount,
     );
-  } else {
-    buffers.outY.set(buffers.y);
+
+    // Higher `detail` preserves edges more aggressively by lowering thresholds.
+    const edge0 = lerp(0.04, 0.012, detail);
+    const edge1 = lerp(0.14, 0.05, detail);
+
+    for (let p = 0; p < pixelCount; p += 1) {
+      const y0 = buffers.y[p] ?? 0;
+      const blurred = buffers.blurredY[p] ?? y0;
+      const hfAbs = Math.abs(y0 - blurred);
+
+      const edge = smoothstep(edge0, edge1, hfAbs);
+      const preserved = lerp(blurred, y0, edge);
+
+      // Amount blends original -> edge-preserved blur.
+      buffers.y[p] = lerp(y0, preserved, luminanceStrength);
+    }
   }
 
   if (colorAmount > 0) {
-    denoiseChannelEdgeAware(
+    gaussianBlurSeparable(
       buffers.cb,
-      buffers.outCb,
+      buffers.blurredCb,
+      buffers.scratch,
       width,
       height,
       sigmaC,
-      colorAmount,
     );
-    denoiseChannelEdgeAware(
+    gaussianBlurSeparable(
       buffers.cr,
-      buffers.outCr,
+      buffers.blurredCr,
+      buffers.scratch,
       width,
       height,
       sigmaC,
-      colorAmount,
     );
-  } else {
-    buffers.outCb.set(buffers.cb);
-    buffers.outCr.set(buffers.cr);
+
+    // Chroma noise is often more objectionable, so use slightly higher thresholds.
+    const edge0 = lerp(0.05, 0.02, detail);
+    const edge1 = lerp(0.18, 0.07, detail);
+
+    for (let p = 0; p < pixelCount; p += 1) {
+      const cb0 = buffers.cb[p] ?? 0;
+      const cr0 = buffers.cr[p] ?? 0;
+
+      const cbBlur = buffers.blurredCb[p] ?? cb0;
+      const crBlur = buffers.blurredCr[p] ?? cr0;
+
+      const hfAbs = Math.max(Math.abs(cb0 - cbBlur), Math.abs(cr0 - crBlur));
+      const edge = smoothstep(edge0, edge1, hfAbs);
+
+      const preservedCb = lerp(cbBlur, cb0, edge);
+      const preservedCr = lerp(crBlur, cr0, edge);
+
+      buffers.cb[p] = lerp(cb0, preservedCb, colorStrength);
+      buffers.cr[p] = lerp(cr0, preservedCr, colorStrength);
+    }
   }
 
   // Convert back to RGB and write output.
@@ -116,31 +160,28 @@ export function applyDenoiseToRgbaBytes(
     const b0 = input[i + 2] ?? 0;
     const a0 = input[i + 3] ?? 0;
 
-    // Preserve alpha channel exactly.
-    const { r, g, b } = yCbCrToRgb(
-      buffers.outY[p] ?? buffers.y[p] ?? 0,
-      buffers.outCb[p] ?? buffers.cb[p] ?? 0,
-      buffers.outCr[p] ?? buffers.cr[p] ?? 0,
-    );
+    output[i + 3] = a0;
 
-    // If only luminance denoise is enabled, preserve chroma by scaling.
-    // (In practice, chroma denoise may be enabled too; conversion already handles it.)
-    // As a small safety, keep extreme chroma shifts from causing big deltas when colorAmount=0.
-    if (colorAmount === 0) {
+    // Preserve chroma when doing luma-only denoise.
+    if (colorStrength === 0 && luminanceStrength > 0) {
       const l0 = 0.2126 * (r0 / 255) + 0.7152 * (g0 / 255) + 0.0722 * (b0 / 255);
-      const l1 = buffers.outY[p] ?? l0;
+      const l1 = buffers.y[p] ?? l0;
       const scale = l0 > 1e-6 ? clamp01(l1) / clamp01(l0) : 1;
       output[i] = floatToByte((r0 / 255) * scale);
       output[i + 1] = floatToByte((g0 / 255) * scale);
       output[i + 2] = floatToByte((b0 / 255) * scale);
-      output[i + 3] = a0;
       continue;
     }
+
+    const { r, g, b } = yCbCrToRgb(
+      buffers.y[p] ?? 0,
+      buffers.cb[p] ?? 0,
+      buffers.cr[p] ?? 0,
+    );
 
     output[i] = floatToByte(r);
     output[i + 1] = floatToByte(g);
     output[i + 2] = floatToByte(b);
-    output[i + 3] = a0;
   }
 }
 
@@ -148,45 +189,70 @@ export function isNeutralDenoise(settings: DenoiseSettings): boolean {
   return settings.luminance === 0 && settings.color === 0;
 }
 
-function denoiseChannelEdgeAware(
+function gaussianBlurSeparable(
   input: Float32Array,
   output: Float32Array,
+  scratch: Float32Array,
   width: number,
   height: number,
   sigma: number,
-  amount: number,
 ): void {
-  const invTwoSigma2 = 1 / (2 * sigma * sigma);
+  if (input.length !== output.length || input.length !== scratch.length) {
+    throw new Error("Blur buffers must match");
+  }
 
+  const { kernel, radius } = createGaussianKernel(sigma);
+
+  // Horizontal pass: input -> scratch
   for (let y = 0; y < height; y += 1) {
+    const rowStart = y * width;
+
     for (let x = 0; x < width; x += 1) {
-      const idx = y * width + x;
-      const center = input[idx] ?? 0;
-
-      let sum = 0;
-      let wSum = 0;
-
-      for (let oy = -1; oy <= 1; oy += 1) {
-        const sy = clampInt(y + oy, 0, height - 1);
-        for (let ox = -1; ox <= 1; ox += 1) {
-          const sx = clampInt(x + ox, 0, width - 1);
-          const nIdx = sy * width + sx;
-          const value = input[nIdx] ?? 0;
-
-          const delta = value - center;
-          const w = Math.exp(-(delta * delta) * invTwoSigma2);
-
-          sum += value * w;
-          wSum += w;
-        }
+      let acc = 0;
+      for (let k = -radius; k <= radius; k += 1) {
+        const sx = clampInt(x + k, 0, width - 1);
+        const w = kernel[k + radius] ?? 0;
+        acc += (input[rowStart + sx] ?? 0) * w;
       }
-
-      const filtered = wSum > 1e-6 ? sum / wSum : center;
-
-      // Amount blends original -> filtered.
-      output[idx] = center + (filtered - center) * amount;
+      scratch[rowStart + x] = acc;
     }
   }
+
+  // Vertical pass: scratch -> output
+  for (let y = 0; y < height; y += 1) {
+    const rowStart = y * width;
+
+    for (let x = 0; x < width; x += 1) {
+      let acc = 0;
+      for (let k = -radius; k <= radius; k += 1) {
+        const sy = clampInt(y + k, 0, height - 1);
+        const w = kernel[k + radius] ?? 0;
+        acc += (scratch[sy * width + x] ?? 0) * w;
+      }
+      output[rowStart + x] = acc;
+    }
+  }
+}
+
+function createGaussianKernel(sigma: number): { kernel: Float32Array; radius: number } {
+  const safeSigma = Math.max(0.001, sigma);
+  const radius = Math.max(1, Math.ceil(safeSigma * 3));
+  const size = radius * 2 + 1;
+
+  const kernel = new Float32Array(size);
+
+  let sum = 0;
+  for (let k = -radius; k <= radius; k += 1) {
+    const w = Math.exp(-(k * k) / (2 * safeSigma * safeSigma));
+    kernel[k + radius] = w;
+    sum += w;
+  }
+
+  for (let i = 0; i < size; i += 1) {
+    kernel[i] = (kernel[i] ?? 0) / sum;
+  }
+
+  return { kernel, radius };
 }
 
 function rgbToYCbCr(r: number, g: number, b: number): {
@@ -233,4 +299,10 @@ function clampInt(value: number, min: number, max: number): number {
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  if (edge0 === edge1) return x < edge0 ? 0 : 1;
+  const t = clamp01((x - edge0) / (edge1 - edge0));
+  return t * t * (3 - 2 * t);
 }

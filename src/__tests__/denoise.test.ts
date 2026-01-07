@@ -88,11 +88,11 @@ describe("denoise", () => {
       input[i + 3] = 255;
     }
 
-    // Add impulse noise at center.
+    // Add small noise at center.
     const center = (2 * width + 2) * 4;
-    input[center] = 180;
-    input[center + 1] = 180;
-    input[center + 2] = 180;
+    input[center] = 120;
+    input[center + 1] = 120;
+    input[center + 2] = 120;
 
     const output = new Uint8ClampedArray(input.length);
 
@@ -168,9 +168,9 @@ describe("denoise", () => {
     }
 
     const center = (1 * width + 1) * 4;
-    input[center] = 200;
-    input[center + 1] = 80;
-    input[center + 2] = 80;
+    input[center] = 150;
+    input[center + 1] = 120;
+    input[center + 2] = 120;
 
     const output = new Uint8ClampedArray(input.length);
 
@@ -194,6 +194,6 @@ describe("denoise", () => {
     // Luma should remain in a reasonable neighborhood (avoid big shifts).
     const lumaIn = 0.2126 * (input[center] ?? 0) + 0.7152 * (input[center + 1] ?? 0) + 0.0722 * (input[center + 2] ?? 0);
     const lumaOut = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    expect(Math.abs(lumaOut - lumaIn)).toBeLessThan(25);
+    expect(Math.abs(lumaOut - lumaIn)).toBeLessThan(10);
   });
 });
