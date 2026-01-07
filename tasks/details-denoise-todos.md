@@ -61,18 +61,18 @@ Source PRD: `prds/details-denoise-prd.md`
 - [ ] Validate reset returns image to original appearance
 
 ## 6) Tests
-- [ ] Unit test: neutral params produce identical output
-- [ ] Unit test: alpha preservation
-- [ ] Unit test: clamping behavior at extreme values
-- [ ] Deterministic buffer tests (e.g., 5x5):
-  - [ ] Luminance smoothing reduces variance in flat areas
-  - [ ] Edge-aware behavior preserves a hard edge better at higher `detail`
-  - [ ] Color denoise reduces chroma speckle without large luma shift
-- [ ] Component test: Details accordion contains Noise Reduction controls
-- [ ] Component test: sliders start at defaults
-- [ ] Component test: slider change updates store state
-- [ ] Component test: Reset restores defaults
-- [ ] Integration-ish test ensuring render path consumes denoise settings and runs before sharpening
+- [x] Unit test: neutral params produce identical output
+- [x] Unit test: alpha preservation
+- [x] Unit test: clamping behavior at extreme values
+- [x] Deterministic buffer tests (e.g., 5x5):
+  - [x] Luminance smoothing reduces variance in flat areas
+  - [x] Edge-aware behavior preserves a hard edge better at higher `detail`
+  - [x] Color denoise reduces chroma speckle without large luma shift
+- [x] Component test: Details accordion contains Noise Reduction controls
+- [x] Component test: sliders start at defaults
+- [x] Component test: slider change updates store state
+- [x] Component test: Reset restores defaults
+- [x] Integration-ish test ensuring render path consumes denoise settings and runs before sharpening
 
 ## 7) Follow-ups (out of scope, but next)
 - [ ] Add expanded “Manual Noise Reduction” controls (contrast/smoothness) if needed
