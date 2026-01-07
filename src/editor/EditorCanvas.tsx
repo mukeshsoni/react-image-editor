@@ -11,12 +11,14 @@ import type { PixelPipelineContext, PipelineBuffers } from "@/editor/pixel-pipel
 
 import type {
   ColorAdjustments,
+  DenoiseSettings,
   LightAdjustments,
   SharpeningSettings,
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "@/store/cropStore";
 import { useColorStore } from "@/store/colorStore";
+import { useDenoiseStore } from "@/store/denoiseStore";
 import { useLightStore } from "@/store/lightStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
@@ -41,6 +43,7 @@ function renderImageToCanvas(
   lightAdjustments?: LightAdjustments,
   toneCurve?: ToneCurveSettings,
   colorAdjustments?: ColorAdjustments,
+  denoise?: DenoiseSettings,
   sharpening?: SharpeningSettings,
   cache?: RenderCache,
 ) {
@@ -94,6 +97,7 @@ function renderImageToCanvas(
     lightAdjustments,
     toneCurve,
     colorAdjustments,
+    denoise,
     sharpening,
   };
 
@@ -139,6 +143,7 @@ export function EditorCanvas({
   const lightAdjustments = useLightStore((state) => state.lightAdjustments);
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
+  const denoise = useDenoiseStore((state) => state.denoise);
   const sharpening = useSharpeningStore((state) => state.sharpening);
 
   const renderRef = useRef<number | null>(null);
@@ -177,6 +182,7 @@ export function EditorCanvas({
         lightAdjustments,
         toneCurve,
         colorAdjustments,
+        denoise,
         sharpening,
         renderCacheRef.current ?? undefined,
       );
@@ -191,6 +197,7 @@ export function EditorCanvas({
     toneCurve,
     whiteBalance,
     zoomLevel,
+    denoise,
     sharpening,
   ]);
 
