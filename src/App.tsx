@@ -24,12 +24,12 @@ function App() {
   }, [imageFile]);
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="flex flex-col flex-1">
+    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0">
         <div>
           <Input type="file" onChange={handleFileChange} />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {imageSource ? <ReactImageEditor imageSrc={imageSource} /> : null}
         </div>
       </div>
