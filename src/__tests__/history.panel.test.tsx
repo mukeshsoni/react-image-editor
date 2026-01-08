@@ -5,173 +5,124 @@ import type { HistoryEntry } from "@/store";
 
 import { ReactImageEditor } from "../ReactImageEditor";
 
-const hoisted = vi.hoisted(() => ({
-  historyJumpTo: vi.fn(),
-}));
+const hoisted = vi.hoisted(() => {
+  const baselineEntry: HistoryEntry = {
+    id: "original",
+    label: "Original",
+    timestamp: 0,
+    state: {
+      edits: {
+        version: 1,
+        crop: {
+          rect: { x: 0, y: 0, width: 0, height: 0 },
+          settings: { aspectRatio: "original", aspectRatioLocked: false },
+        },
+        whiteBalance: {
+          temperatureKelvin: 6500,
+          tint: 0,
+          preset: "custom",
+        },
+        light: {
+          exposure: 0,
+          contrast: 0,
+          highlights: 0,
+          shadows: 0,
+          whites: 0,
+          blacks: 0,
+        },
+        color: {
+          vibrance: 0,
+          saturation: 0,
+        },
+        toneCurve: {
+          mode: "point",
+          activeChannel: "rgb",
+          point: {
+            rgb: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+            r: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+            g: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+            b: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+          },
+          parametric: {
+            rgb: {
+              highlights: 0,
+              lights: 0,
+              darks: 0,
+              shadows: 0,
+            },
+          },
+        },
+        sharpening: {
+          amount: 0,
+          radius: 1,
+          detail: 25,
+          masking: 0,
+        },
+        denoise: {
+          luminance: 0,
+          color: 0,
+          detail: 50,
+        },
+      },
+      camera: {
+        zoomLevel: 1,
+        offset: { x: 0, y: 0 },
+      },
+    },
+  };
 
-vi.mock("../store/historyStore", () => {
-  const entries: HistoryEntry[] = [
-    {
-      id: "original",
-      label: "Original",
-      timestamp: 0,
-      state: {
-        edits: {
-          version: 1,
-          crop: {
-            rect: { x: 0, y: 0, width: 0, height: 0 },
-            settings: { aspectRatio: "original", aspectRatioLocked: false },
-          },
-          whiteBalance: {
-            temperatureKelvin: 6500,
-            tint: 0,
-            preset: "custom",
-          },
-          light: {
-            exposure: 0,
-            contrast: 0,
-            highlights: 0,
-            shadows: 0,
-            whites: 0,
-            blacks: 0,
-          },
-          color: {
-            vibrance: 0,
-            saturation: 0,
-          },
-          toneCurve: {
-            mode: "point",
-            activeChannel: "rgb",
-            point: {
-              rgb: [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-              ],
-              r: [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-              ],
-              g: [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-              ],
-              b: [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-              ],
-            },
-            parametric: {
-              rgb: {
-                highlights: 0,
-                lights: 0,
-                darks: 0,
-                shadows: 0,
-              },
-            },
-          },
-          sharpening: {
-            amount: 0,
-            radius: 1,
-            detail: 25,
-            masking: 0,
-          },
-          denoise: {
-            luminance: 0,
-            color: 0,
-            detail: 50,
-          },
-        },
-        camera: {
-          zoomLevel: 1,
-          offset: { x: 0, y: 0 },
+  const exposureEntry: HistoryEntry = {
+    id: "tone",
+    label: "Exposure",
+    delta: "+0.2",
+    timestamp: 1,
+    state: {
+      ...baselineEntry.state,
+      edits: {
+        ...baselineEntry.state.edits,
+        light: {
+          ...baselineEntry.state.edits.light,
+          exposure: 0.2,
         },
       },
     },
-    {
-      id: "tone",
-      label: "Exposure",
-      delta: "+0.2",
-      timestamp: 1,
-      state: {
-        edits: {
-          version: 1,
-          crop: {
-            rect: { x: 0, y: 0, width: 0, height: 0 },
-            settings: { aspectRatio: "original", aspectRatioLocked: false },
-          },
-          whiteBalance: {
-            temperatureKelvin: 6500,
-            tint: 0,
-            preset: "custom",
-          },
-          light: {
-            exposure: 0.2,
-            contrast: 0,
-            highlights: 0,
-            shadows: 0,
-            whites: 0,
-            blacks: 0,
-          },
-          color: {
-            vibrance: 0,
-            saturation: 0,
-          },
-          toneCurve: {
-            mode: "point",
-            activeChannel: "rgb",
-            point: {
-              rgb: [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-              ],
-              r: [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-              ],
-              g: [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-              ],
-              b: [
-                { x: 0, y: 0 },
-                { x: 1, y: 1 },
-              ],
-            },
-            parametric: {
-              rgb: {
-                highlights: 0,
-                lights: 0,
-                darks: 0,
-                shadows: 0,
-              },
-            },
-          },
-          sharpening: {
-            amount: 0,
-            radius: 1,
-            detail: 25,
-            masking: 0,
-          },
-          denoise: {
-            luminance: 0,
-            color: 0,
-            detail: 50,
-          },
-        },
-        camera: {
-          zoomLevel: 1,
-          offset: { x: 0, y: 0 },
-        },
-      },
-    },
-  ];
+  };
 
   return {
+    baselineEntry,
+    exposureEntry,
+    historyJumpTo: vi.fn(),
+  };
+});
+
+vi.mock("../store/historyStore", async () => {
+  const actual = await vi.importActual<typeof import("../store/historyStore")>(
+    "../store/historyStore",
+  );
+
+  const entries: HistoryEntry[] = [hoisted.baselineEntry, hoisted.exposureEntry];
+
+  return {
+    ...actual,
     useHistoryStore: ((selector?: (state: unknown) => unknown) => {
       const state = {
         entries,
         index: 1,
-        jumpTo: hoisted.historyJumpTo,
+        jumpTo: hoisted.historyJumpTo.mockImplementation((idx: number) =>
+          idx === 0 ? hoisted.baselineEntry : hoisted.exposureEntry,
+        ),
         push: vi.fn(),
         resetToBaseline: vi.fn(),
       };
@@ -379,6 +330,7 @@ vi.mock("../use-canvas-zoom-pan", async () => {
       zoomIn: vi.fn(),
       zoomOut: vi.fn(),
       resetZoom: vi.fn(),
+      setCamera: vi.fn(),
       listeners: {},
     }),
   };

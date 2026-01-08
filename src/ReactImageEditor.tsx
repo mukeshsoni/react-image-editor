@@ -33,6 +33,7 @@ const HISTORY_COMMIT_DEBOUNCE_MS = 250;
 import { getImageEditorEdits, subscribeToEdits, useHistoryStore } from "./store";
 import { useResetAll } from "./store/editorActions";
 import { type Bounds, useCropStore } from "./store/cropStore";
+import { selectCanRedo, selectCanUndo } from "./store/historyStore";
 import { useDenoiseStore } from "./store/denoiseStore";
 import { useSharpeningStore } from "./store/sharpeningStore";
 import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
@@ -216,7 +217,12 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const historyEntries = useHistoryStore((state) => state.entries);
   const historyIndex = useHistoryStore((state) => state.index);
   const historyJumpTo = useHistoryStore((state) => state.jumpTo);
+  const historyUndo = useHistoryStore((state) => state.undo);
+  const historyRedo = useHistoryStore((state) => state.redo);
   const editsPush = useHistoryStore((state) => state.push);
+
+  const canUndo = useHistoryStore(selectCanUndo);
+  const canRedo = useHistoryStore(selectCanRedo);
 
   const lastCommittedEditsRef = useRef(getImageEditorEdits());
 
@@ -711,9 +717,117 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
           <ResizablePanel defaultSize={25} className="min-h-0">
-            <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
-              <div className="flex flex-wrap items-center gap-2">
-                  <CropToolButtons
+               <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
+                 <div className="flex flex-wrap items-center gap-2">
+                   <div className="ml-auto">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={historyIndex <= 0}
+                        onClick={() => {
+                          const baseline = historyJumpTo(0);
+                          if (!baseline) return;
+
+                          isApplyingHistoryRef.current = true;
+                          try {
+                            applyEditsSnapshot(baseline.state.edits);
+                            const camera = baseline.state.camera;
+                            if (camera) {
+                              setCamera(camera.zoomLevel, camera.offset);
+                            }
+
+                            lastCommittedEditsRef.current = baseline.state.edits;
+                            if (camera) {
+                              zoomPanStateRef.current = {
+                                zoomLevel: camera.zoomLevel,
+                                offset: camera.offset,
+                              };
+                            }
+                          } finally {
+                            queueMicrotask(() => {
+                              isApplyingHistoryRef.current = false;
+                            });
+                          }
+                        }}
+                      >
+                        Reset
+                      </Button>
+                   </div>
+                 <div className="ml-auto flex items-center gap-1">
+                   <Button
+                     type="button"
+                     size="icon"
+                     variant="outline"
+                     title="Undo (⌘Z)"
+                     aria-label="Undo (⌘Z)"
+                     disabled={!canUndo}
+                     onClick={() => {
+                       const nextEntry = historyUndo();
+                       if (!nextEntry) return;
+
+                       isApplyingHistoryRef.current = true;
+                       try {
+                         applyEditsSnapshot(nextEntry.state.edits);
+                         const camera = nextEntry.state.camera;
+                         if (camera) {
+                           setCamera(camera.zoomLevel, camera.offset);
+                         }
+
+                         lastCommittedEditsRef.current = nextEntry.state.edits;
+                         if (camera) {
+                           zoomPanStateRef.current = {
+                             zoomLevel: camera.zoomLevel,
+                             offset: camera.offset,
+                           };
+                         }
+                       } finally {
+                         queueMicrotask(() => {
+                           isApplyingHistoryRef.current = false;
+                         });
+                       }
+                     }}
+                   >
+                     ↶
+                   </Button>
+                   <Button
+                     type="button"
+                     size="icon"
+                     variant="outline"
+                     title="Redo (⇧⌘Z)"
+                     aria-label="Redo (⇧⌘Z)"
+                     disabled={!canRedo}
+                     onClick={() => {
+                       const nextEntry = historyRedo();
+                       if (!nextEntry) return;
+
+                       isApplyingHistoryRef.current = true;
+                       try {
+                         applyEditsSnapshot(nextEntry.state.edits);
+                         const camera = nextEntry.state.camera;
+                         if (camera) {
+                           setCamera(camera.zoomLevel, camera.offset);
+                         }
+
+                         lastCommittedEditsRef.current = nextEntry.state.edits;
+                         if (camera) {
+                           zoomPanStateRef.current = {
+                             zoomLevel: camera.zoomLevel,
+                             offset: camera.offset,
+                           };
+                         }
+                       } finally {
+                         queueMicrotask(() => {
+                           isApplyingHistoryRef.current = false;
+                         });
+                       }
+                     }}
+                   >
+                     ↷
+                   </Button>
+                 </div>
+
+                   <CropToolButtons
                     cropMode={cropMode}
                     setCropMode={setCropMode}
                     hasAppliedCrop={cropCommitted}
