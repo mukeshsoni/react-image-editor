@@ -66,11 +66,11 @@ Source PRD: `prds/undo-redo-prd.md`
   - [ ] Export after crop matches preview
 
 ## 5) UI — Left history panel
-- [ ] Add left panel container (Lightroom-style) using existing layout patterns
-- [ ] Add `History` accordion
-- [ ] Render history list with current selection styling
-- [ ] Clicking a row triggers `jumpTo(index)`
-- [ ] Add stable selectors for tests (`data-testid`)
+- [x] Add left panel container (Lightroom-style) using existing layout patterns
+- [x] Add `History` accordion
+- [x] Render history list with current selection styling
+- [x] Clicking a row triggers `jumpTo(index)`
+- [x] Add stable selectors for tests (`data-testid`)
 
 ## 6) UI — Right panel buttons
 - [ ] Add Undo/Redo buttons to the right side of the right panel header

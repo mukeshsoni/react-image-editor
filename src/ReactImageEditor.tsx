@@ -212,6 +212,9 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   const rotation = cropSettings.rotation ?? 0;
 
+  const historyEntries = useHistoryStore((state) => state.entries);
+  const historyIndex = useHistoryStore((state) => state.index);
+  const historyJumpTo = useHistoryStore((state) => state.jumpTo);
   const editsPush = useHistoryStore((state) => state.push);
 
   const lastCommittedEditsRef = useRef(getImageEditorEdits());
@@ -467,9 +470,57 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         direction="horizontal"
         className="flex flex-1 min-h-0 overflow-hidden"
       >
+        <ResizablePanel defaultSize={18} className="min-h-0">
+          <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
+            <details
+              className="rounded-md border bg-white"
+              data-testid="history-accordion"
+              open
+            >
+              <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span>History</span>
+                </span>
+                <span className="text-xs text-gray-500">▾</span>
+              </summary>
+
+              <div className="px-3 pb-3">
+                <div data-testid="history-list" className="flex flex-col gap-1">
+                  {historyEntries.length === 0 ? (
+                    <div
+                      data-testid="history-entry-placeholder"
+                      className="text-xs text-gray-600"
+                    >
+                      History entries will appear here
+                    </div>
+                  ) : (
+                    historyEntries.map((entry, idx) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        data-testid={`history-entry-${idx}`}
+                        onClick={() => historyJumpTo(idx)}
+                        className={
+                          idx === historyIndex
+                            ? "rounded-sm bg-gray-900 px-2 py-1 text-left text-xs text-white"
+                            : "rounded-sm px-2 py-1 text-left text-xs text-gray-800 hover:bg-gray-200"
+                        }
+                      >
+                        {entry.label}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </details>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
+
         <ResizablePanel
           className="flex flex-col min-h-0 overflow-hidden"
-          defaultSize={75}
+          defaultSize={57}
           onResize={handleImagePanelResize}
         >
             <div className="flex flex-col flex-1 p-0">
