@@ -821,6 +821,7 @@ export const useCanvasZoomPan = (
     zoomIn,
     zoomOut,
     resetZoom,
+    setCamera,
     // event handlers to attach to the canvas element
     listeners: {
       onTouchEnd: handleTouchEnd,

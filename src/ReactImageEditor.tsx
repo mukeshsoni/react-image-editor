@@ -14,6 +14,7 @@ import { EditorCanvas } from "@/editor/EditorCanvas";
 import { ExportTool } from "@/editor/ExportTool";
 import { getPanelRegistry } from "@/editor/panels";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
+import { applyEditsSnapshot } from "@/store";
 import {
   areEditsEqual,
   createEditorSerializableState,
@@ -222,32 +223,43 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const zoomPanStateRef = useRef({ zoomLevel: 1, offset: { x: 0, y: 0 } });
   const commitCameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } = useCanvasZoomPan(
-    canvasRef,
-    imageRef,
-    {
-      enableWheel: true,
-      onCameraChange: (camera) => {
-        zoomPanStateRef.current = camera;
+  const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, setCamera, listeners } =
+    useCanvasZoomPan(
+      canvasRef,
+      imageRef,
+      {
+        enableWheel: true,
+        onCameraChange: (camera) => {
+          if (commitCameraTimeoutRef.current) {
+            clearTimeout(commitCameraTimeoutRef.current);
+          }
 
-        if (commitCameraTimeoutRef.current) {
-          clearTimeout(commitCameraTimeoutRef.current);
-        }
+          commitCameraTimeoutRef.current = setTimeout(() => {
+            commitCameraTimeoutRef.current = null;
 
-        commitCameraTimeoutRef.current = setTimeout(() => {
-          commitCameraTimeoutRef.current = null;
-          editsPush({
-            label: "Zoom/Pan",
-            state: createEditorSerializableState({
-              edits: lastCommittedEditsRef.current,
-              zoomLevel: camera.zoomLevel,
-              offset: camera.offset,
-            }),
-          });
-        }, HISTORY_COMMIT_DEBOUNCE_MS);
+            const lastCamera = zoomPanStateRef.current;
+            if (
+              lastCamera.zoomLevel === camera.zoomLevel &&
+              lastCamera.offset.x === camera.offset.x &&
+              lastCamera.offset.y === camera.offset.y
+            ) {
+              return;
+            }
+
+            editsPush({
+              label: "Zoom/Pan",
+              state: createEditorSerializableState({
+                edits: lastCommittedEditsRef.current,
+                zoomLevel: camera.zoomLevel,
+                offset: camera.offset,
+              }),
+            });
+
+            zoomPanStateRef.current = camera;
+          }, HISTORY_COMMIT_DEBOUNCE_MS);
+        },
       },
-    },
-  );
+    );
 
   useEffect(() => {
     return () => {
@@ -365,14 +377,13 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   }, [imageSrc, resetAll, resetHistoryToBaseline, resetZoom]);
 
   useEffect(() => {
-    if (!onEditsChange) {
-      return;
-    }
-
     const unsubscribe = subscribeToEdits((nextEdits) => {
       if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
         editsPush({
-          label: getHistoryLabelForEditsChange(lastCommittedEditsRef.current, nextEdits),
+          label: getHistoryLabelForEditsChange(
+            lastCommittedEditsRef.current,
+            nextEdits,
+          ),
           state: createEditorSerializableState({
             edits: nextEdits,
             zoomLevel: zoomPanStateRef.current.zoomLevel,
@@ -382,7 +393,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         lastCommittedEditsRef.current = nextEdits;
       }
 
-      onEditsChange(nextEdits);
+      onEditsChange?.(nextEdits);
     });
 
     return unsubscribe;
@@ -499,7 +510,16 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                         key={entry.id}
                         type="button"
                         data-testid={`history-entry-${idx}`}
-                        onClick={() => historyJumpTo(idx)}
+                        onClick={() => {
+                          const nextEntry = historyJumpTo(idx);
+                          if (nextEntry) {
+                            applyEditsSnapshot(nextEntry.state.edits);
+                            const camera = nextEntry.state.camera;
+                            if (camera) {
+                              setCamera(camera.zoomLevel, camera.offset);
+                            }
+                          }
+                        }}
                         className={
                           idx === historyIndex
                             ? "rounded-sm bg-gray-900 px-2 py-1 text-left text-xs text-white"

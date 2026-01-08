@@ -14,5 +14,6 @@ export {
   getHistoryLabelForEditsChange,
 } from "./historyRecording";
 
+export { applyEditsSnapshot } from "./applyEditsSnapshot";
 export { getImageEditorEdits } from "./selectEdits";
 export { subscribeToEdits } from "./subscribeToEdits";
