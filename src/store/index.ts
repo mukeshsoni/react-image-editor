@@ -11,6 +11,7 @@ export {
 export {
   areEditsEqual,
   createEditorSerializableState,
+  getHistoryDisplayForEditsChange,
   getHistoryLabelForEditsChange,
 } from "./historyRecording";
 

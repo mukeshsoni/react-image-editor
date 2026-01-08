@@ -15,7 +15,13 @@ export type EditorSerializableState = {
 
 export type HistoryEntry = {
   id: string;
+
+  // Left column label (e.g. "Exposure")
   label: string;
+
+  // Optional right column (e.g. "+0.2")
+  delta?: string;
+
   timestamp: number;
   state: EditorSerializableState;
 };

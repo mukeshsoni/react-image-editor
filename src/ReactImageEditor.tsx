@@ -18,7 +18,7 @@ import { applyEditsSnapshot } from "@/store";
 import {
   areEditsEqual,
   createEditorSerializableState,
-  getHistoryLabelForEditsChange,
+  getHistoryDisplayForEditsChange,
 } from "@/store/historyRecording";
 
 import type { ExportFormat } from "./export-download";
@@ -222,6 +222,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   const zoomPanStateRef = useRef({ zoomLevel: 1, offset: { x: 0, y: 0 } });
   const commitCameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitializingRef = useRef(true);
+  const isApplyingHistoryRef = useRef(false);
 
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, setCamera, listeners } =
     useCanvasZoomPan(
@@ -230,6 +232,11 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       {
         enableWheel: true,
         onCameraChange: (camera) => {
+          if (isInitializingRef.current || isApplyingHistoryRef.current) {
+            zoomPanStateRef.current = camera;
+            return;
+          }
+
           if (commitCameraTimeoutRef.current) {
             clearTimeout(commitCameraTimeoutRef.current);
           }
@@ -332,9 +339,16 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
     setIsImageLoaded(false);
 
     img.onload = () => {
+      isInitializingRef.current = true;
+
+      if (commitCameraTimeoutRef.current) {
+        clearTimeout(commitCameraTimeoutRef.current);
+        commitCameraTimeoutRef.current = null;
+      }
+
       imageRef.current = img;
       originalImageRef.current = img;
-      useCropStore.getState().clearCommittedCrop();
+      useCropStore.getState?.().clearCommittedCrop?.();
       setCropMode(false);
 
       const initialZoomLevel = calculateInitialZoomLevel(canvasRef.current, img);
@@ -366,6 +380,12 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         state: baselineState,
       });
 
+      lastCommittedEditsRef.current = baselineState.edits;
+      zoomPanStateRef.current = {
+        zoomLevel: baselineState.camera?.zoomLevel ?? initialZoomLevel,
+        offset: baselineState.camera?.offset ?? initialOffset,
+      };
+
       setIsImageLoaded(true);
 
       // We trigger a recalculation of zoomLevel and image offset by calling resetZoom
@@ -373,17 +393,32 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       // the first time. Or, it is called, but the imageRef.current is still null so we render nothing
       // Once the image is loaded, we need to calculate the zoom level and image offset once more
       resetZoom();
+
+      // ResetZoom triggers onCameraChange; ignore it during initialization.
+      queueMicrotask(() => {
+        isInitializingRef.current = false;
+      });
     };
   }, [imageSrc, resetAll, resetHistoryToBaseline, resetZoom]);
 
   useEffect(() => {
     const unsubscribe = subscribeToEdits((nextEdits) => {
+      if (isApplyingHistoryRef.current || isInitializingRef.current) {
+        // Don’t record history while we’re programmatically applying snapshots.
+        lastCommittedEditsRef.current = nextEdits;
+        onEditsChange?.(nextEdits);
+        return;
+      }
+
       if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
+        const display = getHistoryDisplayForEditsChange(
+          lastCommittedEditsRef.current,
+          nextEdits,
+        );
+
         editsPush({
-          label: getHistoryLabelForEditsChange(
-            lastCommittedEditsRef.current,
-            nextEdits,
-          ),
+          label: display.label,
+          delta: display.delta,
           state: createEditorSerializableState({
             edits: nextEdits,
             zoomLevel: zoomPanStateRef.current.zoomLevel,
@@ -511,22 +546,44 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                         type="button"
                         data-testid={`history-entry-${idx}`}
                         onClick={() => {
-                          const nextEntry = historyJumpTo(idx);
-                          if (nextEntry) {
-                            applyEditsSnapshot(nextEntry.state.edits);
-                            const camera = nextEntry.state.camera;
-                            if (camera) {
-                              setCamera(camera.zoomLevel, camera.offset);
+                          isApplyingHistoryRef.current = true;
+
+                          try {
+                            const nextEntry = historyJumpTo(idx);
+                            if (nextEntry) {
+                              applyEditsSnapshot(nextEntry.state.edits);
+                              const camera = nextEntry.state.camera;
+                              if (camera) {
+                                setCamera(camera.zoomLevel, camera.offset);
+                              }
+
+                              lastCommittedEditsRef.current = nextEntry.state.edits;
+                              const nextCamera = nextEntry.state.camera;
+                              if (nextCamera) {
+                                zoomPanStateRef.current = {
+                                  zoomLevel: nextCamera.zoomLevel,
+                                  offset: nextCamera.offset,
+                                };
+                              }
                             }
+                          } finally {
+                            queueMicrotask(() => {
+                              isApplyingHistoryRef.current = false;
+                            });
                           }
                         }}
                         className={
                           idx === historyIndex
-                            ? "rounded-sm bg-gray-900 px-2 py-1 text-left text-xs text-white"
-                            : "rounded-sm px-2 py-1 text-left text-xs text-gray-800 hover:bg-gray-200"
+                            ? "flex items-center gap-2 rounded-sm bg-gray-900 px-2 py-1 text-left text-xs text-white"
+                            : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-gray-800 hover:bg-gray-200"
                         }
                       >
-                        {entry.label}
+                        <span className="flex-1 truncate">{entry.label}</span>
+                        {entry.delta ? (
+                          <span className="tabular-nums text-right min-w-[3rem]">
+                            {entry.delta}
+                          </span>
+                        ) : null}
                       </button>
                     ))
                   )}
@@ -663,7 +720,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                     onResetCrop={() => {
                       if (!originalImageRef.current) return;
                       imageRef.current = originalImageRef.current;
-                      useCropStore.getState().clearCommittedCrop();
+                      useCropStore.getState?.().clearCommittedCrop?.();
                       resetRotation();
                       resetZoom();
                     }}

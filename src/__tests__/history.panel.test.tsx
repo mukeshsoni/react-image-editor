@@ -89,7 +89,8 @@ vi.mock("../store/historyStore", () => {
     },
     {
       id: "tone",
-      label: "Tone",
+      label: "Exposure",
+      delta: "+0.2",
       timestamp: 1,
       state: {
         edits: {
@@ -197,15 +198,32 @@ vi.mock("../store/cropStore", async () => {
   return {
     ...actual,
     useCropStore: createMockZustandHook({
+      cropRect: { x: 0, y: 0, width: 0, height: 0 },
+      cropBounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+      cropCommitted: false,
+      cropCommit: null,
       cropSettings: {
+        aspectRatio: "original",
+        aspectRatioLocked: false,
         rotation: 0,
         constrainCrop: true,
       },
-      cropCommitted: false,
-      cropCommit: null,
       clearCommittedCrop: vi.fn(),
+      commitCrop: vi.fn(),
+      initializeCropRect: vi.fn(),
+      moveCropRect: vi.fn(),
+      resizeCropRect: vi.fn(),
+      setCropRect: vi.fn(),
+      updateCropRect: vi.fn(),
+      setCropSettings: vi.fn(),
+      updateCropSettings: vi.fn(),
+      handleCropSettingsChange: vi.fn(),
+      resetAll: vi.fn(),
+      resetCropRect: vi.fn(),
+      resetCropSettings: vi.fn(),
       setRotation: vi.fn(),
       resetRotation: vi.fn(),
+      setConstrainCrop: vi.fn(),
     }),
   };
 });
@@ -428,9 +446,13 @@ describe("History panel", () => {
 
     const list = screen.getByTestId("history-list");
     expect(within(list).getByText("Original")).toBeTruthy();
-    expect(within(list).getByText("Tone")).toBeTruthy();
+    expect(within(list).getByText("Exposure")).toBeTruthy();
+    expect(within(list).getByText("+0.2")).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("history-entry-0"));
     expect(hoisted.historyJumpTo).toHaveBeenCalledWith(0);
+
+    fireEvent.click(screen.getByTestId("history-entry-1"));
+    expect(hoisted.historyJumpTo).toHaveBeenCalledWith(1);
   });
 });

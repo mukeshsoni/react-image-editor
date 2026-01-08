@@ -10,8 +10,10 @@ import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 export function applyEditsSnapshot(edits: ImageEditorEdits) {
   const crop = useCropStore.getState();
+
+  // Apply crop settings without triggering aspect-ratio side effects.
+  crop.handleCropSettingsChange(edits.crop.settings);
   crop.setCropRect(edits.crop.rect);
-  crop.setCropSettings(edits.crop.settings);
 
   if (edits.crop.committed) {
     if (edits.crop.commit) {
