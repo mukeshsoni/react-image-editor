@@ -86,15 +86,15 @@ Source PRD: `prds/undo-redo-prd.md`
 - [x] Ensure shortcuts don’t conflict with existing bindings
 
 ## 8) Tests (Vitest)
-- [ ] Unit tests for history store:
-  - [ ] push/undo/redo basics
-  - [ ] history cap (drops oldest)
-  - [ ] new edit after undo clears redo
-  - [ ] jumpTo sets correct index
-- [ ] Component tests:
-  - [ ] Undo/Redo buttons enable/disable correctly
-  - [ ] Keyboard shortcuts invoke actions
-  - [ ] History list renders and clicking an entry restores expected state
+- [x] Unit tests for history store:
+  - [x] push/undo/redo basics
+  - [x] history cap (drops oldest)
+  - [x] new edit after undo clears redo
+  - [x] jumpTo sets correct index
+- [x] Component tests:
+  - [x] Undo/Redo buttons enable/disable correctly
+  - [x] Keyboard shortcuts invoke actions
+  - [x] History list renders and clicking an entry restores expected state
 
 ## 9) Manual QA checklist
 - [ ] Undo/redo across multiple panel adjustments

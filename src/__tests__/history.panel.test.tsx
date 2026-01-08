@@ -104,6 +104,10 @@ const hoisted = vi.hoisted(() => {
     baselineEntry,
     exposureEntry,
     historyJumpTo: vi.fn(),
+    historyUndo: vi.fn(),
+    historyRedo: vi.fn(),
+    historyIndex: 1,
+    appliedEntries: [] as HistoryEntry[],
   };
 });
 
@@ -112,17 +116,25 @@ vi.mock("../store/historyStore", async () => {
     "../store/historyStore",
   );
 
-  const entries: HistoryEntry[] = [hoisted.baselineEntry, hoisted.exposureEntry];
+    const entries: HistoryEntry[] = [hoisted.baselineEntry, hoisted.exposureEntry];
 
-  return {
-    ...actual,
-    useHistoryStore: ((selector?: (state: unknown) => unknown) => {
-      const state = {
-        entries,
-        index: 1,
+   return {
+     ...actual,
+     useHistoryStore: ((selector?: (state: unknown) => unknown) => {
+       const state = {
+         entries,
+         index: hoisted.historyIndex,
         jumpTo: hoisted.historyJumpTo.mockImplementation((idx: number) =>
           idx === 0 ? hoisted.baselineEntry : hoisted.exposureEntry,
         ),
+        undo: hoisted.historyUndo.mockImplementation(() => {
+          hoisted.appliedEntries.push(hoisted.baselineEntry);
+          return hoisted.baselineEntry;
+        }),
+        redo: hoisted.historyRedo.mockImplementation(() => {
+          hoisted.appliedEntries.push(hoisted.exposureEntry);
+          return hoisted.exposureEntry;
+        }),
         push: vi.fn(),
         resetToBaseline: vi.fn(),
       };
@@ -390,21 +402,75 @@ describe("History panel", () => {
     vi.restoreAllMocks();
   });
 
-  test("renders history entries and jumps on click", async () => {
-    render(<ReactImageEditor imageSrc="data:image/png;base64,AAA=" />);
-
-    const accordion = screen.getByTestId("history-accordion");
-    expect(within(accordion).getByText("History")).toBeTruthy();
-
-    const list = screen.getByTestId("history-list");
-    expect(within(list).getByText("Original")).toBeTruthy();
-    expect(within(list).getByText("Exposure")).toBeTruthy();
-    expect(within(list).getByText("+0.2")).toBeTruthy();
-
-    fireEvent.click(screen.getByTestId("history-entry-0"));
-    expect(hoisted.historyJumpTo).toHaveBeenCalledWith(0);
-
-    fireEvent.click(screen.getByTestId("history-entry-1"));
-    expect(hoisted.historyJumpTo).toHaveBeenCalledWith(1);
-  });
+   test("renders history entries and jumps on click", async () => {
+     render(<ReactImageEditor imageSrc="data:image/png;base64,AAA=" />);
+ 
+     const accordion = screen.getByTestId("history-accordion");
+     expect(within(accordion).getByText("History")).toBeTruthy();
+ 
+     const list = screen.getByTestId("history-list");
+     expect(within(list).getByText("Original")).toBeTruthy();
+     expect(within(list).getByText("Exposure")).toBeTruthy();
+     expect(within(list).getByText("+0.2")).toBeTruthy();
+ 
+     // History rows
+     fireEvent.click(screen.getByTestId("history-entry-0"));
+     expect(hoisted.historyJumpTo).toHaveBeenCalledWith(0);
+ 
+     fireEvent.click(screen.getByTestId("history-entry-1"));
+     expect(hoisted.historyJumpTo).toHaveBeenCalledWith(1);
+ 
+     // Buttons
+     fireEvent.click(screen.getByLabelText("Undo (⌘Z)"));
+     expect(hoisted.historyUndo).toHaveBeenCalled();
+ 
+     const redoButton = screen.getByLabelText("Redo (⇧⌘Z)") as HTMLButtonElement;
+     if (!redoButton.disabled) {
+       fireEvent.click(redoButton);
+       expect(hoisted.historyRedo).toHaveBeenCalled();
+     }
+   });
+ 
+   test("keyboard shortcuts invoke undo/redo", async () => {
+     hoisted.historyIndex = 1;
+     render(<ReactImageEditor imageSrc="data:image/png;base64,AAA=" />);
+ 
+     const undoEvent = new KeyboardEvent("keydown", {
+       key: "z",
+       metaKey: true,
+     });
+     document.dispatchEvent(undoEvent);
+     expect(hoisted.historyUndo).toHaveBeenCalledTimes(1);
+ 
+     const rangeInput = document.createElement("input");
+     rangeInput.type = "range";
+     document.body.appendChild(rangeInput);
+     rangeInput.focus();
+ 
+     const undoFromInputEvent = new KeyboardEvent("keydown", {
+       key: "z",
+       metaKey: true,
+     });
+     document.dispatchEvent(undoFromInputEvent);
+     expect(hoisted.historyUndo).toHaveBeenCalledTimes(2);
+ 
+     hoisted.historyIndex = 0;
+     const redoEvent = new KeyboardEvent("keydown", {
+       key: "z",
+       metaKey: true,
+       shiftKey: true,
+     });
+     document.dispatchEvent(redoEvent);
+     expect(hoisted.historyRedo).toHaveBeenCalledTimes(1);
+ 
+     const redoFromInputEvent = new KeyboardEvent("keydown", {
+       key: "z",
+       metaKey: true,
+       shiftKey: true,
+     });
+     document.dispatchEvent(redoFromInputEvent);
+     expect(hoisted.historyRedo).toHaveBeenCalledTimes(2);
+ 
+     rangeInput.remove();
+   });
 });
