@@ -73,10 +73,10 @@ Source PRD: `prds/undo-redo-prd.md`
 - [x] Add stable selectors for tests (`data-testid`)
 
 ## 6) UI — Right panel buttons
-- [ ] Add Undo/Redo buttons to the right side of the right panel header
-- [ ] Disabled states follow `canUndo` / `canRedo`
-- [ ] Add optional tooltips/aria-labels with shortcut hints
-- [ ] Add `Revert` button to bottom of right panel
+- [x] Add Undo/Redo buttons to the right side of the right panel header
+- [x] Disabled states follow `canUndo` / `canRedo`
+- [x] Add optional tooltips/aria-labels with shortcut hints
+- [x] Add `Reset` button to bottom of right panel
 
 ## 7) Keyboard shortcuts
 - [ ] Add global shortcut handling:

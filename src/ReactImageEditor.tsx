@@ -717,44 +717,10 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
           <ResizablePanel defaultSize={25} className="min-h-0">
-               <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
-                 <div className="flex flex-wrap items-center gap-2">
-                   <div className="ml-auto">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={historyIndex <= 0}
-                        onClick={() => {
-                          const baseline = historyJumpTo(0);
-                          if (!baseline) return;
-
-                          isApplyingHistoryRef.current = true;
-                          try {
-                            applyEditsSnapshot(baseline.state.edits);
-                            const camera = baseline.state.camera;
-                            if (camera) {
-                              setCamera(camera.zoomLevel, camera.offset);
-                            }
-
-                            lastCommittedEditsRef.current = baseline.state.edits;
-                            if (camera) {
-                              zoomPanStateRef.current = {
-                                zoomLevel: camera.zoomLevel,
-                                offset: camera.offset,
-                              };
-                            }
-                          } finally {
-                            queueMicrotask(() => {
-                              isApplyingHistoryRef.current = false;
-                            });
-                          }
-                        }}
-                      >
-                        Reset
-                      </Button>
-                   </div>
-                 <div className="ml-auto flex items-center gap-1">
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="ml-auto flex items-center gap-1">
                    <Button
                      type="button"
                      size="icon"
@@ -827,7 +793,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                    </Button>
                  </div>
 
-                   <CropToolButtons
+                  <CropToolButtons
                     cropMode={cropMode}
                     setCropMode={setCropMode}
                     hasAppliedCrop={cropCommitted}
@@ -840,23 +806,23 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                     }}
                   />
 
-                <ExportTool
-                  imageRef={imageRef}
-                  isImageLoaded={isImageLoaded}
-                  cropMode={cropMode}
-                  rotation={rotation}
-                  exportFormat={exportFormat}
-                  setExportFormat={setExportFormat}
-                  jpegQuality={jpegQuality}
-                  setJpegQuality={setJpegQuality}
-                  isDownloading={isDownloading}
-                  setIsDownloading={setIsDownloading}
-                  exportError={exportError}
-                  setExportError={setExportError}
-                />
-              </div>
+                  <ExportTool
+                    imageRef={imageRef}
+                    isImageLoaded={isImageLoaded}
+                    cropMode={cropMode}
+                    rotation={rotation}
+                    exportFormat={exportFormat}
+                    setExportFormat={setExportFormat}
+                    jpegQuality={jpegQuality}
+                    setJpegQuality={setJpegQuality}
+                    isDownloading={isDownloading}
+                    setIsDownloading={setIsDownloading}
+                    exportError={exportError}
+                    setExportError={setExportError}
+                  />
+                </div>
 
-              <details className="rounded-md border bg-white" open>
+                <details className="rounded-md border bg-white" open>
                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span>Basic</span>
@@ -925,8 +891,47 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 ))}
 
 
-          </div>
-          <CropToolOptions
+              </div>
+              <div className="sticky bottom-0 mt-auto border-t bg-gray-100 px-2 py-2">
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={historyIndex <= 0}
+                    onClick={() => {
+                      const baseline = historyJumpTo(0);
+                      if (!baseline) return;
+
+                      isApplyingHistoryRef.current = true;
+                      try {
+                        applyEditsSnapshot(baseline.state.edits);
+                        const camera = baseline.state.camera;
+                        if (camera) {
+                          setCamera(camera.zoomLevel, camera.offset);
+                        }
+
+                        lastCommittedEditsRef.current = baseline.state.edits;
+                        if (camera) {
+                          zoomPanStateRef.current = {
+                            zoomLevel: camera.zoomLevel,
+                            offset: camera.offset,
+                          };
+                        }
+                      } finally {
+                        queueMicrotask(() => {
+                          isApplyingHistoryRef.current = false;
+                        });
+                      }
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <CropToolOptions
             cropMode={cropMode}
             imageRef={imageRef}
             zoomLevel={zoomLevel}
