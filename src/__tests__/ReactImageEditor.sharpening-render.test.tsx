@@ -91,11 +91,7 @@ describe("ReactImageEditor render integration (sharpening)", () => {
 
       return {
         ...actual,
-        useCropStore: createMockZustandHook({
-          cropSettings: store.cropSettings,
-          setRotation: store.setRotation,
-          resetRotation: store.resetRotation,
-        }),
+        useCropStore: createMockZustandHook(store),
       };
     });
 
@@ -174,16 +170,24 @@ describe("ReactImageEditor render integration (sharpening)", () => {
       CropOptions: () => null,
     }));
 
-    vi.doMock("../use-canvas-zoom-pan", () => ({
-      useCanvasZoomPan: () => ({
-        zoomLevel: 1,
-        offset: { x: 0, y: 0 },
-        zoomIn: vi.fn(),
-        zoomOut: vi.fn(),
-        resetZoom: vi.fn(),
-        listeners: {},
-      }),
-    }));
+    vi.doMock("../use-canvas-zoom-pan", async () => {
+      const actual = await vi.importActual<typeof import("../use-canvas-zoom-pan")>(
+        "../use-canvas-zoom-pan",
+      );
+
+      return {
+        ...actual,
+        useCanvasZoomPan: () => ({
+          zoomLevel: 1,
+          offset: { x: 0, y: 0 },
+          zoomIn: vi.fn(),
+          zoomOut: vi.fn(),
+          resetZoom: vi.fn(),
+          setCamera: vi.fn(),
+          listeners: {},
+        }),
+      };
+    });
 
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
       () =>

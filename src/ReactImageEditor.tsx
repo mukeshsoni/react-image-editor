@@ -1,34 +1,42 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { EditorCanvas } from "@/editor/EditorCanvas";
-
+import { MinusIcon, PlusIcon } from "@radix-ui/react-icons";
 import { getPanelGroupElement } from "react-resizable-panels";
-import { PlusIcon, MinusIcon } from "@radix-ui/react-icons";
+
+import { Button } from "@/components/ui/button";
 import {
-  ResizablePanel,
   ResizableHandle,
+  ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Button } from "@/components/ui/button";
-
+import { CropToolButtons, CropToolOptions, CropToolOverlay } from "@/editor/CropTool";
+import { EditorCanvas } from "@/editor/EditorCanvas";
 import { ExportTool } from "@/editor/ExportTool";
+import { getPanelRegistry } from "@/editor/panels";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
+import { applyEditsSnapshot } from "@/store";
+import type { HistoryEntry } from "@/store";
+import {
+  areEditsEqual,
+  createEditorSerializableState,
+  getHistoryDisplayForEditsChange,
+} from "@/store/historyRecording";
 
 import type { ExportFormat } from "./export-download";
-
 import { estimateWhiteBalanceFromRgb, sampleAverageRgb } from "./lib/white-balance";
-
-
-import { getPanelRegistry } from "@/editor/panels";
-import { useCanvasZoomPan } from "./use-canvas-zoom-pan";
 import {
-  CropToolButtons,
-  CropToolOptions,
-  CropToolOverlay,
-} from "@/editor/CropTool";
-import { subscribeToEdits } from "./store";
+  calculateInitialImageStartOffset,
+  calculateInitialZoomLevel,
+  useCanvasZoomPan,
+} from "./use-canvas-zoom-pan";
+
+const HISTORY_COMMIT_DEBOUNCE_MS = 250;
+import { getImageEditorEdits, subscribeToEdits, useHistoryStore } from "./store";
 import { useResetAll } from "./store/editorActions";
-import { useCropStore } from "./store/cropStore";
+import { type Bounds, useCropStore } from "./store/cropStore";
+import { selectCanRedo, selectCanUndo } from "./store/historyStore";
+import { useDenoiseStore } from "./store/denoiseStore";
+import { useSharpeningStore } from "./store/sharpeningStore";
 import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
 
 
@@ -165,7 +173,7 @@ type Props = {
 
 export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [cropMode, setCropMode] = useState(false);
-  const [hasAppliedCrop, setHasAppliedCrop] = useState(false);
+  const cropCommitted = useCropStore((state) => state.cropCommitted);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
@@ -194,11 +202,12 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
-  const bakedImageUrlRef = useRef<string | null>(null);
 
   const cropSettings = useCropStore((state) => state.cropSettings);
   const setRotation = useCropStore((state) => state.setRotation);
   const resetRotation = useCropStore((state) => state.resetRotation);
+
+  const resetHistoryToBaseline = useHistoryStore((state) => state.resetToBaseline);
 
   const resetAll = useResetAll();
 
@@ -206,8 +215,96 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   const rotation = cropSettings.rotation ?? 0;
 
-  const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, listeners } =
-    useCanvasZoomPan(canvasRef, imageRef);
+  const historyEntries = useHistoryStore((state) => state.entries);
+  const historyIndex = useHistoryStore((state) => state.index);
+  const historyJumpTo = useHistoryStore((state) => state.jumpTo);
+  const historyUndo = useHistoryStore((state) => state.undo);
+  const historyRedo = useHistoryStore((state) => state.redo);
+  const editsPush = useHistoryStore((state) => state.push);
+
+  const canUndo = useHistoryStore(selectCanUndo);
+  const canRedo = useHistoryStore(selectCanRedo);
+
+  const lastCommittedEditsRef = useRef(getImageEditorEdits());
+
+  const zoomPanStateRef = useRef({ zoomLevel: 1, offset: { x: 0, y: 0 } });
+  const commitCameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitializingRef = useRef(true);
+  const isApplyingHistoryRef = useRef(false);
+
+  const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, setCamera, listeners } =
+    useCanvasZoomPan(
+      canvasRef,
+      imageRef,
+      {
+        enableWheel: true,
+        onCameraChange: (camera) => {
+          if (isInitializingRef.current || isApplyingHistoryRef.current) {
+            zoomPanStateRef.current = camera;
+            return;
+          }
+
+          if (commitCameraTimeoutRef.current) {
+            clearTimeout(commitCameraTimeoutRef.current);
+          }
+
+          commitCameraTimeoutRef.current = setTimeout(() => {
+            commitCameraTimeoutRef.current = null;
+
+            const lastCamera = zoomPanStateRef.current;
+            if (
+              lastCamera.zoomLevel === camera.zoomLevel &&
+              lastCamera.offset.x === camera.offset.x &&
+              lastCamera.offset.y === camera.offset.y
+            ) {
+              return;
+            }
+
+            editsPush({
+              label: "Zoom/Pan",
+              state: createEditorSerializableState({
+                edits: lastCommittedEditsRef.current,
+                zoomLevel: camera.zoomLevel,
+                offset: camera.offset,
+              }),
+            });
+
+            zoomPanStateRef.current = camera;
+          }, HISTORY_COMMIT_DEBOUNCE_MS);
+        },
+      },
+    );
+
+  useEffect(() => {
+    return () => {
+      if (commitCameraTimeoutRef.current) {
+        clearTimeout(commitCameraTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const applyHistoryEntry = useMemo(() => {
+    return (entry: HistoryEntry) => {
+      isApplyingHistoryRef.current = true;
+      try {
+        applyEditsSnapshot(entry.state.edits);
+        const camera = entry.state.camera;
+        if (camera) {
+          setCamera(camera.zoomLevel, camera.offset);
+          zoomPanStateRef.current = {
+            zoomLevel: camera.zoomLevel,
+            offset: camera.offset,
+          };
+        }
+
+        lastCommittedEditsRef.current = entry.state.edits;
+      } finally {
+        queueMicrotask(() => {
+          isApplyingHistoryRef.current = false;
+        });
+      }
+    };
+  }, [setCamera]);
 
   // Reset zoom when in crop mode
   useEffect(() => {
@@ -215,6 +312,58 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       resetZoom();
     }
   }, [cropMode, resetZoom]);
+
+  useEffect(() => {
+    function handleUndoRedoKeyDown(event: KeyboardEvent) {
+      const isModifierPressed = event.metaKey || event.ctrlKey;
+      if (!isModifierPressed) return;
+
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement) return;
+      if (target instanceof HTMLElement && target.isContentEditable) return;
+
+      // Only ignore real text-entry inputs. Sliders (`type="range"`) should still
+      // allow Cmd/Ctrl+Z.
+      if (target instanceof HTMLInputElement) {
+        const inputType = (target.type || "text").toLowerCase();
+        const isTextEntryType =
+          inputType === "text" ||
+          inputType === "search" ||
+          inputType === "email" ||
+          inputType === "password" ||
+          inputType === "tel" ||
+          inputType === "url" ||
+          inputType === "number" ||
+          inputType === "date" ||
+          inputType === "time" ||
+          inputType === "datetime-local";
+
+        if (isTextEntryType) return;
+      }
+
+      if (event.key.toLowerCase() !== "z") return;
+
+      event.preventDefault();
+
+      if (event.shiftKey) {
+        const entry = historyRedo();
+        if (entry) {
+          applyHistoryEntry(entry);
+        }
+        return;
+      }
+
+      const entry = historyUndo();
+      if (entry) {
+        applyHistoryEntry(entry);
+      }
+    }
+
+    document.addEventListener("keydown", handleUndoRedoKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleUndoRedoKeyDown, true);
+    };
+  }, [applyHistoryEntry, historyRedo, historyUndo]);
 
   useEffect(() => {
     if (!cropMode) return;
@@ -272,39 +421,101 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
     setIsImageLoaded(false);
 
     img.onload = () => {
+      isInitializingRef.current = true;
+
+      if (commitCameraTimeoutRef.current) {
+        clearTimeout(commitCameraTimeoutRef.current);
+        commitCameraTimeoutRef.current = null;
+      }
+
       imageRef.current = img;
       originalImageRef.current = img;
-      setHasAppliedCrop(false);
+      useCropStore.getState?.().clearCommittedCrop?.();
+      setCropMode(false);
+
+      const initialZoomLevel = calculateInitialZoomLevel(canvasRef.current, img);
+      const initialOffset = calculateInitialImageStartOffset(
+        canvasRef.current,
+        img,
+        initialZoomLevel,
+      );
+
+      const bounds: Bounds = {
+        minX: initialOffset.x,
+        minY: initialOffset.y,
+        maxX: initialOffset.x + img.width * initialZoomLevel,
+        maxY: initialOffset.y + img.height * initialZoomLevel,
+      };
+
+      resetAll(bounds);
+      useSharpeningStore.getState().resetSharpening();
+      useDenoiseStore.getState().resetDenoise();
+
+      const baselineState = createEditorSerializableState({
+        edits: getImageEditorEdits(),
+        zoomLevel: initialZoomLevel,
+        offset: initialOffset,
+      });
+
+      resetHistoryToBaseline({
+        label: "Original",
+        state: baselineState,
+      });
+
+      lastCommittedEditsRef.current = baselineState.edits;
+      zoomPanStateRef.current = {
+        zoomLevel: baselineState.camera?.zoomLevel ?? initialZoomLevel,
+        offset: baselineState.camera?.offset ?? initialOffset,
+      };
+
       setIsImageLoaded(true);
-      if (bakedImageUrlRef.current) {
-        URL.revokeObjectURL(bakedImageUrlRef.current);
-        bakedImageUrlRef.current = null;
-      }
 
       // We trigger a recalculation of zoomLevel and image offset by calling resetZoom
       // Otherwise the useEffect which renders the image on change on zoom level might not be called
       // the first time. Or, it is called, but the imageRef.current is still null so we render nothing
       // Once the image is loaded, we need to calculate the zoom level and image offset once more
       resetZoom();
+
+      // ResetZoom triggers onCameraChange; ignore it during initialization.
+      queueMicrotask(() => {
+        isInitializingRef.current = false;
+      });
     };
-  }, [imageSrc, resetZoom]);
+  }, [imageSrc, resetAll, resetHistoryToBaseline, resetZoom]);
 
   useEffect(() => {
-    if (!onEditsChange) {
-      return;
-    }
-
-    const unsubscribe = subscribeToEdits(onEditsChange);
-    return unsubscribe;
-  }, [onEditsChange]);
-
-  useEffect(() => {
-    return () => {
-      if (bakedImageUrlRef.current) {
-        URL.revokeObjectURL(bakedImageUrlRef.current);
+    const unsubscribe = subscribeToEdits((nextEdits) => {
+      if (isApplyingHistoryRef.current || isInitializingRef.current) {
+        // Don’t record history while we’re programmatically applying snapshots.
+        lastCommittedEditsRef.current = nextEdits;
+        onEditsChange?.(nextEdits);
+        return;
       }
-    };
-  }, []);
+
+      if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
+        const display = getHistoryDisplayForEditsChange(
+          lastCommittedEditsRef.current,
+          nextEdits,
+        );
+
+        editsPush({
+          label: display.label,
+          delta: display.delta,
+          state: createEditorSerializableState({
+            edits: nextEdits,
+            zoomLevel: zoomPanStateRef.current.zoomLevel,
+            offset: zoomPanStateRef.current.offset,
+          }),
+        });
+        lastCommittedEditsRef.current = nextEdits;
+      }
+
+      onEditsChange?.(nextEdits);
+    });
+
+    return unsubscribe;
+  }, [editsPush, onEditsChange]);
+
 
 
   function handleResetZoomClick() {
@@ -387,9 +598,88 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         direction="horizontal"
         className="flex flex-1 min-h-0 overflow-hidden"
       >
+        <ResizablePanel defaultSize={18} className="min-h-0">
+          <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
+            <details
+              className="rounded-md border bg-white"
+              data-testid="history-accordion"
+              open
+            >
+              <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span>History</span>
+                </span>
+                <span className="text-xs text-gray-500">▾</span>
+              </summary>
+
+              <div className="px-3 pb-3">
+                <div data-testid="history-list" className="flex flex-col gap-1">
+                  {historyEntries.length === 0 ? (
+                    <div
+                      data-testid="history-entry-placeholder"
+                      className="text-xs text-gray-600"
+                    >
+                      History entries will appear here
+                    </div>
+                  ) : (
+                    historyEntries.map((entry, idx) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        data-testid={`history-entry-${idx}`}
+                        onClick={() => {
+                          isApplyingHistoryRef.current = true;
+
+                          try {
+                            const nextEntry = historyJumpTo(idx);
+                            if (nextEntry) {
+                              applyEditsSnapshot(nextEntry.state.edits);
+                              const camera = nextEntry.state.camera;
+                              if (camera) {
+                                setCamera(camera.zoomLevel, camera.offset);
+                              }
+
+                              lastCommittedEditsRef.current = nextEntry.state.edits;
+                              const nextCamera = nextEntry.state.camera;
+                              if (nextCamera) {
+                                zoomPanStateRef.current = {
+                                  zoomLevel: nextCamera.zoomLevel,
+                                  offset: nextCamera.offset,
+                                };
+                              }
+                            }
+                          } finally {
+                            queueMicrotask(() => {
+                              isApplyingHistoryRef.current = false;
+                            });
+                          }
+                        }}
+                        className={
+                          idx === historyIndex
+                            ? "flex items-center gap-2 rounded-sm bg-gray-900 px-2 py-1 text-left text-xs text-white"
+                            : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-gray-800 hover:bg-gray-200"
+                        }
+                      >
+                        <span className="flex-1 truncate">{entry.label}</span>
+                        {entry.delta ? (
+                          <span className="tabular-nums text-right min-w-[3rem]">
+                            {entry.delta}
+                          </span>
+                        ) : null}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </details>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
+
         <ResizablePanel
           className="flex flex-col min-h-0 overflow-hidden"
-          defaultSize={75}
+          defaultSize={57}
           onResize={handleImagePanelResize}
         >
             <div className="flex flex-col flex-1 p-0">
@@ -503,38 +793,112 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
           <ResizablePanel defaultSize={25} className="min-h-0">
-            <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
-              <div className="flex flex-wrap items-center gap-2">
-                <CropToolButtons
-                  cropMode={cropMode}
-                  setCropMode={setCropMode}
-                  hasAppliedCrop={hasAppliedCrop}
-                  onResetCrop={() => {
-                    if (!originalImageRef.current) return;
-                    imageRef.current = originalImageRef.current;
-                    setHasAppliedCrop(false);
-                    resetRotation();
-                    resetZoom();
-                  }}
-                />
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="ml-auto flex items-center gap-1">
+                   <Button
+                     type="button"
+                     size="icon"
+                     variant="outline"
+                     title="Undo (⌘Z)"
+                     aria-label="Undo (⌘Z)"
+                     disabled={!canUndo}
+                     onClick={() => {
+                       const nextEntry = historyUndo();
+                       if (!nextEntry) return;
 
-                <ExportTool
-                  imageRef={imageRef}
-                  isImageLoaded={isImageLoaded}
-                  cropMode={cropMode}
-                  rotation={rotation}
-                  exportFormat={exportFormat}
-                  setExportFormat={setExportFormat}
-                  jpegQuality={jpegQuality}
-                  setJpegQuality={setJpegQuality}
-                  isDownloading={isDownloading}
-                  setIsDownloading={setIsDownloading}
-                  exportError={exportError}
-                  setExportError={setExportError}
-                />
-              </div>
+                       isApplyingHistoryRef.current = true;
+                       try {
+                         applyEditsSnapshot(nextEntry.state.edits);
+                         const camera = nextEntry.state.camera;
+                         if (camera) {
+                           setCamera(camera.zoomLevel, camera.offset);
+                         }
 
-              <details className="rounded-md border bg-white" open>
+                         lastCommittedEditsRef.current = nextEntry.state.edits;
+                         if (camera) {
+                           zoomPanStateRef.current = {
+                             zoomLevel: camera.zoomLevel,
+                             offset: camera.offset,
+                           };
+                         }
+                       } finally {
+                         queueMicrotask(() => {
+                           isApplyingHistoryRef.current = false;
+                         });
+                       }
+                     }}
+                   >
+                     ↶
+                   </Button>
+                   <Button
+                     type="button"
+                     size="icon"
+                     variant="outline"
+                     title="Redo (⇧⌘Z)"
+                     aria-label="Redo (⇧⌘Z)"
+                     disabled={!canRedo}
+                     onClick={() => {
+                       const nextEntry = historyRedo();
+                       if (!nextEntry) return;
+
+                       isApplyingHistoryRef.current = true;
+                       try {
+                         applyEditsSnapshot(nextEntry.state.edits);
+                         const camera = nextEntry.state.camera;
+                         if (camera) {
+                           setCamera(camera.zoomLevel, camera.offset);
+                         }
+
+                         lastCommittedEditsRef.current = nextEntry.state.edits;
+                         if (camera) {
+                           zoomPanStateRef.current = {
+                             zoomLevel: camera.zoomLevel,
+                             offset: camera.offset,
+                           };
+                         }
+                       } finally {
+                         queueMicrotask(() => {
+                           isApplyingHistoryRef.current = false;
+                         });
+                       }
+                     }}
+                   >
+                     ↷
+                   </Button>
+                 </div>
+
+                  <CropToolButtons
+                    cropMode={cropMode}
+                    setCropMode={setCropMode}
+                    hasAppliedCrop={cropCommitted}
+                    onResetCrop={() => {
+                      if (!originalImageRef.current) return;
+                      imageRef.current = originalImageRef.current;
+                      useCropStore.getState?.().clearCommittedCrop?.();
+                      resetRotation();
+                      resetZoom();
+                    }}
+                  />
+
+                  <ExportTool
+                    imageRef={imageRef}
+                    isImageLoaded={isImageLoaded}
+                    cropMode={cropMode}
+                    rotation={rotation}
+                    exportFormat={exportFormat}
+                    setExportFormat={setExportFormat}
+                    jpegQuality={jpegQuality}
+                    setJpegQuality={setJpegQuality}
+                    isDownloading={isDownloading}
+                    setIsDownloading={setIsDownloading}
+                    exportError={exportError}
+                    setExportError={setExportError}
+                  />
+                </div>
+
+                <details className="rounded-md border bg-white" open>
                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span>Basic</span>
@@ -603,23 +967,54 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 ))}
 
 
-          </div>
-          <CropToolOptions
+              </div>
+              <div className="sticky bottom-0 mt-auto border-t bg-gray-100 px-2 py-2">
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={historyIndex <= 0}
+                    onClick={() => {
+                      const baseline = historyJumpTo(0);
+                      if (!baseline) return;
+
+                      isApplyingHistoryRef.current = true;
+                      try {
+                        applyEditsSnapshot(baseline.state.edits);
+                        const camera = baseline.state.camera;
+                        if (camera) {
+                          setCamera(camera.zoomLevel, camera.offset);
+                        }
+
+                        lastCommittedEditsRef.current = baseline.state.edits;
+                        if (camera) {
+                          zoomPanStateRef.current = {
+                            zoomLevel: camera.zoomLevel,
+                            offset: camera.offset,
+                          };
+                        }
+                      } finally {
+                        queueMicrotask(() => {
+                          isApplyingHistoryRef.current = false;
+                        });
+                      }
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <CropToolOptions
             cropMode={cropMode}
             imageRef={imageRef}
-            bakedImageUrlRef={bakedImageUrlRef}
             zoomLevel={zoomLevel}
             offset={offset}
             rotation={rotation}
             resetAll={resetAll}
-            onCroppedImageReady={(croppedImage) => {
-              if (bakedImageUrlRef.current) {
-                URL.revokeObjectURL(bakedImageUrlRef.current);
-              }
-
-              bakedImageUrlRef.current = croppedImage.src;
-              imageRef.current = croppedImage;
-              setHasAppliedCrop(true);
+            onCropCommitted={() => {
               setIsImageLoaded(true);
               setCropMode(false);
               resetRotation();

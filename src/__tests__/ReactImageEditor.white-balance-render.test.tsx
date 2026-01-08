@@ -102,11 +102,7 @@ describe("ReactImageEditor render integration (white balance)", () => {
 
       return {
         ...actual,
-        useCropStore: createMockZustandHook({
-          cropSettings: nonNeutralStore.cropSettings,
-          setRotation: nonNeutralStore.setRotation,
-          resetRotation: nonNeutralStore.resetRotation,
-        }),
+        useCropStore: createMockZustandHook(nonNeutralStore),
       };
     });
 
@@ -173,16 +169,24 @@ describe("ReactImageEditor render integration (white balance)", () => {
       CropOptions: () => null,
     }));
 
-    vi.doMock("../use-canvas-zoom-pan", () => ({
-      useCanvasZoomPan: () => ({
-        zoomLevel: 1,
-        offset: { x: 0, y: 0 },
-        zoomIn: vi.fn(),
-        zoomOut: vi.fn(),
-        resetZoom: vi.fn(),
-        listeners: {},
-      }),
-    }));
+    vi.doMock("../use-canvas-zoom-pan", async () => {
+      const actual = await vi.importActual<typeof import("../use-canvas-zoom-pan")>(
+        "../use-canvas-zoom-pan",
+      );
+
+      return {
+        ...actual,
+        useCanvasZoomPan: () => ({
+          zoomLevel: 1,
+          offset: { x: 0, y: 0 },
+          zoomIn: vi.fn(),
+          zoomOut: vi.fn(),
+          resetZoom: vi.fn(),
+          setCamera: vi.fn(),
+          listeners: {},
+        }),
+      };
+    });
 
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
       () =>
