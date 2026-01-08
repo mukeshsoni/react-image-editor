@@ -1,1 +1,2 @@
 - [X] Bug in vertical panning. Vertical panning does not work until the image is also ready for horizontal panning. Only once the image goes out of left and right viewport edges, does vertical panning work.
+- [ ] Go through RapidRAW code and see if we can get some ideas on how to integrate image editor in Viroop
