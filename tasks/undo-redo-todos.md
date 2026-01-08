@@ -79,11 +79,11 @@ Source PRD: `prds/undo-redo-prd.md`
 - [x] Add `Reset` button to bottom of right panel
 
 ## 7) Keyboard shortcuts
-- [ ] Add global shortcut handling:
-  - [ ] `Cmd+Z` → undo
-  - [ ] `Shift+Cmd+Z` → redo
-- [ ] Do not trigger when focus is inside text inputs / editable elements
-- [ ] Ensure shortcuts don’t conflict with existing bindings
+- [x] Add global shortcut handling:
+  - [x] `Cmd+Z` → undo
+  - [x] `Shift+Cmd+Z` → redo
+- [x] Do not trigger when focus is inside text inputs / editable elements
+- [x] Ensure shortcuts don’t conflict with existing bindings
 
 ## 8) Tests (Vitest)
 - [ ] Unit tests for history store:

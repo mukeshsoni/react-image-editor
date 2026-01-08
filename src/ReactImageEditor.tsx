@@ -15,6 +15,7 @@ import { ExportTool } from "@/editor/ExportTool";
 import { getPanelRegistry } from "@/editor/panels";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 import { applyEditsSnapshot } from "@/store";
+import type { HistoryEntry } from "@/store";
 import {
   areEditsEqual,
   createEditorSerializableState,
@@ -282,12 +283,87 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
     };
   }, []);
 
+  const applyHistoryEntry = useMemo(() => {
+    return (entry: HistoryEntry) => {
+      isApplyingHistoryRef.current = true;
+      try {
+        applyEditsSnapshot(entry.state.edits);
+        const camera = entry.state.camera;
+        if (camera) {
+          setCamera(camera.zoomLevel, camera.offset);
+          zoomPanStateRef.current = {
+            zoomLevel: camera.zoomLevel,
+            offset: camera.offset,
+          };
+        }
+
+        lastCommittedEditsRef.current = entry.state.edits;
+      } finally {
+        queueMicrotask(() => {
+          isApplyingHistoryRef.current = false;
+        });
+      }
+    };
+  }, [setCamera]);
+
   // Reset zoom when in crop mode
   useEffect(() => {
     if (cropMode) {
       resetZoom();
     }
   }, [cropMode, resetZoom]);
+
+  useEffect(() => {
+    function handleUndoRedoKeyDown(event: KeyboardEvent) {
+      const isModifierPressed = event.metaKey || event.ctrlKey;
+      if (!isModifierPressed) return;
+
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement) return;
+      if (target instanceof HTMLElement && target.isContentEditable) return;
+
+      // Only ignore real text-entry inputs. Sliders (`type="range"`) should still
+      // allow Cmd/Ctrl+Z.
+      if (target instanceof HTMLInputElement) {
+        const inputType = (target.type || "text").toLowerCase();
+        const isTextEntryType =
+          inputType === "text" ||
+          inputType === "search" ||
+          inputType === "email" ||
+          inputType === "password" ||
+          inputType === "tel" ||
+          inputType === "url" ||
+          inputType === "number" ||
+          inputType === "date" ||
+          inputType === "time" ||
+          inputType === "datetime-local";
+
+        if (isTextEntryType) return;
+      }
+
+      if (event.key.toLowerCase() !== "z") return;
+
+      event.preventDefault();
+
+      if (event.shiftKey) {
+        const entry = historyRedo();
+        if (entry) {
+          applyHistoryEntry(entry);
+        }
+        return;
+      }
+
+      const entry = historyUndo();
+      if (entry) {
+        applyHistoryEntry(entry);
+      }
+    }
+
+    document.addEventListener("keydown", handleUndoRedoKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleUndoRedoKeyDown, true);
+    };
+  }, [applyHistoryEntry, historyRedo, historyUndo]);
 
   useEffect(() => {
     if (!cropMode) return;
