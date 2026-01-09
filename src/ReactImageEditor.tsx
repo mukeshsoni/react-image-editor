@@ -193,6 +193,10 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [lensDistortion, setLensDistortion] = useState(0);
   const [removeChromaticAberration, setRemoveChromaticAberration] = useState(false);
 
+  const [vignetteAmount, setVignetteAmount] = useState(0);
+  const [grainAmount, setGrainAmount] = useState(0);
+  const [dehazeAmount, setDehazeAmount] = useState(0);
+
   useEffect(() => {
     if (!isPickingWhiteBalance) return;
 
@@ -1221,8 +1225,96 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                   </div>
                 </div>
               </details>
- 
-               {getPanelRegistry()
+
+              <details className="rounded-md border bg-white" open>
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Optics</span>
+                  </span>
+                  <span className="text-xs text-gray-500">▾</span>
+                </summary>
+
+                <div className="px-3 pb-3">
+                  <div className="border-t pt-3">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs" htmlFor="optics-vignette">
+                            Vignette
+                          </label>
+                          <span className="text-xs font-medium tabular-nums">
+                            {formatSignedInt(vignetteAmount)}
+                          </span>
+                        </div>
+
+                        <DebouncedRange
+                          id="optics-vignette"
+                          label="Vignette"
+                          value={vignetteAmount}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          onValueChange={setVignetteAmount}
+                          className="w-full"
+                          disabled={!isImageLoaded}
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs" htmlFor="optics-grain">
+                            Grain
+                          </label>
+                          <span className="text-xs font-medium tabular-nums">
+                            {Math.round(grainAmount)}
+                          </span>
+                        </div>
+
+                        <DebouncedRange
+                          id="optics-grain"
+                          label="Grain"
+                          value={grainAmount}
+                          defaultValue={0}
+                          min={0}
+                          max={100}
+                          step={1}
+                          onValueChange={setGrainAmount}
+                          className="w-full"
+                          disabled={!isImageLoaded}
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs" htmlFor="optics-dehaze">
+                            Dehaze
+                          </label>
+                          <span className="text-xs font-medium tabular-nums">
+                            {formatSignedInt(dehazeAmount)}
+                          </span>
+                        </div>
+
+                        <DebouncedRange
+                          id="optics-dehaze"
+                          label="Dehaze"
+                          value={dehazeAmount}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          onValueChange={setDehazeAmount}
+                          className="w-full"
+                          disabled={!isImageLoaded}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+  
+                {getPanelRegistry()
+
                  .filter((panel) => panel.groupId !== "basic")
                  .map((panel) => (
                    <panel.Component

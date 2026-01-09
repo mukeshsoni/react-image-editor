@@ -47,11 +47,11 @@ Source PRD: `prds/geometry-and-optics-prd.md`
 - [x] Add accordion section `Lens Corrections`
   - [x] `Lens Distortion` slider
   - [x] `Remove Chromatic Aberration` toggle
-- [ ] Add accordion section `Optics`
-  - [ ] `Vignette` slider
-  - [ ] `Grain` slider
-  - [ ] `Dehaze` slider
-- [ ] Disable controls when no image loaded
+- [x] Add accordion section `Optics`
+  - [x] `Vignette` slider
+  - [x] `Grain` slider
+  - [x] `Dehaze` slider
+- [x] Disable controls when no image loaded
 
 ## 3) Rendering pipeline foundations (shared preview + export)
 - [ ] Identify the current “committed image render” entry point (preview)
