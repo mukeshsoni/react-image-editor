@@ -30,5 +30,12 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/__tests__/setup.ts"],
+    singleThread: process.env.CI === "true",
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        singleFork: process.env.CI === "true",
+      },
+    },
   },
 });
