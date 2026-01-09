@@ -26,7 +26,7 @@ jobs:
         run: npm run lint
 
       - name: Test
-        run: npx vitest run
+        run: NODE_OPTIONS="--max-old-space-size=4096" npx vitest run
         env:
           CI: "true"
 

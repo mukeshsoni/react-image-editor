@@ -1,12 +1,15 @@
-import { defineConfig } from "vitest/config";
-import path from "path";
-import { fileURLToPath } from "url";
-import react from "@vitejs/plugin-react";
+import path from "node:path";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
+
 import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
 
-const ReactCompilerConfig = {};
+const reactCompilerConfig = {};
+const isCi = process.env.CI === "true";
+
 const __filename = fileURLToPath(import.meta.url);
-
 const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
@@ -14,7 +17,7 @@ export default defineConfig({
   plugins: [
     react({
       babel: {
-        plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
+        plugins: [["babel-plugin-react-compiler", reactCompilerConfig]],
       },
     }),
     tailwindcss(),
@@ -30,12 +33,6 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/__tests__/setup.ts"],
-    singleThread: process.env.CI === "true",
-    pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: process.env.CI === "true",
-      },
-    },
+    ...(isCi ? { poolOptions: { threads: { singleThread: true } } } : {}),
   },
 });
