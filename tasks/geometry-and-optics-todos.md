@@ -12,12 +12,12 @@ Source PRD: `prds/geometry-and-optics-prd.md`
 - All settings affect export output.
 
 ## 0) Product decisions to lock
-- [ ] Decide sign conventions (e.g. distortion + = barrel)
-- [ ] Decide default for `Constrain crop` (on/off)
-- [ ] Decide JPEG behavior when transparency exists
+- [x] Decide sign conventions (distortion `+` = barrel, `-` = pincushion)
+- [x] Decide default for `Constrain crop` (default: `on`)
+- [x] Decide JPEG behavior when transparency exists (default: auto-fill background)
   - [ ] Option A: force PNG when transparency
-  - [ ] Option B: auto-fill background for JPEG
-- [ ] Decide rendering backend for v1 (recommended: WebGL; fallback: CPU)
+  - [x] Option B: auto-fill background for JPEG (default: white)
+- [x] Decide rendering backend for v1 (default: Canvas2D/CPU; revisit WebGL later)
 
 ## 1) State model + defaults
 - [ ] Add serializable editor state for:
