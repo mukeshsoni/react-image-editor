@@ -44,9 +44,9 @@ Source PRD: `prds/geometry-and-optics-prd.md`
   - [x] Guided Upright UI
     - [x] `Guided` toggle
     - [x] `Apply Guided` button
-- [ ] Add accordion section `Lens Corrections`
-  - [ ] `Lens Distortion` slider
-  - [ ] `Remove Chromatic Aberration` toggle
+- [x] Add accordion section `Lens Corrections`
+  - [x] `Lens Distortion` slider
+  - [x] `Remove Chromatic Aberration` toggle
 - [ ] Add accordion section `Optics`
   - [ ] `Vignette` slider
   - [ ] `Grain` slider

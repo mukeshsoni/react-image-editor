@@ -190,6 +190,9 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [perspectiveAspect, setPerspectiveAspect] = useState(0);
   const [guidedUprightEnabled, setGuidedUprightEnabled] = useState(false);
 
+  const [lensDistortion, setLensDistortion] = useState(0);
+  const [removeChromaticAberration, setRemoveChromaticAberration] = useState(false);
+
   useEffect(() => {
     if (!isPickingWhiteBalance) return;
 
@@ -1170,6 +1173,55 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 </div>
               </details>
 
+              <details className="rounded-md border bg-white" open>
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Lens Corrections</span>
+                  </span>
+                  <span className="text-xs text-gray-500">▾</span>
+                </summary>
+
+                <div className="px-3 pb-3">
+                  <div className="border-t pt-3">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs" htmlFor="lens-distortion">
+                            Distortion
+                          </label>
+                          <span className="text-xs font-medium tabular-nums">
+                            {formatSignedInt(lensDistortion)}
+                          </span>
+                        </div>
+
+                        <DebouncedRange
+                          id="lens-distortion"
+                          label="Distortion"
+                          value={lensDistortion}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          onValueChange={setLensDistortion}
+                          className="w-full"
+                          disabled={!isImageLoaded}
+                        />
+                      </div>
+
+                      <label className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={removeChromaticAberration}
+                          onChange={(e) => setRemoveChromaticAberration(e.target.checked)}
+                          disabled={!isImageLoaded}
+                        />
+                        Remove Chromatic Aberration
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </details>
+ 
                {getPanelRegistry()
                  .filter((panel) => panel.groupId !== "basic")
                  .map((panel) => (
@@ -1182,6 +1234,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                      setIsPickingWhiteBalance={setIsPickingWhiteBalance}
                    />
                  ))}
+
 
 
 
