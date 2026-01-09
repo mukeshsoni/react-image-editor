@@ -31,19 +31,19 @@ Source PRD: `prds/geometry-and-optics-prd.md`
 - [ ] Ensure state is included in future undo/redo snapshots (if present)
 
 ## 2) UI: Right panel accordions
-- [ ] Add accordion section `Transform`
-  - [ ] Add `Rotate` slider UI
-    - [ ] Reset to 0° control
-    - [ ] Optional angle readout (nice-to-have)
-  - [ ] Add `Auto Straighten` button + loading state
-  - [ ] Add perspective controls
-    - [ ] `Vertical` slider
-    - [ ] `Horizontal` slider
-    - [ ] `Constrain crop` toggle
-    - [ ] Optional `Aspect` slider (nice-to-have)
-  - [ ] Guided Upright UI
-    - [ ] `Guided` toggle
-    - [ ] `Apply Guided` button
+- [x] Add accordion section `Transform`
+  - [x] Add `Rotate` slider UI
+    - [x] Reset to 0° control
+    - [x] Optional angle readout (nice-to-have)
+  - [x] Add `Auto Straighten` button + loading state
+  - [x] Add perspective controls
+    - [x] `Vertical` slider
+    - [x] `Horizontal` slider
+    - [x] `Constrain crop` toggle
+    - [x] Optional `Aspect` slider (nice-to-have)
+  - [x] Guided Upright UI
+    - [x] `Guided` toggle
+    - [x] `Apply Guided` button
 - [ ] Add accordion section `Lens Corrections`
   - [ ] `Lens Distortion` slider
   - [ ] `Remove Chromatic Aberration` toggle
