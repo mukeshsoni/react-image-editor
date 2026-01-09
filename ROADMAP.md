@@ -73,6 +73,13 @@
 - Perspective grid overlay
 - Perspective correction tool
 - Auto-straighten with edge detection
+- PRD: `prds/geometry-and-optics-prd.md`
+
+### Geometry & Optics
+- Upright/auto-straighten + guided perspective (draw lines to correct)
+- Lens distortion + chromatic aberration correction (manual; optional profile-based later)
+- Vignette, grain, dehaze, haze removal
+- PRD: `prds/geometry-and-optics-prd.md`
 
 ### Healing & Spot Removal
 - Spot removal/clone tool
@@ -101,6 +108,26 @@
 - Radial filter (vignette-style local adjustments)
 - Adjustment brush (paint adjustments locally)
 - Masking capability for selective edits
+
+### Color & Tone Tools
+- Curves (RGB + per-channel), point curve + region curve
+- HSL/Color Mixer + targeted adjustment tool (drag on image to shift hues)
+- Color Grading wheels (shadows/midtones/highlights) + blending/balance
+- Calibration panel (camera-like primaries) for “looks”
+- LUT support + preset system (import/export presets)
+
+### AI + Smart Editing
+- Auto “Enhance” (one-click tone/color + dehaze-like contrast)
+- Subject / Sky / Background selection (automatic masks)
+- AI Denoise / Super Resolution (upscale) / Sharpen (model-backed)
+- Content-aware remove (object removal) + heal/clone brush
+- Generative expand / crop-fill (outpainting for wider crops)
+
+### Masking & Local Adjustments (Lightroom’s core differentiator)
+- Mask stack: add/subtract/intersect masks (brush, linear/radial gradient, color/luminance range)
+- Per-mask sliders: exposure/contrast/highlights/shadows/clarity/texture/saturation/temp/tint
+- Feather, density, flow, auto-mask edge detection
+- Invert mask, refine edges, mask presets
 
 ### Expand Test Coverage
 - Add tests for zoom/pan interactions (currently minimal)
