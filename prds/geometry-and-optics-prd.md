@@ -33,9 +33,14 @@ This feature set focuses on:
 ## UX / UI requirements
 
 ### Placement
-- Add a new right-panel accordion section: `Geometry & Optics`.
+Add three right-panel accordions (Lightroom-inspired):
+- `Transform` (straighten + perspective)
+- `Lens Corrections` (distortion + chromatic aberration)
+- `Optics` (finishing effects like vignette/grain/dehaze)
 
-### Straighten
+### Transform
+
+#### Straighten
 - `Rotate` slider:
   - Range: `-45° … +45°` (configurable)
   - Step: `0.1°` (with Shift = `0.01°`)
@@ -44,7 +49,7 @@ This feature set focuses on:
   - Computes suggested rotation and applies it.
 - Optional (nice-to-have v1): `Angle` readout with text input.
 
-### Perspective / Transform
+#### Perspective / Transform
 Provide both simple sliders and guided correction.
 
 - `Vertical` slider (keystone): `-100 … +100`
@@ -54,7 +59,7 @@ Provide both simple sliders and guided correction.
 - `Constrain Crop` toggle:
   - When on, automatically expands/crops so the output fills the canvas without transparent corners.
 
-#### Guided Upright
+##### Guided Upright
 - `Guided` mode toggle.
 - Overlay:
   - Perspective grid overlay toggle.
@@ -63,13 +68,13 @@ Provide both simple sliders and guided correction.
     - `Horizontal guide` (aligns to horizon)
 - Button `Apply Guided` computes the transform and exits guided mode.
 
-### Optics
+### Lens Corrections
 - `Lens Distortion` slider:
   - `-100` = pincushion, `+100` = barrel (or vice versa; decide in implementation)
 - `Remove Chromatic Aberration` toggle:
   - v1: simple CA reduction (see Technical)
 
-### Effects (Geometry & Optics group)
+### Optics
 - `Vignette` slider: `-100 … +100`
 - `Grain` slider: `0 … 100`
 - `Dehaze` slider: `-100 … +100`
@@ -99,7 +104,8 @@ Provide both simple sliders and guided correction.
 Add a serializable set of settings to editor state:
 - `rotateDegrees: number`
 - `perspective: { vertical: number; horizontal: number; aspect?: number; guided?: { verticalLine?: Line; horizontalLine?: Line } }`
-- `optics: { distortion: number; chromaticAberration: boolean; vignette: number; grain: number; dehaze: number }`
+- `lensCorrections: { distortion: number; chromaticAberration: boolean }`
+- `optics: { vignette: number; grain: number; dehaze: number }`
 
 ### Rendering pipeline
 Prefer a single “bake/render committed image” pipeline shared by:
@@ -108,9 +114,9 @@ Prefer a single “bake/render committed image” pipeline shared by:
 - Crop apply (future integration)
 
 Proposed stages (order matters):
-1. **Geometry transform** (rotate + perspective)
-2. **Optics correction** (distortion, CA)
-3. **Effects** (vignette, grain, dehaze)
+1. **Transform** (rotate + perspective)
+2. **Lens corrections** (distortion, CA)
+3. **Optics** (vignette, grain, dehaze)
 
 ### Implementation approach options
 - **v1 recommended**: WebGL/WebGPU shader-based pipeline for perspective + distortion at interactive FPS.

@@ -3,12 +3,12 @@
 Source PRD: `prds/geometry-and-optics-prd.md`
 
 ## Scope (v1)
-- Add `Geometry & Optics` right-panel section.
-- Straighten: rotate slider + auto-straighten.
-- Perspective: vertical/horizontal sliders + constrain crop.
-- Guided Upright: 1–2 guide lines + apply.
-- Optics: lens distortion slider + CA toggle.
-- Effects: vignette + grain + dehaze.
+- Add three right-panel accordions: `Transform`, `Lens Corrections`, `Optics`.
+- Transform: rotate slider + auto-straighten.
+- Transform: vertical/horizontal sliders + constrain crop.
+- Transform: Guided Upright (1–2 guide lines + apply).
+- Lens Corrections: lens distortion slider + CA toggle.
+- Optics: vignette + grain + dehaze.
 - All settings affect export output.
 
 ## 0) Product decisions to lock
@@ -23,27 +23,31 @@ Source PRD: `prds/geometry-and-optics-prd.md`
 - [ ] Add serializable editor state for:
   - [ ] `rotateDegrees: number`
   - [ ] `perspective: { vertical: number; horizontal: number; aspect?: number }`
-  - [ ] `optics: { distortion: number; chromaticAberration: boolean; vignette: number; grain: number; dehaze: number }`
   - [ ] `constrainCrop: boolean`
+  - [ ] `lensCorrections: { distortion: number; chromaticAberration: boolean }`
+  - [ ] `optics: { vignette: number; grain: number; dehaze: number }`
 - [ ] Ensure defaults match “no-op” rendering
 - [ ] Ensure state resets on new image load
 - [ ] Ensure state is included in future undo/redo snapshots (if present)
 
-## 2) UI: Geometry & Optics panel
-- [ ] Add accordion section `Geometry & Optics` in right panel
-- [ ] Add `Rotate` slider UI
-  - [ ] Reset to 0° control
-  - [ ] Optional angle readout (nice-to-have)
-- [ ] Add `Auto Straighten` button + loading state
-- [ ] Add perspective controls
-  - [ ] `Vertical` slider
-  - [ ] `Horizontal` slider
-  - [ ] `Constrain crop` toggle
-  - [ ] Optional `Aspect` slider (nice-to-have)
-- [ ] Add optics controls
+## 2) UI: Right panel accordions
+- [ ] Add accordion section `Transform`
+  - [ ] Add `Rotate` slider UI
+    - [ ] Reset to 0° control
+    - [ ] Optional angle readout (nice-to-have)
+  - [ ] Add `Auto Straighten` button + loading state
+  - [ ] Add perspective controls
+    - [ ] `Vertical` slider
+    - [ ] `Horizontal` slider
+    - [ ] `Constrain crop` toggle
+    - [ ] Optional `Aspect` slider (nice-to-have)
+  - [ ] Guided Upright UI
+    - [ ] `Guided` toggle
+    - [ ] `Apply Guided` button
+- [ ] Add accordion section `Lens Corrections`
   - [ ] `Lens Distortion` slider
   - [ ] `Remove Chromatic Aberration` toggle
-- [ ] Add effects controls
+- [ ] Add accordion section `Optics`
   - [ ] `Vignette` slider
   - [ ] `Grain` slider
   - [ ] `Dehaze` slider
@@ -56,9 +60,9 @@ Source PRD: `prds/geometry-and-optics-prd.md`
   - [ ] Render to preview canvas
   - [ ] Render to export offscreen canvas
 - [ ] Lock stage order:
-  - [ ] Geometry (rotate + perspective)
-  - [ ] Optics (distortion + CA)
-  - [ ] Effects (vignette + grain + dehaze)
+  - [ ] Transform (rotate + perspective)
+  - [ ] Lens Corrections (distortion + CA)
+  - [ ] Optics (vignette + grain + dehaze)
 
 ## 4) Straighten (manual rotate)
 - [ ] Implement rotate in preview rendering
