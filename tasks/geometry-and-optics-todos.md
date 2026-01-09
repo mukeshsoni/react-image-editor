@@ -1,0 +1,135 @@
+# Geometry & Optics — Task Breakdown
+
+Source PRD: `prds/geometry-and-optics-prd.md`
+
+## Scope (v1)
+- Add `Geometry & Optics` right-panel section.
+- Straighten: rotate slider + auto-straighten.
+- Perspective: vertical/horizontal sliders + constrain crop.
+- Guided Upright: 1–2 guide lines + apply.
+- Optics: lens distortion slider + CA toggle.
+- Effects: vignette + grain + dehaze.
+- All settings affect export output.
+
+## 0) Product decisions to lock
+- [ ] Decide sign conventions (e.g. distortion + = barrel)
+- [ ] Decide default for `Constrain crop` (on/off)
+- [ ] Decide JPEG behavior when transparency exists
+  - [ ] Option A: force PNG when transparency
+  - [ ] Option B: auto-fill background for JPEG
+- [ ] Decide rendering backend for v1 (recommended: WebGL; fallback: CPU)
+
+## 1) State model + defaults
+- [ ] Add serializable editor state for:
+  - [ ] `rotateDegrees: number`
+  - [ ] `perspective: { vertical: number; horizontal: number; aspect?: number }`
+  - [ ] `optics: { distortion: number; chromaticAberration: boolean; vignette: number; grain: number; dehaze: number }`
+  - [ ] `constrainCrop: boolean`
+- [ ] Ensure defaults match “no-op” rendering
+- [ ] Ensure state resets on new image load
+- [ ] Ensure state is included in future undo/redo snapshots (if present)
+
+## 2) UI: Geometry & Optics panel
+- [ ] Add accordion section `Geometry & Optics` in right panel
+- [ ] Add `Rotate` slider UI
+  - [ ] Reset to 0° control
+  - [ ] Optional angle readout (nice-to-have)
+- [ ] Add `Auto Straighten` button + loading state
+- [ ] Add perspective controls
+  - [ ] `Vertical` slider
+  - [ ] `Horizontal` slider
+  - [ ] `Constrain crop` toggle
+  - [ ] Optional `Aspect` slider (nice-to-have)
+- [ ] Add optics controls
+  - [ ] `Lens Distortion` slider
+  - [ ] `Remove Chromatic Aberration` toggle
+- [ ] Add effects controls
+  - [ ] `Vignette` slider
+  - [ ] `Grain` slider
+  - [ ] `Dehaze` slider
+- [ ] Disable controls when no image loaded
+
+## 3) Rendering pipeline foundations (shared preview + export)
+- [ ] Identify the current “committed image render” entry point (preview)
+- [ ] Introduce a single render pipeline abstraction:
+  - [ ] Accept source image + crop + geometry/optics settings
+  - [ ] Render to preview canvas
+  - [ ] Render to export offscreen canvas
+- [ ] Lock stage order:
+  - [ ] Geometry (rotate + perspective)
+  - [ ] Optics (distortion + CA)
+  - [ ] Effects (vignette + grain + dehaze)
+
+## 4) Straighten (manual rotate)
+- [ ] Implement rotate in preview rendering
+- [ ] Ensure “constrain crop” handles transparent corners
+  - [ ] If constrain: compute maximal rectangle crop
+  - [ ] If not constrain: allow transparency (preview)
+- [ ] Integrate rotate into export pipeline
+
+## 5) Auto-straighten
+- [ ] Implement downscaled analysis buffer generation
+- [ ] Implement edge detection + line detection (Hough-style)
+- [ ] Compute dominant near-horizontal angle and apply to `rotateDegrees`
+- [ ] Add guardrails
+  - [ ] If confidence low, no-op + message (or keep button enabled)
+  - [ ] Clamp to allowed rotate range
+
+## 6) Perspective sliders (vertical/horizontal)
+- [ ] Define mapping from slider value → keystone transform params
+- [ ] Implement perspective transform in preview
+  - [ ] WebGL: homography shader sampling
+  - [ ] CPU: `ImageData` resample with bilinear
+- [ ] Integrate into export pipeline
+- [ ] Ensure constrain-crop behaves sensibly for keystone
+
+## 7) Guided Upright
+- [ ] Add guided mode state + UI toggle
+- [ ] Add overlay rendering
+  - [ ] Perspective grid toggle
+  - [ ] 2 draggable guide lines (vertical + horizontal)
+  - [ ] Touch + mouse support
+- [ ] Solve transform
+  - [ ] One line: constrain one axis
+  - [ ] Two lines: solve for both axes
+- [ ] `Apply Guided` computes params, exits guided mode
+
+## 8) Lens distortion
+- [ ] Implement radial distortion mapping (single coefficient)
+- [ ] Integrate after geometry transform (sampling step)
+- [ ] Ensure clamping/edge sampling rules are consistent
+
+## 9) Chromatic aberration reduction (v1)
+- [ ] Implement CA toggle as subtle per-channel sampling offset
+- [ ] Validate effect is not overly aggressive
+
+## 10) Effects
+- [ ] Vignette
+  - [ ] Radial falloff applied in linear-ish space (best effort)
+- [ ] Grain
+  - [ ] Noise pattern generation (seeded per-frame or per-export)
+  - [ ] Ensure grain is stable enough visually in preview
+- [ ] Dehaze
+  - [ ] Implement fast approximation (local contrast + blacks)
+  - [ ] If too slow/ugly, gate behind “experimental” or defer
+
+## 11) Export integration
+- [ ] Ensure export uses same pipeline and settings
+- [ ] Transparency policy enforcement for JPEG
+- [ ] Add/adjust export tests to cover geometry/optics settings
+
+## 12) Tests (Vitest)
+- [ ] Unit tests for math helpers
+  - [ ] Homography mapping (known points)
+  - [ ] Distortion mapping clamps/inverts as expected
+- [ ] Component tests
+  - [ ] Slider changes update state
+  - [ ] Reset restores defaults
+  - [ ] Auto-straighten sets a new angle (mock analysis)
+
+## 13) Manual QA checklist
+- [ ] Straighten horizon photo
+- [ ] Vertical correction on a building
+- [ ] Guided upright with 1 line and 2 lines
+- [ ] Extreme slider values (no crashes)
+- [ ] Export matches preview
