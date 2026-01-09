@@ -1,7 +1,8 @@
 import type { RefObject } from "react";
 
-import { canvasToBlob, drawImageWithRotation } from "@/export-download";
 import { CropOptions, Cropper } from "@/Cropper";
+import { buildCropCommitFromCanvasRect } from "@/editor/cropCommitted";
+import { useCropStore } from "@/store/cropStore";
 import type { Bounds, CropRect } from "@/store/cropStore";
 
 type CropToolButtonsProps = {
@@ -61,24 +62,23 @@ export function CropToolOverlay({ cropMode, imageRef, cropBounds }: CropToolOver
 type CropToolOptionsProps = {
   cropMode: boolean;
   imageRef: RefObject<HTMLImageElement | null>;
-  bakedImageUrlRef: RefObject<string | null>;
   zoomLevel: number;
   offset: { x: number; y: number };
   rotation: number;
   resetAll: (bounds: Bounds) => void;
-  onCroppedImageReady: (image: HTMLImageElement) => void;
+  onCropCommitted: () => void;
 };
 
 export function CropToolOptions({
   cropMode,
   imageRef,
-  bakedImageUrlRef,
   zoomLevel,
   offset,
   rotation,
   resetAll,
-  onCroppedImageReady,
+  onCropCommitted,
 }: CropToolOptionsProps) {
+  const commitCrop = useCropStore((state) => state.commitCrop);
   function handleCropReset() {
     if (!imageRef.current) {
       return;
@@ -92,53 +92,20 @@ export function CropToolOptions({
     });
   }
 
-  async function handleCropApplication(cropRect: CropRect) {
+  function handleCropApplication(cropRect: CropRect) {
     if (!imageRef.current) return;
     if (!Number.isFinite(zoomLevel) || zoomLevel <= 0) return;
 
-    const outputWidth = Math.max(1, Math.round(cropRect.width / zoomLevel));
-    const outputHeight = Math.max(1, Math.round(cropRect.height / zoomLevel));
+    commitCrop(
+      buildCropCommitFromCanvasRect({
+        cropRect,
+        zoomLevel,
+        offset,
+        rotationDegrees: rotation,
+      }),
+    );
 
-    const offscreen = document.createElement("canvas");
-    offscreen.width = outputWidth;
-    offscreen.height = outputHeight;
-
-    const ctx = offscreen.getContext("2d");
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, offscreen.width, offscreen.height);
-    ctx.save();
-
-    // Convert canvas-space offset/cropRect into image-pixel space, so we render at zoom=1.
-    const bakedOffset = {
-      x: (offset.x - cropRect.x) / zoomLevel,
-      y: (offset.y - cropRect.y) / zoomLevel,
-    };
-
-    drawImageWithRotation(ctx, imageRef.current, 1, bakedOffset, rotation);
-
-    ctx.restore();
-
-    const blob = await canvasToBlob(offscreen, "image/png");
-    if (!blob) return;
-
-    if (bakedImageUrlRef.current) {
-      URL.revokeObjectURL(bakedImageUrlRef.current);
-    }
-
-    const url = URL.createObjectURL(blob);
-
-    const bakedImage = new Image();
-    bakedImage.crossOrigin = "anonymous";
-    bakedImage.src = url;
-
-    bakedImage.onload = () => {
-      onCroppedImageReady(bakedImage);
-    };
-
-    bakedImage.onerror = () => {
-      URL.revokeObjectURL(url);
-    };
+    onCropCommitted();
   }
 
   if (!cropMode) {

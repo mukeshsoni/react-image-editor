@@ -100,7 +100,7 @@ function getRotatedBoundingBoxSize(
 }
 
 export function renderCommittedImageToOffscreenCanvas(
-  image: HTMLImageElement,
+  image: DrawableImage,
   rotationDegrees: number,
   background: ExportBackground,
   whiteBalance?: WhiteBalanceSettings,
@@ -109,6 +109,9 @@ export function renderCommittedImageToOffscreenCanvas(
   colorAdjustments?: ColorAdjustments,
   sharpening?: SharpeningSettings,
 ): HTMLCanvasElement | null {
+  // NOTE: Crop is handled by the caller (see ExportTool) so that export can bake
+  // crop first and then run the same adjustment pipeline on the cropped pixels.
+
   const outputSize = getRotatedBoundingBoxSize(
     image.width,
     image.height,

@@ -22,6 +22,8 @@ export function getImageEditorEdits(): ImageEditorEdits {
     crop: {
       rect: cropState.cropRect,
       settings: cropState.cropSettings,
+      committed: cropState.cropCommitted,
+      commit: cropState.cropCommit ?? undefined,
     },
     whiteBalance: whiteBalanceState.whiteBalance,
     light: lightState.lightAdjustments,

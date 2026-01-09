@@ -20,9 +20,32 @@ describe("ReactImageEditor white balance eyedropper", () => {
       return {
         ...actual,
         useCropStore: createMockZustandHook({
-          cropSettings: { rotation: 0, constrainCrop: true },
+          cropRect: { x: 0, y: 0, width: 0, height: 0 },
+          cropBounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+          cropCommitted: false,
+          cropCommit: null,
+          cropSettings: {
+            aspectRatio: "original",
+            aspectRatioLocked: false,
+            rotation: 0,
+            constrainCrop: true,
+          },
+          clearCommittedCrop: vi.fn(),
+          commitCrop: vi.fn(),
+          initializeCropRect: vi.fn(),
+          moveCropRect: vi.fn(),
+          resizeCropRect: vi.fn(),
+          setCropRect: vi.fn(),
+          updateCropRect: vi.fn(),
+          setCropSettings: vi.fn(),
+          updateCropSettings: vi.fn(),
+          handleCropSettingsChange: vi.fn(),
+          resetAll: vi.fn(),
+          resetCropRect: vi.fn(),
+          resetCropSettings: vi.fn(),
           setRotation: vi.fn(),
           resetRotation: vi.fn(),
+          setConstrainCrop: vi.fn(),
         }),
       };
     });
@@ -104,16 +127,24 @@ describe("ReactImageEditor white balance eyedropper", () => {
       CropOptions: () => null,
     }));
 
-    vi.doMock("../use-canvas-zoom-pan", () => ({
-      useCanvasZoomPan: () => ({
-        zoomLevel: 1,
-        offset: { x: 0, y: 0 },
-        zoomIn: vi.fn(),
-        zoomOut: vi.fn(),
-        resetZoom: vi.fn(),
-        listeners: {},
-      }),
-    }));
+    vi.doMock("../use-canvas-zoom-pan", async () => {
+      const actual = await vi.importActual<typeof import("../use-canvas-zoom-pan")>(
+        "../use-canvas-zoom-pan",
+      );
+
+      return {
+        ...actual,
+        useCanvasZoomPan: () => ({
+          zoomLevel: 1,
+          offset: { x: 0, y: 0 },
+          zoomIn: vi.fn(),
+          zoomOut: vi.fn(),
+          resetZoom: vi.fn(),
+          setCamera: vi.fn(),
+          listeners: {},
+        }),
+      };
+    });
 
     const ctx = {
       drawImage: vi.fn(),

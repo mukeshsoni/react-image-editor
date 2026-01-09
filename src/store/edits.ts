@@ -14,6 +14,16 @@ export type ImageEditorEdits = {
   crop: {
     rect: CropRect;
     settings: CropSettings;
+    committed?: boolean;
+    commit?: {
+      outputWidth: number;
+      outputHeight: number;
+      bakedOffset: {
+        x: number;
+        y: number;
+      };
+      rotationDegrees: number;
+    };
   };
   whiteBalance: WhiteBalanceSettings;
   light: LightAdjustments;

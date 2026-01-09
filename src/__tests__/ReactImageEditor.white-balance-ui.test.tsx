@@ -76,10 +76,11 @@ vi.doMock("../store/cropStore", async () => {
   const actual = await vi.importActual<typeof import("../store/cropStore")>(
     "../store/cropStore",
   );
+  const { createMockZustandHook } = await import("./test-helpers/mockZustandHook");
 
   return {
     ...actual,
-    useCropStore: () => mockStore!,
+    useCropStore: createMockZustandHook(mockStore!),
   };
 });
 
@@ -106,16 +107,24 @@ vi.doMock("../store/editorActions", () => ({
       CropOptions: () => null,
     }));
 
-    vi.doMock("../use-canvas-zoom-pan", () => ({
-      useCanvasZoomPan: () => ({
-        zoomLevel: 1,
-        offset: { x: 0, y: 0 },
-        zoomIn: vi.fn(),
-        zoomOut: vi.fn(),
-        resetZoom: vi.fn(),
-        listeners: {},
-      }),
-    }));
+    vi.doMock("../use-canvas-zoom-pan", async () => {
+      const actual = await vi.importActual<typeof import("../use-canvas-zoom-pan")>(
+        "../use-canvas-zoom-pan",
+      );
+
+      return {
+        ...actual,
+        useCanvasZoomPan: () => ({
+          zoomLevel: 1,
+          offset: { x: 0, y: 0 },
+          zoomIn: vi.fn(),
+          zoomOut: vi.fn(),
+          resetZoom: vi.fn(),
+          setCamera: vi.fn(),
+          listeners: {},
+        }),
+      };
+    });
 
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
       () =>

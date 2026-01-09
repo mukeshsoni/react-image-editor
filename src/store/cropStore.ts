@@ -181,11 +181,23 @@ export const DEFAULT_WHITE_BALANCE: WhiteBalanceSettings = {
 
 export type { ImageEditorEdits } from "./edits";
 
+export type CropCommit = {
+  outputWidth: number;
+  outputHeight: number;
+  bakedOffset: {
+    x: number;
+    y: number;
+  };
+  rotationDegrees: number;
+};
+
 interface CropStore {
   // State
   cropRect: CropRect;
   cropSettings: CropSettings;
   cropBounds: Bounds;
+  cropCommitted: boolean;
+  cropCommit: CropCommit | null;
   whiteBalance: WhiteBalanceSettings;
   lightAdjustments: LightAdjustments;
   colorAdjustments: ColorAdjustments;
@@ -205,6 +217,9 @@ interface CropStore {
   resetCropRect: (bounds: Bounds) => void;
   resetAll: (bounds: Bounds) => void;
   handleCropSettingsChange: (newSettings: CropSettings) => void;
+
+  commitCrop: (commit: CropCommit) => void;
+  clearCommittedCrop: () => void;
   moveCropRect: (newPoint: Point, oldPoint: Point) => void;
   resizeCropRect: (
     newPoint: Point,
@@ -262,6 +277,8 @@ export const useCropStore = create<CropStore>((set, get) => ({
     rotation: 0,
     constrainCrop: true,
   },
+  cropCommitted: false,
+  cropCommit: null,
   cropBounds: {
     minX: 0,
     minY: 0,
@@ -469,32 +486,43 @@ export const useCropStore = create<CropStore>((set, get) => ({
     }));
   },
 
-  resetCropRect: (bounds: Bounds) =>
-    set({
-      cropRect: {
-        x: bounds.minX,
-        y: bounds.minY,
-        width: bounds.maxX - bounds.minX,
-        height: bounds.maxY - bounds.minY,
-      },
-    }),
+   resetCropRect: (bounds: Bounds) =>
+     set({
+       cropRect: {
+         x: bounds.minX,
+         y: bounds.minY,
+         width: bounds.maxX - bounds.minX,
+         height: bounds.maxY - bounds.minY,
+       },
+     }),
 
-   resetAll: (bounds) => {
-     const {
-       resetCropSettings,
-       resetCropRect,
-       resetWhiteBalance,
-       resetLightAdjustments,
-       resetColorAdjustments,
-       resetToneCurve,
-     } = get();
-     resetCropSettings();
-     resetCropRect(bounds);
-     resetWhiteBalance();
-     resetLightAdjustments();
-     resetColorAdjustments();
-     resetToneCurve();
+   commitCrop: (commit) => {
+     set({ cropCommitted: true, cropCommit: commit });
    },
+
+   clearCommittedCrop: () => {
+     set({ cropCommitted: false, cropCommit: null });
+   },
+
+
+    resetAll: (bounds) => {
+      const {
+        clearCommittedCrop,
+        resetCropSettings,
+        resetCropRect,
+        resetWhiteBalance,
+        resetLightAdjustments,
+        resetColorAdjustments,
+        resetToneCurve,
+      } = get();
+      clearCommittedCrop();
+      resetCropSettings();
+      resetCropRect(bounds);
+      resetWhiteBalance();
+      resetLightAdjustments();
+      resetColorAdjustments();
+      resetToneCurve();
+    },
 
   setWhiteBalance: (updates) => {
     set((state) => {
@@ -619,26 +647,30 @@ export const useCropStore = create<CropStore>((set, get) => ({
    },
 
    getEdits: () => {
-     const {
-       cropRect,
-       cropSettings,
-       whiteBalance,
-       lightAdjustments,
-       colorAdjustments,
-       toneCurve,
-     } = get();
+      const {
+        cropRect,
+        cropSettings,
+        cropCommitted,
+        cropCommit,
+        whiteBalance,
+        lightAdjustments,
+        colorAdjustments,
+        toneCurve,
+      } = get();
 
-     return {
-       version: 1,
-       crop: {
-         rect: cropRect,
-         settings: cropSettings,
-       },
-       whiteBalance,
-       light: lightAdjustments,
-       color: colorAdjustments,
-       toneCurve,
-     };
+      return {
+        version: 1,
+        crop: {
+          rect: cropRect,
+          settings: cropSettings,
+          committed: cropCommitted,
+          commit: cropCommit ?? undefined,
+        },
+        whiteBalance,
+        light: lightAdjustments,
+        color: colorAdjustments,
+        toneCurve,
+      };
    },
 
   handleCropSettingsChange: (newSettings: CropSettings) => {

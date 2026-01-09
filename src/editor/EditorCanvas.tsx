@@ -17,6 +17,7 @@ import type {
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "@/store/cropStore";
+import { useCropStore } from "@/store/cropStore";
 import { useColorStore } from "@/store/colorStore";
 import { useDenoiseStore } from "@/store/denoiseStore";
 import { useLightStore } from "@/store/lightStore";
@@ -39,6 +40,12 @@ function renderImageToCanvas(
   zoomLevel: number,
   offset: { x: number; y: number },
   rotation: number,
+  cropCommit?: {
+    outputWidth: number;
+    outputHeight: number;
+    bakedOffset: { x: number; y: number };
+    rotationDegrees: number;
+  } | null,
   whiteBalance?: WhiteBalanceSettings,
   lightAdjustments?: LightAdjustments,
   toneCurve?: ToneCurveSettings,
@@ -60,12 +67,26 @@ function renderImageToCanvas(
 
   if (!shouldProcessPixels) {
     ctx.save();
-    drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
+
+    if (cropCommit) {
+      drawImageWithRotation(
+        ctx,
+        imageRef,
+        1,
+        cropCommit.bakedOffset,
+        cropCommit.rotationDegrees,
+      );
+    } else {
+      drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
+    }
+
     ctx.restore();
     return;
   }
 
-  const baseKey = `${canvasWidth}x${canvasHeight}:${zoomLevel}:${offset.x}:${offset.y}:${rotation}`;
+  const baseKey = cropCommit
+    ? `${canvasWidth}x${canvasHeight}:${cropCommit.outputWidth}x${cropCommit.outputHeight}:${cropCommit.bakedOffset.x}:${cropCommit.bakedOffset.y}:${cropCommit.rotationDegrees}`
+    : `${canvasWidth}x${canvasHeight}:${zoomLevel}:${offset.x}:${offset.y}:${rotation}`;
 
   if (cache.baseKey !== baseKey) {
     cache.baseCanvas.width = canvasWidth;
@@ -76,7 +97,19 @@ function renderImageToCanvas(
 
     baseCtx.clearRect(0, 0, canvasWidth, canvasHeight);
     baseCtx.save();
-    drawImageWithRotation(baseCtx, imageRef, zoomLevel, offset, rotation);
+
+    if (cropCommit) {
+      drawImageWithRotation(
+        baseCtx,
+        imageRef,
+        1,
+        cropCommit.bakedOffset,
+        cropCommit.rotationDegrees,
+      );
+    } else {
+      drawImageWithRotation(baseCtx, imageRef, zoomLevel, offset, rotation);
+    }
+
     baseCtx.restore();
 
     const imageData = baseCtx.getImageData(0, 0, canvasWidth, canvasHeight);
@@ -139,6 +172,8 @@ export function EditorCanvas({
   isPickingWhiteBalance,
   onPickWhiteBalance,
 }: Props) {
+  const cropCommitted = useCropStore((state) => state.cropCommitted);
+  const cropCommit = useCropStore((state) => state.cropCommit);
   const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
   const lightAdjustments = useLightStore((state) => state.lightAdjustments);
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
@@ -148,6 +183,7 @@ export function EditorCanvas({
 
   const renderRef = useRef<number | null>(null);
   const renderCacheRef = useRef<RenderCache | null>(null);
+
 
   if (!renderCacheRef.current && typeof document !== "undefined") {
     renderCacheRef.current = {
@@ -178,6 +214,7 @@ export function EditorCanvas({
         zoomLevel,
         offset,
         rotation,
+        cropCommitted ? cropCommit : null,
         whiteBalance,
         lightAdjustments,
         toneCurve,
@@ -190,6 +227,8 @@ export function EditorCanvas({
   }, [
     canvasRef,
     colorAdjustments,
+    cropCommit,
+    cropCommitted,
     imageRef,
     lightAdjustments,
     offset,
