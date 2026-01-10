@@ -15,7 +15,7 @@ Source PRD: `prds/geometry-and-optics-prd.md`
 - [x] Decide sign conventions (distortion `+` = barrel, `-` = pincushion)
 - [x] Decide default for `Constrain crop` (default: `on`)
 - [x] Decide JPEG behavior when transparency exists (default: auto-fill background)
-  - [ ] Option A: force PNG when transparency
+  - [x] Option A: force PNG when transparency (cancelled; superseded by Option B)
   - [x] Option B: auto-fill background for JPEG (default: white)
 - [x] Decide rendering backend for v1 (default: Canvas2D/CPU; revisit WebGL later)
 
