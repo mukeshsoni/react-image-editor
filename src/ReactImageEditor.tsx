@@ -14,6 +14,11 @@ import { CropToolButtons, CropToolOptions, CropToolOverlay } from "@/editor/Crop
 import { EditorCanvas } from "@/editor/EditorCanvas";
 import { ExportTool } from "@/editor/ExportTool";
 import { getPanelRegistry } from "@/editor/panels";
+import {
+  downscaleLuminanceNearest,
+  estimateStraightenDegreesFromLuminance,
+  extractLuminance,
+} from "@/geometry/auto-straighten";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 import { applyEditsSnapshot } from "@/store";
 import type { HistoryEntry } from "@/store";
@@ -539,11 +544,32 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   async function handleAutoStraighten() {
     if (!isImageLoaded) return;
+    if (!canvasRef.current) return;
 
     setIsAutoStraightening(true);
     try {
-      // Placeholder v1: reset rotation. Replace with edge-based detection later.
-      setRotation(0);
+      // Analyze a downscaled luminance buffer from the current canvas.
+      const ctx = canvasRef.current.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return;
+
+      const width = Math.max(1, Math.floor(canvasRef.current.width));
+      const height = Math.max(1, Math.floor(canvasRef.current.height));
+      const imageData = ctx.getImageData(0, 0, width, height);
+
+      const luminance = extractLuminance(imageData.data, width, height);
+      const scaled = downscaleLuminanceNearest(luminance, width, height, 320);
+      const result = estimateStraightenDegreesFromLuminance(
+        scaled.grays,
+        scaled.width,
+        scaled.height,
+      );
+
+      // Guardrails: ignore low confidence.
+      if (result.confidence < 0.12) {
+        return;
+      }
+
+      setRotation(result.degrees);
     } finally {
       setIsAutoStraightening(false);
     }

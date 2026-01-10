@@ -72,12 +72,12 @@ Source PRD: `prds/geometry-and-optics-prd.md`
 - [x] Integrate rotate into export pipeline
 
 ## 5) Auto-straighten
-- [ ] Implement downscaled analysis buffer generation
-- [ ] Implement edge detection + line detection (Hough-style)
-- [ ] Compute dominant near-horizontal angle and apply to `rotateDegrees`
-- [ ] Add guardrails
-  - [ ] If confidence low, no-op + message (or keep button enabled)
-  - [ ] Clamp to allowed rotate range
+- [x] Implement downscaled analysis buffer generation
+- [x] Implement edge detection + line detection (gradient histogram)
+- [x] Compute dominant near-horizontal angle and apply to `rotateDegrees`
+- [x] Add guardrails
+  - [x] If confidence low, no-op + message (currently silent)
+  - [x] Clamp to allowed rotate range
 
 ## 6) Perspective sliders (vertical/horizontal)
 - [ ] Define mapping from slider value → keystone transform params
