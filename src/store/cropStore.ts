@@ -4,6 +4,8 @@ import type { Handle } from "../crop-handles";
 
 import type { ImageEditorEdits } from "./edits";
 
+import { getImageEditorEdits } from "./selectEdits";
+
 export type Point = {
   x: number;
   y: number;
@@ -647,31 +649,10 @@ export const useCropStore = create<CropStore>((set, get) => ({
    },
 
    getEdits: () => {
-      const {
-        cropRect,
-        cropSettings,
-        cropCommitted,
-        cropCommit,
-        whiteBalance,
-        lightAdjustments,
-        colorAdjustments,
-        toneCurve,
-      } = get();
-
-      return {
-        version: 1,
-        crop: {
-          rect: cropRect,
-          settings: cropSettings,
-          committed: cropCommitted,
-          commit: cropCommit ?? undefined,
-        },
-        whiteBalance,
-        light: lightAdjustments,
-        color: colorAdjustments,
-        toneCurve,
-      };
+     // Prefer the centralized snapshot aggregator.
+     return getImageEditorEdits();
    },
+
 
   handleCropSettingsChange: (newSettings: CropSettings) => {
     set({ cropSettings: newSettings });

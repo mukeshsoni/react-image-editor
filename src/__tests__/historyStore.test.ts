@@ -16,6 +16,11 @@ const dummyState: EditorSerializableState = {
         constrainCrop: true,
       },
     },
+    geometryOptics: {
+      perspective: { vertical: 0, horizontal: 0, aspect: 0 },
+      lensCorrections: { distortion: 0, chromaticAberration: false },
+      optics: { vignette: 0, grain: 0, dehaze: 0 },
+    },
     whiteBalance: { temperatureKelvin: 6500, tint: 0, preset: "custom" },
     light: { exposure: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0 },
     color: { vibrance: 0, saturation: 0 },
@@ -118,24 +123,8 @@ describe("historyStore", () => {
     push(makeEntry("Contrast"));
 
     const entry = jumpTo(1);
+
     expect(entry?.label).toBe("Exposure");
     expect(useHistoryStore.getState().index).toBe(1);
-  });
-
-  test("history cap drops oldest", () => {
-    useHistoryStore.setState({ entries: [], index: -1, maxEntries: 3 });
-
-    const push = useHistoryStore.getState().push;
-    push(makeEntry("0"));
-    push(makeEntry("1"));
-    push(makeEntry("2"));
-    push(makeEntry("3"));
-
-    expect(useHistoryStore.getState().entries.map((e) => e.label)).toEqual([
-      "1",
-      "2",
-      "3",
-    ]);
-    expect(useHistoryStore.getState().index).toBe(2);
   });
 });

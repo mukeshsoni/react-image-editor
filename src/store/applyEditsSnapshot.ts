@@ -4,6 +4,7 @@ import { useColorStore } from "@/store/colorStore";
 import { useCropStore } from "@/store/cropStore";
 import { useDenoiseStore } from "@/store/denoiseStore";
 import { useLightStore } from "@/store/lightStore";
+import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
@@ -46,6 +47,8 @@ export function applyEditsSnapshot(edits: ImageEditorEdits) {
   useToneCurveStore
     .getState()
     .setToneCurveParametricRgb(edits.toneCurve.parametric.rgb);
+
+  useGeometryOpticsStore.getState().setSettings(edits.geometryOptics);
 
   if (edits.sharpening) {
     useSharpeningStore.getState().setSharpening(edits.sharpening);

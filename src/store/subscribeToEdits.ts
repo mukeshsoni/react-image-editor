@@ -8,6 +8,7 @@ import { getImageEditorEdits } from "./selectEdits";
 import { useSharpeningStore } from "./sharpeningStore";
 import { useToneCurveStore } from "./toneCurveStore";
 import { useWhiteBalanceStore } from "./whiteBalanceStore";
+import { useGeometryOpticsStore } from "./geometryOpticsStore";
 
 const HISTORY_COMMIT_DEBOUNCE_MS = 250;
 
@@ -38,6 +39,7 @@ export function subscribeToEdits(onChange: (edits: ImageEditorEdits) => void): U
     useToneCurveStore.subscribe(scheduleEmit),
     useSharpeningStore.subscribe(scheduleEmit),
     useDenoiseStore.subscribe(scheduleEmit),
+    useGeometryOpticsStore.subscribe(scheduleEmit),
   ];
 
   return () => {

@@ -146,6 +146,16 @@ vi.mock("../Cropper", () => ({
   CropOptions: () => null,
 }));
 
+vi.mock("../editor/panels/details.panel", () => ({
+  default: {
+    id: "details",
+    order: 40,
+    title: "Details",
+    groupId: "advanced",
+    Component: () => null,
+  },
+}));
+
 const mockResetZoom = vi.fn();
 vi.mock("../use-canvas-zoom-pan", async () => {
   const actual = await vi.importActual<typeof import("../use-canvas-zoom-pan")>(

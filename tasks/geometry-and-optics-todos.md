@@ -27,8 +27,8 @@ Source PRD: `prds/geometry-and-optics-prd.md`
   - [x] `lensCorrections: { distortion: number; chromaticAberration: boolean }`
   - [x] `optics: { vignette: number; grain: number; dehaze: number }`
 - [x] Ensure defaults match “no-op” rendering
-- [ ] Ensure state resets on new image load
-- [ ] Ensure state is included in future undo/redo snapshots (if present)
+- [x] Ensure state resets on new image load
+- [x] Ensure state is included in future undo/redo snapshots (if present)
 
 ## 2) UI: Right panel accordions
 - [x] Add accordion section `Transform`
