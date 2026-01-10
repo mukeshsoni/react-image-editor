@@ -20,13 +20,13 @@ Source PRD: `prds/geometry-and-optics-prd.md`
 - [x] Decide rendering backend for v1 (default: Canvas2D/CPU; revisit WebGL later)
 
 ## 1) State model + defaults
-- [ ] Add serializable editor state for:
-  - [ ] `rotateDegrees: number`
-  - [ ] `perspective: { vertical: number; horizontal: number; aspect?: number }`
-  - [ ] `constrainCrop: boolean`
-  - [ ] `lensCorrections: { distortion: number; chromaticAberration: boolean }`
-  - [ ] `optics: { vignette: number; grain: number; dehaze: number }`
-- [ ] Ensure defaults match “no-op” rendering
+- [x] Add serializable editor state for:
+  - [ ] `rotateDegrees: number` (kept in `cropStore.cropSettings.rotation`)
+  - [ ] `constrainCrop: boolean` (kept in `cropStore.cropSettings.constrainCrop`)
+  - [x] `perspective: { vertical: number; horizontal: number; aspect?: number }`
+  - [x] `lensCorrections: { distortion: number; chromaticAberration: boolean }`
+  - [x] `optics: { vignette: number; grain: number; dehaze: number }`
+- [x] Ensure defaults match “no-op” rendering
 - [ ] Ensure state resets on new image load
 - [ ] Ensure state is included in future undo/redo snapshots (if present)
 

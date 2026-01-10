@@ -102,7 +102,8 @@ Provide both simple sliders and guided correction.
 
 ### State model
 Add a serializable set of settings to editor state:
-- `rotateDegrees: number`
+- `rotateDegrees: number` (currently backed by `cropStore.cropSettings.rotation`)
+- `constrainCrop: boolean` (currently backed by `cropStore.cropSettings.constrainCrop`)
 - `perspective: { vertical: number; horizontal: number; aspect?: number; guided?: { verticalLine?: Line; horizontalLine?: Line } }`
 - `lensCorrections: { distortion: number; chromaticAberration: boolean }`
 - `optics: { vignette: number; grain: number; dehaze: number }`
