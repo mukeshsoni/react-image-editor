@@ -1,4 +1,6 @@
 import { applyPixelPipelineToCanvas } from "@/editor/renderPipeline";
+import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
+import { useCropStore } from "@/store/cropStore";
 
 import type {
   ColorAdjustments,
@@ -129,9 +131,38 @@ export function renderCommittedImageToOffscreenCanvas(
     y: (offscreen.height - image.height) / 2,
   };
 
-  ctx.save();
-  drawImageWithRotation(ctx, image, 1, centeredOffset, rotationDegrees);
-  ctx.restore();
+  const constrainCrop = useCropStore.getState().cropSettings.constrainCrop ?? true;
+  if (constrainCrop && rotationDegrees !== 0) {
+    const maxRect = getMaxInnerAxisAlignedRectSize(offscreen.width, offscreen.height, rotationDegrees);
+    const width = Math.max(1, Math.floor(maxRect.width));
+    const height = Math.max(1, Math.floor(maxRect.height));
+
+    offscreen.width = width;
+    offscreen.height = height;
+
+    const constrainedCtx = offscreen.getContext("2d");
+    if (!constrainedCtx) return null;
+
+    if (background === "white") {
+      constrainedCtx.fillStyle = "#ffffff";
+      constrainedCtx.fillRect(0, 0, width, height);
+    } else {
+      constrainedCtx.clearRect(0, 0, width, height);
+    }
+
+    const constrainedOffset = {
+      x: (width - image.width) / 2,
+      y: (height - image.height) / 2,
+    };
+
+    constrainedCtx.save();
+    drawImageWithRotation(constrainedCtx, image, 1, constrainedOffset, rotationDegrees);
+    constrainedCtx.restore();
+  } else {
+    ctx.save();
+    drawImageWithRotation(ctx, image, 1, centeredOffset, rotationDegrees);
+    ctx.restore();
+  }
 
   applyPixelPipelineToCanvas(offscreen, {
     whiteBalance,

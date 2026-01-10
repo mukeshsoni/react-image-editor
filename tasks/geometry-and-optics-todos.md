@@ -65,11 +65,11 @@ Source PRD: `prds/geometry-and-optics-prd.md`
   - [x] Optics (vignette + grain + dehaze)
 
 ## 4) Straighten (manual rotate)
-- [ ] Implement rotate in preview rendering
-- [ ] Ensure “constrain crop” handles transparent corners
-  - [ ] If constrain: compute maximal rectangle crop
-  - [ ] If not constrain: allow transparency (preview)
-- [ ] Integrate rotate into export pipeline
+- [x] Implement rotate in preview rendering
+- [x] Ensure “constrain crop” handles transparent corners
+  - [x] If constrain: compute maximal rectangle crop
+  - [x] If not constrain: allow transparency (preview)
+- [x] Integrate rotate into export pipeline
 
 ## 5) Auto-straighten
 - [ ] Implement downscaled analysis buffer generation
