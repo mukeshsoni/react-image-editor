@@ -4,7 +4,6 @@ import type { Handle } from "../crop-handles";
 
 import type { ImageEditorEdits } from "./edits";
 
-import { getImageEditorEdits } from "./selectEdits";
 
 export type Point = {
   x: number;
@@ -649,8 +648,39 @@ export const useCropStore = create<CropStore>((set, get) => ({
    },
 
    getEdits: () => {
-     // Prefer the centralized snapshot aggregator.
-     return getImageEditorEdits();
+     const {
+       cropRect,
+       cropSettings,
+       cropCommitted,
+       cropCommit,
+       whiteBalance,
+       lightAdjustments,
+       colorAdjustments,
+       toneCurve,
+     } = get();
+
+      return {
+        version: 1,
+        crop: {
+          rect: cropRect,
+          settings: cropSettings,
+          committed: cropCommitted,
+          commit: cropCommit ?? undefined,
+        },
+        // NOTE: `geometryOptics` state is owned by `geometryOpticsStore`.
+        // `cropStore.getEdits()` is retained for legacy usage but isn’t the
+        // canonical snapshot path; use `getImageEditorEdits()` instead.
+        geometryOptics: {
+          perspective: { vertical: 0, horizontal: 0, aspect: 0 },
+          lensCorrections: { distortion: 0, chromaticAberration: false },
+          optics: { vignette: 0, grain: 0, dehaze: 0 },
+        },
+        whiteBalance,
+        light: lightAdjustments,
+        color: colorAdjustments,
+        toneCurve,
+      };
+
    },
 
 
