@@ -102,6 +102,7 @@ export function renderCommittedImageToOffscreenCanvas(
   toneCurve?: ToneCurveSettings,
   colorAdjustments?: ColorAdjustments,
   sharpening?: SharpeningSettings,
+  geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings,
 ): HTMLCanvasElement | null {
   // NOTE: Crop is handled by the caller (see ExportTool) so that export can bake
   // crop first and then run the same adjustment pipeline on the cropped pixels.
@@ -165,6 +166,7 @@ export function renderCommittedImageToOffscreenCanvas(
   }
 
   applyPixelPipelineToCanvas(offscreen, {
+    geometryOptics,
     whiteBalance,
     lightAdjustments,
     toneCurve,

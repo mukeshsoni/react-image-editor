@@ -13,6 +13,8 @@ import type {
 } from "@/store/cropStore";
 
 type PipelineInputs = {
+  geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings;
+
   whiteBalance?: WhiteBalanceSettings;
   lightAdjustments?: LightAdjustments;
   toneCurve?: ToneCurveSettings;
@@ -36,6 +38,8 @@ export function applyPixelPipelineToCanvas(
   const context = {
     width,
     height,
+
+    geometryOptics: inputs.geometryOptics,
 
     whiteBalance: inputs.whiteBalance,
     lightAdjustments: inputs.lightAdjustments,
