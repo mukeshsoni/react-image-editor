@@ -54,15 +54,15 @@ Source PRD: `prds/geometry-and-optics-prd.md`
 - [x] Disable controls when no image loaded
 
 ## 3) Rendering pipeline foundations (shared preview + export)
-- [ ] Identify the current “committed image render” entry point (preview)
-- [ ] Introduce a single render pipeline abstraction:
-  - [ ] Accept source image + crop + geometry/optics settings
-  - [ ] Render to preview canvas
-  - [ ] Render to export offscreen canvas
-- [ ] Lock stage order:
-  - [ ] Transform (rotate + perspective)
-  - [ ] Lens Corrections (distortion + CA)
-  - [ ] Optics (vignette + grain + dehaze)
+- [x] Identify the current “committed image render” entry point (preview)
+- [x] Introduce a single render pipeline abstraction:
+  - [x] Accept source image + crop + geometry/optics settings
+  - [x] Render to preview canvas
+  - [x] Render to export offscreen canvas
+- [x] Lock stage order:
+  - [x] Transform (rotate + perspective)
+  - [x] Lens Corrections (distortion + CA)
+  - [x] Optics (vignette + grain + dehaze)
 
 ## 4) Straighten (manual rotate)
 - [ ] Implement rotate in preview rendering
