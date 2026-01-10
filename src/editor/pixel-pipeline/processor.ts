@@ -5,6 +5,7 @@ export type PixelProcessorId =
   | "light"
   | "tone-curve"
   | "color"
+  | "perspective-warp"
   | "geometry-optics"
   | "denoise"
   | "sharpening";
