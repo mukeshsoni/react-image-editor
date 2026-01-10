@@ -80,12 +80,12 @@ Source PRD: `prds/geometry-and-optics-prd.md`
   - [x] Clamp to allowed rotate range
 
 ## 6) Perspective sliders (vertical/horizontal)
-- [ ] Define mapping from slider value → keystone transform params
-- [ ] Implement perspective transform in preview
+- [x] Define mapping from slider value → keystone transform params
+- [x] Implement perspective transform in preview
   - [ ] WebGL: homography shader sampling
-  - [ ] CPU: `ImageData` resample with bilinear
-- [ ] Integrate into export pipeline
-- [ ] Ensure constrain-crop behaves sensibly for keystone
+  - [x] CPU: `ImageData` resample with bilinear
+- [x] Integrate into export pipeline
+- [x] Ensure constrain-crop behaves sensibly for keystone
 
 ## 7) Guided Upright
 - [ ] Add guided mode state + UI toggle
