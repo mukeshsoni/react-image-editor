@@ -1,12 +1,6 @@
-import { applyColorAdjustmentsToRgbaBytes, hasNonNeutralColorAdjustments } from "./lib/color-adjustments";
-import { applySharpeningToRgbaBytes, createSharpeningBuffers, isNeutralSharpening } from "./lib/sharpening";
-import { applyLightAdjustmentsToRgbaBytes } from "./lib/light-adjustments";
-import {
-  applyToneCurveToRgbaBytes,
-  createToneCurveLuts,
-  hasNonNeutralToneCurve,
-} from "./lib/tone-curve";
-import { applyWhiteBalanceToRgbaBytes, hasNonNeutralWhiteBalance } from "./lib/white-balance";
+import { applyPixelPipelineToCanvas } from "@/editor/renderPipeline";
+import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
+import { useCropStore } from "@/store/cropStore";
 
 import type {
   ColorAdjustments,
@@ -108,6 +102,7 @@ export function renderCommittedImageToOffscreenCanvas(
   toneCurve?: ToneCurveSettings,
   colorAdjustments?: ColorAdjustments,
   sharpening?: SharpeningSettings,
+  geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings,
 ): HTMLCanvasElement | null {
   // NOTE: Crop is handled by the caller (see ExportTool) so that export can bake
   // crop first and then run the same adjustment pipeline on the cropped pixels.
@@ -137,84 +132,47 @@ export function renderCommittedImageToOffscreenCanvas(
     y: (offscreen.height - image.height) / 2,
   };
 
-  ctx.save();
-  drawImageWithRotation(ctx, image, 1, centeredOffset, rotationDegrees);
-  ctx.restore();
+  const constrainCrop = useCropStore.getState().cropSettings.constrainCrop ?? true;
+  if (constrainCrop && rotationDegrees !== 0) {
+    const maxRect = getMaxInnerAxisAlignedRectSize(offscreen.width, offscreen.height, rotationDegrees);
+    const width = Math.max(1, Math.floor(maxRect.width));
+    const height = Math.max(1, Math.floor(maxRect.height));
 
-  const shouldApplyWhiteBalance =
-    whiteBalance != null && hasNonNeutralWhiteBalance(whiteBalance);
+    offscreen.width = width;
+    offscreen.height = height;
 
-  const shouldApplyLight =
-    lightAdjustments != null &&
-    (lightAdjustments.exposure !== 0 ||
-      lightAdjustments.contrast !== 0 ||
-      lightAdjustments.highlights !== 0 ||
-      lightAdjustments.shadows !== 0 ||
-      lightAdjustments.whites !== 0 ||
-      lightAdjustments.blacks !== 0);
+    const constrainedCtx = offscreen.getContext("2d");
+    if (!constrainedCtx) return null;
 
-  const shouldApplyToneCurve = toneCurve != null && hasNonNeutralToneCurve(toneCurve);
-
-  const shouldApplyColor =
-    colorAdjustments != null && hasNonNeutralColorAdjustments(colorAdjustments);
-
-  const shouldApplySharpening =
-    sharpening != null && !isNeutralSharpening(sharpening);
-
-  if (
-    shouldApplyWhiteBalance ||
-    shouldApplyLight ||
-    shouldApplyToneCurve ||
-    shouldApplyColor ||
-    shouldApplySharpening
-  ) {
-    const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
-
-    const out = new Uint8ClampedArray(imageData.data.length);
-
-    if (shouldApplyWhiteBalance && whiteBalance) {
-      applyWhiteBalanceToRgbaBytes(imageData.data, out, whiteBalance);
+    if (background === "white") {
+      constrainedCtx.fillStyle = "#ffffff";
+      constrainedCtx.fillRect(0, 0, width, height);
     } else {
-      out.set(imageData.data);
+      constrainedCtx.clearRect(0, 0, width, height);
     }
 
-    if (shouldApplyLight && lightAdjustments) {
-      const lightOut = new Uint8ClampedArray(out.length);
-      applyLightAdjustmentsToRgbaBytes(out, lightOut, lightAdjustments);
-      out.set(lightOut);
-    }
+    const constrainedOffset = {
+      x: (width - image.width) / 2,
+      y: (height - image.height) / 2,
+    };
 
-    if (shouldApplyToneCurve && toneCurve) {
-      const luts = createToneCurveLuts(toneCurve);
-      const toneOut = new Uint8ClampedArray(out.length);
-      applyToneCurveToRgbaBytes(out, toneOut, luts);
-      out.set(toneOut);
-    }
-
-    if (shouldApplyColor && colorAdjustments) {
-      const colorOut = new Uint8ClampedArray(out.length);
-      applyColorAdjustmentsToRgbaBytes(out, colorOut, colorAdjustments);
-      out.set(colorOut);
-    }
-
-    if (shouldApplySharpening && sharpening) {
-      const buffers = createSharpeningBuffers(offscreen.width * offscreen.height);
-      const sharpened = new Uint8ClampedArray(out.length);
-
-      applySharpeningToRgbaBytes(
-        out,
-        sharpened,
-        offscreen.width,
-        offscreen.height,
-        sharpening,
-        buffers,
-      );
-
-      out.set(sharpened);
-    }
-
-    ctx.putImageData(new ImageData(out, offscreen.width, offscreen.height), 0, 0);
+    constrainedCtx.save();
+    drawImageWithRotation(constrainedCtx, image, 1, constrainedOffset, rotationDegrees);
+    constrainedCtx.restore();
+  } else {
+    ctx.save();
+    drawImageWithRotation(ctx, image, 1, centeredOffset, rotationDegrees);
+    ctx.restore();
   }
+
+  applyPixelPipelineToCanvas(offscreen, {
+    geometryOptics,
+    whiteBalance,
+    lightAdjustments,
+    toneCurve,
+    colorAdjustments,
+    sharpening,
+  });
 
   return offscreen;
 }

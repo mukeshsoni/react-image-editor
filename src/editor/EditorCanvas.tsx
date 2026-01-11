@@ -20,6 +20,7 @@ import type {
 import { useCropStore } from "@/store/cropStore";
 import { useColorStore } from "@/store/colorStore";
 import { useDenoiseStore } from "@/store/denoiseStore";
+import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
 import { useLightStore } from "@/store/lightStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
@@ -53,6 +54,7 @@ function renderImageToCanvas(
   denoise?: DenoiseSettings,
   sharpening?: SharpeningSettings,
   cache?: RenderCache,
+  geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings,
 ) {
   if (!canvasRef) return;
 
@@ -122,17 +124,19 @@ function renderImageToCanvas(
     cache.baseKey = baseKey;
   }
 
-  const context: PixelPipelineContext = {
-    width: canvasWidth,
-    height: canvasHeight,
+   const context: PixelPipelineContext = {
+     width: canvasWidth,
+     height: canvasHeight,
 
-    whiteBalance,
-    lightAdjustments,
-    toneCurve,
-    colorAdjustments,
-    denoise,
-    sharpening,
-  };
+     geometryOptics,
+
+     whiteBalance,
+     lightAdjustments,
+     toneCurve,
+     colorAdjustments,
+     denoise,
+     sharpening,
+   };
 
   cache.buffers.in.set(cache.basePixels);
   runPipeline(cache.pipeline, cache.buffers, context);
@@ -180,6 +184,7 @@ export function EditorCanvas({
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
   const denoise = useDenoiseStore((state) => state.denoise);
   const sharpening = useSharpeningStore((state) => state.sharpening);
+  const geometryOptics = useGeometryOpticsStore((state) => state.settings);
 
   const renderRef = useRef<number | null>(null);
   const renderCacheRef = useRef<RenderCache | null>(null);
@@ -222,23 +227,26 @@ export function EditorCanvas({
         denoise,
         sharpening,
         renderCacheRef.current ?? undefined,
+        geometryOptics,
       );
     });
-  }, [
-    canvasRef,
-    colorAdjustments,
-    cropCommit,
-    cropCommitted,
-    imageRef,
-    lightAdjustments,
-    offset,
-    rotation,
-    toneCurve,
-    whiteBalance,
-    zoomLevel,
-    denoise,
-    sharpening,
-  ]);
+   }, [
+     canvasRef,
+     colorAdjustments,
+     cropCommit,
+     cropCommitted,
+     geometryOptics,
+     imageRef,
+     lightAdjustments,
+     offset,
+     rotation,
+     toneCurve,
+     whiteBalance,
+     zoomLevel,
+     denoise,
+     sharpening,
+   ]);
+
 
   return (
     <canvas

@@ -17,6 +17,11 @@ const hoisted = vi.hoisted(() => {
           rect: { x: 0, y: 0, width: 0, height: 0 },
           settings: { aspectRatio: "original", aspectRatioLocked: false },
         },
+        geometryOptics: {
+          perspective: { vertical: 0, horizontal: 0, aspect: 0 },
+          lensCorrections: { distortion: 0, chromaticAberration: false },
+          optics: { vignette: 0, grain: 0, dehaze: 0 },
+        },
         whiteBalance: {
           temperatureKelvin: 6500,
           tint: 0,
@@ -70,13 +75,14 @@ const hoisted = vi.hoisted(() => {
           detail: 25,
           masking: 0,
         },
-        denoise: {
-          luminance: 0,
-          color: 0,
-          detail: 50,
+         denoise: {
+           luminance: 0,
+           color: 0,
+           detail: 50,
         },
-      },
-      camera: {
+       },
+       camera: {
+
         zoomLevel: 1,
         offset: { x: 0, y: 0 },
       },

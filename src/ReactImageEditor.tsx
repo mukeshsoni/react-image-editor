@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MinusIcon, PlusIcon } from "@radix-ui/react-icons";
 import { getPanelGroupElement } from "react-resizable-panels";
 
+import { DebouncedRange } from "@/components/DebouncedRange";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -12,10 +13,17 @@ import {
 import { CropToolButtons, CropToolOptions, CropToolOverlay } from "@/editor/CropTool";
 import { EditorCanvas } from "@/editor/EditorCanvas";
 import { ExportTool } from "@/editor/ExportTool";
+import { GeometryOpticsPanel } from "@/editor/GeometryOpticsPanel";
 import { getPanelRegistry } from "@/editor/panels";
+import {
+  downscaleLuminanceNearest,
+  estimateStraightenDegreesFromLuminance,
+  extractLuminance,
+} from "@/geometry/auto-straighten";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 import { applyEditsSnapshot } from "@/store";
 import type { HistoryEntry } from "@/store";
+import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
 import {
   areEditsEqual,
   createEditorSerializableState,
@@ -183,6 +191,13 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   const [isPickingWhiteBalance, setIsPickingWhiteBalance] = useState(false);
 
+  const [isAutoStraightening, setIsAutoStraightening] = useState(false);
+  const [guidedUprightEnabled, setGuidedUprightEnabled] = useState(false);
+
+  const geometryOptics = useGeometryOpticsStore((state) => state.settings);
+  const setPerspective = useGeometryOpticsStore((state) => state.setPerspective);
+
+
   useEffect(() => {
     if (!isPickingWhiteBalance) return;
 
@@ -206,6 +221,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const cropSettings = useCropStore((state) => state.cropSettings);
   const setRotation = useCropStore((state) => state.setRotation);
   const resetRotation = useCropStore((state) => state.resetRotation);
+  const setConstrainCrop = useCropStore((state) => state.setConstrainCrop);
 
   const resetHistoryToBaseline = useHistoryStore((state) => state.resetToBaseline);
 
@@ -520,6 +536,39 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
   function handleResetZoomClick() {
     resetZoom();
+  }
+
+  async function handleAutoStraighten() {
+    if (!isImageLoaded) return;
+    if (!canvasRef.current) return;
+
+    setIsAutoStraightening(true);
+    try {
+      // Analyze a downscaled luminance buffer from the current canvas.
+      const ctx = canvasRef.current.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return;
+
+      const width = Math.max(1, Math.floor(canvasRef.current.width));
+      const height = Math.max(1, Math.floor(canvasRef.current.height));
+      const imageData = ctx.getImageData(0, 0, width, height);
+
+      const luminance = extractLuminance(imageData.data, width, height);
+      const scaled = downscaleLuminanceNearest(luminance, width, height, 320);
+      const result = estimateStraightenDegreesFromLuminance(
+        scaled.grays,
+        scaled.width,
+        scaled.height,
+      );
+
+      // Guardrails: ignore low confidence.
+      if (result.confidence < 0.12) {
+        return;
+      }
+
+      setRotation(result.degrees);
+    } finally {
+      setIsAutoStraightening(false);
+    }
   }
   function handleImagePanelResize(panelWidth: number) {
     const CONTAINER_PADDING = 32;
@@ -953,18 +1002,258 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 </div>
               </details>
 
-              {getPanelRegistry()
-                .filter((panel) => panel.groupId !== "basic")
-                .map((panel) => (
-                  <panel.Component
-                    key={panel.id}
-                    isImageLoaded={isImageLoaded}
-                    Slider={LightSlider}
-                    formatSigned={formatSigned}
-                    formatSignedInt={formatSignedInt}
-                    setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                  />
-                ))}
+              <details className="rounded-md border bg-white" open>
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Transform</span>
+                  </span>
+                  <span className="text-xs text-gray-500">▾</span>
+                </summary>
+
+                <div className="px-3 pb-3">
+                  <div className="border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Straighten</div>
+                    </div>
+
+                    <div className="mt-2 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs" htmlFor="transform-rotate">
+                          Rotate
+                        </label>
+                        <span className="text-xs font-medium tabular-nums">
+                          {(cropSettings.rotation ?? 0).toFixed(1)}°
+                        </span>
+                      </div>
+
+                      <DebouncedRange
+                        id="transform-rotate"
+                        label="Rotate"
+                        value={cropSettings.rotation ?? 0}
+                        defaultValue={0}
+                        min={-45}
+                        max={45}
+                        step={0.1}
+                        onValueChange={setRotation}
+                        className="w-full"
+                        disabled={!isImageLoaded}
+                      />
+
+                      <div className="flex justify-between gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          onClick={resetRotation}
+                          disabled={!isImageLoaded}
+                        >
+                          Reset
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          onClick={handleAutoStraighten}
+                          disabled={!isImageLoaded || isAutoStraightening}
+                        >
+                          {isAutoStraightening ? "Straightening…" : "Auto Straighten"}
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-xs" htmlFor="transform-rotate-input">
+                          Angle
+                        </label>
+                        <input
+                          id="transform-rotate-input"
+                          type="number"
+                          min={-45}
+                          max={45}
+                          step={0.1}
+                          value={(cropSettings.rotation ?? 0).toFixed(1)}
+                          onChange={(e) => setRotation(Number(e.target.value))}
+                          disabled={!isImageLoaded}
+                          className="w-[84px] rounded-sm border bg-white px-2 py-1 text-xs text-gray-700"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3 mt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Perspective</div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setPerspective({ vertical: 0, horizontal: 0, aspect: 0 })}
+                        disabled={!isImageLoaded}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+
+                    <div className="mt-2 flex flex-col gap-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs" htmlFor="transform-vertical">
+                            Vertical
+                          </label>
+                          <span className="text-xs font-medium tabular-nums">
+                            {formatSignedInt(geometryOptics.perspective.vertical)}
+                          </span>
+                        </div>
+                          <DebouncedRange
+                            id="transform-vertical"
+                            label="Vertical"
+                            value={geometryOptics.perspective.vertical}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            onValueChange={(value) => setPerspective({ vertical: value })}
+                            className="w-full"
+                            disabled={!isImageLoaded}
+                          />
+
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs" htmlFor="transform-horizontal">
+                            Horizontal
+                          </label>
+                          <span className="text-xs font-medium tabular-nums">
+                            {formatSignedInt(geometryOptics.perspective.horizontal)}
+                          </span>
+                        </div>
+                          <DebouncedRange
+                            id="transform-horizontal"
+                            label="Horizontal"
+                            value={geometryOptics.perspective.horizontal}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            onValueChange={(value) => setPerspective({ horizontal: value })}
+                            className="w-full"
+                            disabled={!isImageLoaded}
+                          />
+
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs" htmlFor="transform-aspect">
+                            Aspect
+                          </label>
+                          <span className="text-xs font-medium tabular-nums">
+                            {formatSignedInt(geometryOptics.perspective.aspect ?? 0)}
+                          </span>
+                        </div>
+                          <DebouncedRange
+                            id="transform-aspect"
+                            label="Aspect"
+                            value={geometryOptics.perspective.aspect ?? 0}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            onValueChange={(value) => setPerspective({ aspect: value })}
+                            className="w-full"
+                            disabled={!isImageLoaded}
+                          />
+
+                      </div>
+
+                      <label className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={cropSettings.constrainCrop ?? true}
+                          onChange={(e) => setConstrainCrop(e.target.checked)}
+                          disabled={!isImageLoaded}
+                        />
+                        Constrain crop
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3 mt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-gray-700">Guided Upright</div>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={guidedUprightEnabled}
+                          onChange={(e) => setGuidedUprightEnabled(e.target.checked)}
+                          disabled={!isImageLoaded}
+                        />
+                        Guided
+                      </label>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setGuidedUprightEnabled(false)}
+                        disabled={!isImageLoaded || !guidedUprightEnabled}
+                      >
+                        Apply Guided
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+               <details className="rounded-md border bg-white" open>
+                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                   <span className="flex items-center gap-2">
+                     <span>Lens Corrections</span>
+                   </span>
+                   <span className="text-xs text-gray-500">▾</span>
+                 </summary>
+
+                 <div className="px-3 pb-3">
+                   <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="lens" />
+                 </div>
+               </details>
+
+               <details className="rounded-md border bg-white" open>
+                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                   <span className="flex items-center gap-2">
+                     <span>Optics</span>
+                   </span>
+                   <span className="text-xs text-gray-500">▾</span>
+                 </summary>
+
+                 <div className="px-3 pb-3">
+                   <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="optics" />
+                 </div>
+               </details>
+
+  
+                {getPanelRegistry()
+
+                 .filter((panel) => panel.groupId !== "basic")
+                 .map((panel) => (
+                   <panel.Component
+                     key={panel.id}
+                     isImageLoaded={isImageLoaded}
+                     Slider={LightSlider}
+                     formatSigned={formatSigned}
+                     formatSignedInt={formatSignedInt}
+                     setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                   />
+                 ))}
+
+
 
 
               </div>

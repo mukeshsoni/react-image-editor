@@ -2,12 +2,13 @@ import type {
   ColorAdjustments,
   CropRect,
   CropSettings,
-  LightAdjustments,
   DenoiseSettings,
+  LightAdjustments,
   SharpeningSettings,
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "./cropStore";
+import type { GeometryOpticsSettings } from "./geometryOpticsStore";
 
 export type ImageEditorEdits = {
   version: 1;
@@ -25,6 +26,7 @@ export type ImageEditorEdits = {
       rotationDegrees: number;
     };
   };
+  geometryOptics: GeometryOpticsSettings;
   whiteBalance: WhiteBalanceSettings;
   light: LightAdjustments;
   color: ColorAdjustments;

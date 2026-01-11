@@ -17,6 +17,7 @@ import {
 } from "@/export-download";
 import { createOffscreenCropCanvas } from "@/editor/exportCrop";
 import { useColorStore } from "@/store/colorStore";
+import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
 import { useLightStore } from "@/store/lightStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
@@ -61,6 +62,7 @@ export function ExportTool({
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
   const sharpening = useSharpeningStore((state) => state.sharpening);
+  const geometryOptics = useGeometryOpticsStore((state) => state.settings);
 
   async function handleDownload() {
     if (!imageRef.current) return;
@@ -90,16 +92,18 @@ export function ExportTool({
             })
           : null;
 
-      const offscreen = renderCommittedImageToOffscreenCanvas(
-        cropCanvas ?? baseImage,
-        cropCanvas ? 0 : rotation,
-        background,
-        whiteBalance,
-        lightAdjustments,
-        toneCurve,
-        colorAdjustments,
-        sharpening,
-      );
+       const offscreen = renderCommittedImageToOffscreenCanvas(
+         cropCanvas ?? baseImage,
+         cropCanvas ? 0 : rotation,
+         background,
+         whiteBalance,
+         lightAdjustments,
+         toneCurve,
+         colorAdjustments,
+         sharpening,
+         geometryOptics,
+       );
+
 
       if (!offscreen) {
         setExportError("Failed to export image");

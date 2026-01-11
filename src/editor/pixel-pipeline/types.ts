@@ -6,6 +6,7 @@ import type {
   ToneCurveSettings,
   WhiteBalanceSettings,
 } from "@/store/cropStore";
+import type { GeometryOpticsSettings } from "@/store/geometryOpticsStore";
 
 export type PipelineBuffers = {
   in: Uint8ClampedArray;
@@ -33,6 +34,8 @@ export function ensurePipelineBufferCapacity(
 export type PixelPipelineContext = {
   width?: number;
   height?: number;
+
+  geometryOptics?: GeometryOpticsSettings;
 
   whiteBalance?: WhiteBalanceSettings;
   lightAdjustments?: LightAdjustments;
