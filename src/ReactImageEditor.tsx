@@ -32,6 +32,7 @@ import {
 } from "@/store/historyRecording";
 
 import type { ExportFormat } from "./export-download";
+import { getMousePosInCanvas } from "./dom-helpers";
 import { estimateWhiteBalanceFromRgb, sampleAverageRgb } from "./lib/white-balance";
 import {
   calculateInitialImageStartOffset,
@@ -45,6 +46,7 @@ import { useResetAll } from "./store/editorActions";
 import { type Bounds, useCropStore } from "./store/cropStore";
 import { selectCanRedo, selectCanUndo } from "./store/historyStore";
 import { useDenoiseStore } from "./store/denoiseStore";
+import { useHealingStore } from "./store/healingStore";
 import { useSharpeningStore } from "./store/sharpeningStore";
 import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
 
@@ -183,6 +185,8 @@ type Props = {
 export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
+  const healingBrush = useHealingStore((state) => state.healingBrush);
+  const [healingCursor, setHealingCursor] = useState<{ x: number; y: number } | null>(null);
   const cropCommitted = useCropStore((state) => state.cropCommitted);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
@@ -251,47 +255,44 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const isApplyingHistoryRef = useRef(false);
 
   const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, setCamera, listeners } =
-    useCanvasZoomPan(
-      canvasRef,
-      imageRef,
-      {
-        enableWheel: true,
-        onCameraChange: (camera) => {
-          if (isInitializingRef.current || isApplyingHistoryRef.current) {
-            zoomPanStateRef.current = camera;
+    useCanvasZoomPan(canvasRef, imageRef, {
+      enableWheel: true,
+      onCameraChange: (camera) => {
+        if (isInitializingRef.current || isApplyingHistoryRef.current) {
+          zoomPanStateRef.current = camera;
+          return;
+        }
+
+        if (commitCameraTimeoutRef.current) {
+          clearTimeout(commitCameraTimeoutRef.current);
+        }
+
+        commitCameraTimeoutRef.current = setTimeout(() => {
+          commitCameraTimeoutRef.current = null;
+
+          const lastCamera = zoomPanStateRef.current;
+          if (
+            lastCamera.zoomLevel === camera.zoomLevel &&
+            lastCamera.offset.x === camera.offset.x &&
+            lastCamera.offset.y === camera.offset.y
+          ) {
             return;
           }
 
-          if (commitCameraTimeoutRef.current) {
-            clearTimeout(commitCameraTimeoutRef.current);
-          }
+          editsPush({
+            label: "Zoom/Pan",
+            state: createEditorSerializableState({
+              edits: lastCommittedEditsRef.current,
+              zoomLevel: camera.zoomLevel,
+              offset: camera.offset,
+            }),
+          });
 
-          commitCameraTimeoutRef.current = setTimeout(() => {
-            commitCameraTimeoutRef.current = null;
-
-            const lastCamera = zoomPanStateRef.current;
-            if (
-              lastCamera.zoomLevel === camera.zoomLevel &&
-              lastCamera.offset.x === camera.offset.x &&
-              lastCamera.offset.y === camera.offset.y
-            ) {
-              return;
-            }
-
-            editsPush({
-              label: "Zoom/Pan",
-              state: createEditorSerializableState({
-                edits: lastCommittedEditsRef.current,
-                zoomLevel: camera.zoomLevel,
-                offset: camera.offset,
-              }),
-            });
-
-            zoomPanStateRef.current = camera;
-          }, HISTORY_COMMIT_DEBOUNCE_MS);
-        },
+          zoomPanStateRef.current = camera;
+        }, HISTORY_COMMIT_DEBOUNCE_MS);
       },
-    );
+    });
+
 
   useEffect(() => {
     return () => {
@@ -741,14 +742,30 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                   </div>
                 ) : null}
 
-              <EditorCanvas
-                canvasRef={canvasRef}
-                imageRef={imageRef}
-                zoomLevel={zoomLevel}
-                offset={offset}
-                rotation={rotation}
-                listeners={listeners}
-                isPickingWhiteBalance={isPickingWhiteBalance}
+               <EditorCanvas
+                 canvasRef={canvasRef}
+                 imageRef={imageRef}
+                 zoomLevel={zoomLevel}
+                 offset={offset}
+                 rotation={rotation}
+                 listeners={
+                   healingModeEnabled
+                     ? {
+                         ...listeners,
+                         onPointerMove: (event) => {
+                           if (!canvasRef.current) return;
+                           const pos = getMousePosInCanvas(canvasRef.current, event);
+                           setHealingCursor({ x: pos.x, y: pos.y });
+                         },
+                         onPointerLeave: () => {
+                           setHealingCursor(null);
+                         },
+                       }
+                     : listeners
+                 }
+                 cursor={healingModeEnabled ? "none" : undefined}
+                 isPickingWhiteBalance={isPickingWhiteBalance}
+
                 onPickWhiteBalance={(event) => {
                   if (!isPickingWhiteBalance) {
                     return;
@@ -799,8 +816,27 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                     // Likely a tainted canvas; silently ignore for now.
                   }
                 }}
-              />
-              <CropToolOverlay
+               />
+
+               {healingModeEnabled && healingCursor ? (
+                 <div
+                   className="pointer-events-none absolute left-0 top-0 z-10"
+                   style={{
+                     transform: `translate(${healingCursor.x}px, ${healingCursor.y}px)`,
+                   }}
+                 >
+                   <div
+                     className="rounded-full border border-white shadow-[0_0_0_1px_rgba(0,0,0,0.65)]"
+                     style={{
+                       width: Math.max(1, healingBrush.size * zoomLevel),
+                       height: Math.max(1, healingBrush.size * zoomLevel),
+                       transform: "translate(-50%, -50%)",
+                     }}
+                   />
+                 </div>
+               ) : null}
+               <CropToolOverlay
+
                 cropMode={cropMode}
                 imageRef={imageRef}
                 cropBounds={cropBounds}

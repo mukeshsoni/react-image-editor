@@ -65,9 +65,9 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [x] Keyboard-accessible controls
 
 ## 3) Pointer handling + coordinate mapping
-- [ ] Render a circular brush cursor overlay when Healing active
-  - [ ] Cursor scales correctly with zoom (screen px)
-  - [ ] Cursor hides when pointer leaves canvas
+- [x] Render a circular brush cursor overlay when Healing active
+  - [x] Cursor scales correctly with zoom (screen px)
+  - [x] Cursor hides when pointer leaves canvas
 - [ ] Convert pointer events from canvas space → image space
   - [ ] Use same transform path as crop/zoom/pan
   - [ ] Store points in image space (stable across zoom/pan)

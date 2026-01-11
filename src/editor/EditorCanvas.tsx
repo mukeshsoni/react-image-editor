@@ -162,6 +162,7 @@ type Props = {
   offset: { x: number; y: number };
   rotation: number;
   listeners: import("react").ComponentPropsWithoutRef<"canvas">;
+  cursor?: string;
   isPickingWhiteBalance: boolean;
   onPickWhiteBalance: import("react").MouseEventHandler<HTMLCanvasElement>;
 };
@@ -173,6 +174,7 @@ export function EditorCanvas({
   offset,
   rotation,
   listeners,
+  cursor,
   isPickingWhiteBalance,
   onPickWhiteBalance,
 }: Props) {
@@ -253,7 +255,7 @@ export function EditorCanvas({
       ref={canvasRef}
       {...listeners}
       onClick={onPickWhiteBalance}
-      style={{ cursor: isPickingWhiteBalance ? "crosshair" : undefined }}
+      style={{ cursor: isPickingWhiteBalance ? "crosshair" : cursor }}
     />
   );
 }
