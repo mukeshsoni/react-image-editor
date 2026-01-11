@@ -71,11 +71,11 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
 - [x] Convert pointer events from canvas space → image space
   - [x] Use same transform path as crop/zoom/pan
   - [x] Store points in image space (stable across zoom/pan)
-- [ ] Input behaviors
-  - [ ] `pointerdown` begins stroke (or spot)
-  - [ ] `pointermove` appends points (throttle / distance threshold)
-  - [ ] `pointerup/cancel` commits op
-  - [ ] `Space + drag` pans without painting (if chosen)
+- [x] Input behaviors
+  - [x] `pointerdown` begins stroke (or spot)
+  - [x] `pointermove` appends points (throttle / distance threshold)
+  - [x] `pointerup/cancel` commits op
+  - [x] `Space + drag` pans without painting
 
 ## 4) Preview pipeline support (non-destructive)
 - [ ] Add a healing stage to the render pipeline

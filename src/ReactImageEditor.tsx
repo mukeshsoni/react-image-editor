@@ -185,11 +185,19 @@ type Props = {
 export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
+  const healingMode = useHealingStore((state) => state.healingMode);
   const healingBrush = useHealingStore((state) => state.healingBrush);
+  const addHealingOp = useHealingStore((state) => state.addHealingOp);
   const [healingCursor, setHealingCursor] = useState<{
     canvas: { x: number; y: number };
     image: import("@/store/cropStore").Point | null;
   } | null>(null);
+  const draftStrokeRef = useRef<{ points: import("@/store/cropStore").Point[] } | null>(null);
+  const panRef = useRef<{ isPanning: boolean; last: { x: number; y: number } | null }>({
+    isPanning: false,
+    last: null,
+  });
+  const spaceDownRef = useRef(false);
   const cropCommitted = useCropStore((state) => state.cropCommitted);
   const cropCommit = useCropStore((state) => state.cropCommit);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -223,6 +231,36 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isPickingWhiteBalance]);
+
+  useEffect(() => {
+    if (!healingModeEnabled) {
+      spaceDownRef.current = false;
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== " ") return;
+
+      event.preventDefault();
+      spaceDownRef.current = true;
+    }
+
+    function handleKeyUp(event: KeyboardEvent) {
+      if (event.key !== " ") return;
+
+      event.preventDefault();
+      spaceDownRef.current = false;
+      panRef.current.isPanning = false;
+      panRef.current.last = null;
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [healingModeEnabled]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -819,18 +857,111 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                          onMouseMove: undefined,
                          onMouseUp: undefined,
                          onMouseLeave: undefined,
+                         onPointerDown: (event) => {
+                           if (!canvasRef.current) return;
+                           if (!healingModeEnabled) return;
+
+                           const isPanGesture = spaceDownRef.current;
+                           const canvasPos = getMousePosInCanvas(canvasRef.current, event);
+
+                           if (isPanGesture) {
+                             panRef.current.isPanning = true;
+                             panRef.current.last = canvasPos;
+                             return;
+                           }
+
+                           const imagePos = canvasPointToImagePoint(canvasPos);
+                           if (!imagePos) return;
+
+                           event.preventDefault();
+                           (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+
+                           draftStrokeRef.current = { points: [imagePos] };
+                         },
                          onPointerMove: (event) => {
                            if (!canvasRef.current) return;
+
                            const canvasPos = getMousePosInCanvas(canvasRef.current, event);
-                           setHealingCursor({
-                             canvas: canvasPos,
-                             image: canvasPointToImagePoint(canvasPos),
+                           const imagePos = canvasPointToImagePoint(canvasPos);
+                           setHealingCursor({ canvas: canvasPos, image: imagePos });
+
+                           if (panRef.current.isPanning) {
+                             const last = panRef.current.last;
+                             if (!last) {
+                               panRef.current.last = canvasPos;
+                               return;
+                             }
+
+                             const dx = canvasPos.x - last.x;
+                             const dy = canvasPos.y - last.y;
+                             panRef.current.last = canvasPos;
+
+                             setCamera(zoomLevel, {
+                               x: offset.x + dx,
+                               y: offset.y + dy,
+                             });
+
+                             return;
+                           }
+
+                           const draft = draftStrokeRef.current;
+                           if (!draft) return;
+                           if (!imagePos) return;
+
+                           const lastPoint = draft.points[draft.points.length - 1];
+                           const dx = imagePos.x - lastPoint.x;
+                           const dy = imagePos.y - lastPoint.y;
+                           const distSq = dx * dx + dy * dy;
+                           if (distSq < 1.5 * 1.5) return;
+
+                           draft.points.push(imagePos);
+                         },
+                         onPointerUp: () => {
+                           panRef.current.isPanning = false;
+                           panRef.current.last = null;
+
+                           const draft = draftStrokeRef.current;
+                           draftStrokeRef.current = null;
+
+                           if (!draft) return;
+                           if (draft.points.length === 0) return;
+
+                           const id =
+                             typeof crypto !== "undefined" && "randomUUID" in crypto
+                               ? crypto.randomUUID()
+                               : `${Date.now()}-${Math.random()}`;
+
+                           if (healingMode === "spot") {
+                             const center = draft.points[draft.points.length - 1];
+                             addHealingOp({
+                               id,
+                               type: "spot",
+                               mode: "spot",
+                               center,
+                               radius: healingBrush.size / 2,
+                               feather: healingBrush.feather,
+                               opacity: 1,
+                             });
+                             return;
+                           }
+
+                           addHealingOp({
+                             id,
+                             type: "stroke",
+                             mode: healingMode,
+                             points: draft.points,
+                             radius: healingBrush.size / 2,
+                             feather: healingBrush.feather,
+                             opacity: 1,
                            });
                          },
-                         onPointerLeave: () => {
+                         onPointerCancel: () => {
+                           panRef.current.isPanning = false;
+                           panRef.current.last = null;
+                           draftStrokeRef.current = null;
                            setHealingCursor(null);
                          },
-                         onPointerCancel: () => {
+                         onPointerLeave: () => {
                            setHealingCursor(null);
                          },
                        }
