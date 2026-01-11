@@ -13,6 +13,7 @@ import {
 import { CropToolButtons, CropToolOptions, CropToolOverlay } from "@/editor/CropTool";
 import { EditorCanvas } from "@/editor/EditorCanvas";
 import { ExportTool } from "@/editor/ExportTool";
+import { HealingToolButtons, HealingToolPanel } from "@/editor/HealingTool";
 import { GeometryOpticsPanel } from "@/editor/GeometryOpticsPanel";
 import { getPanelRegistry } from "@/editor/panels";
 import {
@@ -181,6 +182,7 @@ type Props = {
 
 export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [cropMode, setCropMode] = useState(false);
+  const [healingModeEnabled, setHealingModeEnabled] = useState(false);
   const cropCommitted = useCropStore((state) => state.cropCommitted);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
@@ -918,11 +920,31 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                    </Button>
                  </div>
 
-                  <CropToolButtons
-                    cropMode={cropMode}
-                    setCropMode={setCropMode}
-                    hasAppliedCrop={cropCommitted}
-                    onResetCrop={() => {
+                   <HealingToolButtons
+                     enabled={healingModeEnabled}
+                     disabled={!isImageLoaded}
+                     onToggle={() => {
+                       setHealingModeEnabled((prev) => {
+                         const next = !prev;
+                         if (next) {
+                           setCropMode(false);
+                         }
+                         return next;
+                       });
+                     }}
+                   />
+
+                   <CropToolButtons
+                     cropMode={cropMode}
+                     setCropMode={(next) => {
+                       setCropMode(next);
+                       if (next) {
+                         setHealingModeEnabled(false);
+                       }
+                     }}
+                     hasAppliedCrop={cropCommitted}
+                     onResetCrop={() => {
+
                       if (!originalImageRef.current) return;
                       imageRef.current = originalImageRef.current;
                       useCropStore.getState?.().clearCommittedCrop?.();
@@ -947,15 +969,31 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                   />
                 </div>
 
-                <details className="rounded-md border bg-white" open>
-                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <span>Basic</span>
-                  </span>
-                  <span className="text-xs text-gray-500">▾</span>
-                </summary>
+                 {healingModeEnabled ? (
+                   <details className="rounded-md border bg-white" open>
+                     <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                       <span className="flex items-center gap-2">
+                         <span>Healing</span>
+                       </span>
+                       <span className="text-xs text-gray-500">▾</span>
+                     </summary>
+                     <HealingToolPanel
+                       enabled={healingModeEnabled}
+                       isImageLoaded={isImageLoaded}
+                     />
+                   </details>
+                 ) : null}
 
-                <div className="px-3 pb-3">
+                 <details className="rounded-md border bg-white" open>
+                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                   <span className="flex items-center gap-2">
+                     <span>Basic</span>
+                   </span>
+                   <span className="text-xs text-gray-500">▾</span>
+                 </summary>
+ 
+                 <div className="px-3 pb-3">
+
                   <div className="flex items-center justify-between py-2">
                     <div className="flex gap-2">
                       <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
