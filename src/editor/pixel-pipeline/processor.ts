@@ -1,6 +1,7 @@
 import type { PipelineBuffers, PixelPipelineContext } from "./types";
 
 export type PixelProcessorId =
+  | "healing"
   | "white-balance"
   | "light"
   | "tone-curve"

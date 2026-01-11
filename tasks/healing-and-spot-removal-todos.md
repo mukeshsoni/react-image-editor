@@ -78,9 +78,9 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [x] `Space + drag` pans without painting
 
 ## 4) Preview pipeline support (non-destructive)
-- [ ] Add a healing stage to the render pipeline
-  - [ ] Preview: apply ops when drawing to main canvas
-  - [ ] Export: apply same ops deterministically
+- [x] Add a healing stage to the render pipeline
+  - [x] Preview: apply ops when drawing to main canvas
+  - [x] Export: apply same ops deterministically
 - [ ] Maintain an offscreen working canvas for incremental updates while painting
   - [ ] Avoid recomputing the full pipeline per pointer move
   - [ ] Simplify points during drag (distance threshold)

@@ -20,7 +20,9 @@ import type {
 import { useCropStore } from "@/store/cropStore";
 import { useColorStore } from "@/store/colorStore";
 import { useDenoiseStore } from "@/store/denoiseStore";
+import { projectHealingOpsToCanvas } from "@/editor/pixel-pipeline/processors/healing";
 import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
+import { useHealingStore } from "@/store/healingStore";
 import { useLightStore } from "@/store/lightStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
@@ -55,6 +57,7 @@ function renderImageToCanvas(
   sharpening?: SharpeningSettings,
   cache?: RenderCache,
   geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings,
+  healingOps?: import("@/store/healingStore").HealingOp[],
 ) {
   if (!canvasRef) return;
 
@@ -124,11 +127,31 @@ function renderImageToCanvas(
     cache.baseKey = baseKey;
   }
 
+   const projectedHealingOps =
+     healingOps && healingOps.length > 0
+       ? projectHealingOpsToCanvas({
+           ops: healingOps,
+           imageSize: { width: imageRef.width, height: imageRef.height },
+           draw: cropCommit
+             ? {
+                 zoomLevel: 1,
+                 offset: cropCommit.bakedOffset,
+                 rotationDegrees: cropCommit.rotationDegrees,
+               }
+             : {
+                 zoomLevel,
+                 offset,
+                 rotationDegrees: rotation,
+               },
+         })
+       : undefined;
+
    const context: PixelPipelineContext = {
      width: canvasWidth,
      height: canvasHeight,
 
      geometryOptics,
+     healingOps: projectedHealingOps,
 
      whiteBalance,
      lightAdjustments,
@@ -187,6 +210,7 @@ export function EditorCanvas({
   const denoise = useDenoiseStore((state) => state.denoise);
   const sharpening = useSharpeningStore((state) => state.sharpening);
   const geometryOptics = useGeometryOpticsStore((state) => state.settings);
+  const healingOps = useHealingStore((state) => state.healingOps);
 
   const renderRef = useRef<number | null>(null);
   const renderCacheRef = useRef<RenderCache | null>(null);
@@ -215,39 +239,42 @@ export function EditorCanvas({
     renderRef.current = requestAnimationFrame(() => {
       if (!imageRef.current) return;
 
-      renderImageToCanvas(
-        canvasRef.current,
-        imageRef.current,
-        zoomLevel,
-        offset,
-        rotation,
-        cropCommitted ? cropCommit : null,
-        whiteBalance,
-        lightAdjustments,
-        toneCurve,
-        colorAdjustments,
-        denoise,
-        sharpening,
-        renderCacheRef.current ?? undefined,
-        geometryOptics,
-      );
+        renderImageToCanvas(
+          canvasRef.current,
+          imageRef.current,
+          zoomLevel,
+          offset,
+          rotation,
+          cropCommitted ? cropCommit : null,
+          whiteBalance,
+          lightAdjustments,
+          toneCurve,
+          colorAdjustments,
+          denoise,
+          sharpening,
+          renderCacheRef.current ?? undefined,
+          geometryOptics,
+          healingOps,
+        );
     });
-   }, [
-     canvasRef,
-     colorAdjustments,
-     cropCommit,
-     cropCommitted,
-     geometryOptics,
-     imageRef,
-     lightAdjustments,
-     offset,
-     rotation,
-     toneCurve,
-     whiteBalance,
-     zoomLevel,
-     denoise,
-     sharpening,
-   ]);
+    }, [
+      canvasRef,
+      colorAdjustments,
+      cropCommit,
+      cropCommitted,
+      geometryOptics,
+      healingOps,
+      imageRef,
+      lightAdjustments,
+      offset,
+      rotation,
+      toneCurve,
+      whiteBalance,
+      zoomLevel,
+      denoise,
+      sharpening,
+    ]);
+
 
 
   return (

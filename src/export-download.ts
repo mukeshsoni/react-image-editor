@@ -1,6 +1,9 @@
 import { applyPixelPipelineToCanvas } from "@/editor/renderPipeline";
+import { projectHealingOpsToCanvas } from "@/editor/pixel-pipeline/processors/healing";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 import { useCropStore } from "@/store/cropStore";
+
+import type { HealingOp } from "@/store/healingStore";
 
 import type {
   ColorAdjustments,
@@ -103,6 +106,7 @@ export function renderCommittedImageToOffscreenCanvas(
   colorAdjustments?: ColorAdjustments,
   sharpening?: SharpeningSettings,
   geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings,
+  healingOps?: HealingOp[],
 ): HTMLCanvasElement | null {
   // NOTE: Crop is handled by the caller (see ExportTool) so that export can bake
   // crop first and then run the same adjustment pipeline on the cropped pixels.
@@ -165,6 +169,19 @@ export function renderCommittedImageToOffscreenCanvas(
     ctx.restore();
   }
 
+  const projectedHealingOps =
+    healingOps && healingOps.length > 0
+      ? projectHealingOpsToCanvas({
+          ops: healingOps,
+          imageSize: { width: image.width, height: image.height },
+          draw: {
+            zoomLevel: 1,
+            offset: centeredOffset,
+            rotationDegrees,
+          },
+        })
+      : undefined;
+
   applyPixelPipelineToCanvas(offscreen, {
     geometryOptics,
     whiteBalance,
@@ -172,6 +189,7 @@ export function renderCommittedImageToOffscreenCanvas(
     toneCurve,
     colorAdjustments,
     sharpening,
+    healingOps: projectedHealingOps,
   });
 
   return offscreen;
