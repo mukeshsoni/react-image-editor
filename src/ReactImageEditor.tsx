@@ -940,7 +940,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                                center,
                                radius: healingBrush.size / 2,
                                feather: healingBrush.feather,
-                               opacity: 1,
+                               opacity: 255,
                              });
                              return;
                            }
@@ -952,7 +952,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                              points: draft.points,
                              radius: healingBrush.size / 2,
                              feather: healingBrush.feather,
-                             opacity: 1,
+                             opacity: 255,
                            });
                          },
                          onPointerCancel: () => {
