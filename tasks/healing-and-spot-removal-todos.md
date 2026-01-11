@@ -19,16 +19,15 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
 ## 0) Product decisions to lock
 
 ### v1 decisions
-- [ ] Confirm behavior when Healing tool active
-  - [ ] Primary drag paints
-  - [ ] Pan modifier: `Space + drag` (recommended)
-- [ ] Confirm healing stage order vs adjustments
-  - [ ] Healing before tone/color adjustments (recommended)
-  - [ ] Or healing after adjustments
-- [ ] Confirm default brush ranges
-  - [ ] Size: `5…200`
-  - [ ] Feather: `0…100`
-  - [ ] Opacity: `100` default (if shipped)
+- [x] Confirm behavior when Healing tool active
+  - [x] Primary drag paints
+  - [x] Pan modifier: `Space + drag`
+- [x] Confirm healing stage order vs adjustments
+  - [x] Healing before tone/color adjustments
+- [x] Confirm default brush ranges
+  - [x] Size: `5…200`
+  - [x] Feather: `0…100`
+  - [x] Opacity: fixed at `100%` (no v1 control)
 
 ### v2 decisions
 - [ ] Define UX for object removal
@@ -37,34 +36,33 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [ ] Max selection size / quality controls
 
 ## 1) State model + store
-- [ ] Add healing state to the editor store(s) (likely Zustand)
-  - [ ] `healingMode: "spot" | "heal" | "clone"`
-  - [ ] `healingBrush: { size: number; feather: number; opacity?: number }`
-  - [ ] `healingOps: HealingOp[]`
-- [ ] Define serializable types (versioned)
-  - [ ] `SpotOp` (`center`, `radius`, `feather`, `opacity`, `mode`)
-  - [ ] `StrokeOp` (`points[]`, `radius`, `feather`, `opacity`, `mode`, optional `source`)
-- [ ] Store actions
-  - [ ] `setHealingMode(mode)`
-  - [ ] `setHealingBrushSettings(partial)`
-  - [ ] `addHealingOp(op)`
-  - [ ] `removeHealingOp(id)` / `clearHealingOps()`
-- [ ] Ensure reset flows clear healing ops
-  - [ ] New image load
-  - [ ] Revert/Reset (if undo/redo system exists)
+- [x] Add healing state to the editor store(s) (Zustand)
+  - [x] `healingMode: "spot" | "heal" | "clone"`
+  - [x] `healingBrush: { size: number; feather: number }`
+  - [x] `healingOps: HealingOp[]`
+- [x] Define serializable types (versioned)
+  - [x] `SpotOp` (`center`, `radius`, `feather`, `opacity`, `mode`)
+  - [x] `StrokeOp` (`points[]`, `radius`, `feather`, `opacity`, `mode`, optional `source`)
+- [x] Store actions
+  - [x] `setHealingMode(mode)`
+  - [x] `setHealingBrushSettings(partial)`
+  - [x] `addHealingOp(op)`
+  - [x] `removeHealingOp(id)` / `clearHealingOps()`
+- [x] Ensure reset flows clear healing ops
+  - [x] New image load (via `useResetAll` on load)
+  - [x] Revert/Reset (via `useResetAll`)
 
 ## 2) UI: tool entry + subpanel
-- [ ] Add `Healing` tool entry in main controls (where other tools live)
-- [ ] Add Healing subpanel in right panel
-  - [ ] Mode selector: `Spot`, `Heal`, `Clone`
-  - [ ] Slider: `Brush size`
-  - [ ] Slider: `Feather`
-  - [ ] Slider: `Opacity` (optional)
-  - [ ] Button: `Clear` (remove all healing ops)
-  - [ ] Undo/Redo buttons (if available globally; otherwise omit)
-- [ ] A11y
-  - [ ] ARIA labels for selectors/sliders/buttons
-  - [ ] Keyboard-accessible controls
+- [x] Add `Healing` tool entry in main controls (where other tools live)
+- [x] Add Healing subpanel in right panel
+  - [x] Mode selector: `Spot`, `Heal`, `Clone`
+  - [x] Slider: `Brush size`
+  - [x] Slider: `Feather`
+  - [x] Button: `Clear` (remove all healing ops)
+  - [x] Undo/Redo buttons (use global header controls; no tool-local UI)
+- [x] A11y
+  - [x] ARIA labels for selectors/sliders/buttons
+  - [x] Keyboard-accessible controls
 
 ## 3) Pointer handling + coordinate mapping
 - [ ] Render a circular brush cursor overlay when Healing active
