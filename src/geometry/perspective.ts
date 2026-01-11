@@ -1,6 +1,7 @@
 export type PerspectiveParams = {
   vertical: number;
   horizontal: number;
+  aspect?: number;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -17,19 +18,24 @@ function clamp(value: number, min: number, max: number): number {
 export function getKeystoneHomography(params: PerspectiveParams): number[] {
   const v = clamp(params.vertical, -100, 100) / 100;
   const h = clamp(params.horizontal, -100, 100) / 100;
+  const aspect = clamp(params.aspect ?? 0, -100, 100) / 100;
 
   // Create a projective transform with small perspective terms.
   // We keep the center relatively stable by using symmetric offsets.
   const px = h * 0.0025;
   const py = v * 0.0025;
 
+  // Aspect acts as a gentle non-uniform scale.
+  const sx = 1 + aspect * 0.15;
+  const sy = 1 - aspect * 0.15;
+
   // 3x3 row-major homography.
   return [
-    1,
+    sx,
     0,
     0,
     0,
-    1,
+    sy,
     0,
     px,
     py,

@@ -23,6 +23,7 @@ import {
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 import { applyEditsSnapshot } from "@/store";
 import type { HistoryEntry } from "@/store";
+import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
 import {
   areEditsEqual,
   createEditorSerializableState,
@@ -191,10 +192,10 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [isPickingWhiteBalance, setIsPickingWhiteBalance] = useState(false);
 
   const [isAutoStraightening, setIsAutoStraightening] = useState(false);
-  const [perspectiveVertical, setPerspectiveVertical] = useState(0);
-  const [perspectiveHorizontal, setPerspectiveHorizontal] = useState(0);
-  const [perspectiveAspect, setPerspectiveAspect] = useState(0);
   const [guidedUprightEnabled, setGuidedUprightEnabled] = useState(false);
+
+  const geometryOptics = useGeometryOpticsStore((state) => state.settings);
+  const setPerspective = useGeometryOpticsStore((state) => state.setPerspective);
 
 
   useEffect(() => {
@@ -1092,21 +1093,22 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                             Vertical
                           </label>
                           <span className="text-xs font-medium tabular-nums">
-                            {formatSignedInt(perspectiveVertical)}
+                            {formatSignedInt(geometryOptics.perspective.vertical)}
                           </span>
                         </div>
-                        <DebouncedRange
-                          id="transform-vertical"
-                          label="Vertical"
-                          value={perspectiveVertical}
-                          defaultValue={0}
-                          min={-100}
-                          max={100}
-                          step={1}
-                          onValueChange={setPerspectiveVertical}
-                          className="w-full"
-                          disabled={!isImageLoaded}
-                        />
+                          <DebouncedRange
+                            id="transform-vertical"
+                            label="Vertical"
+                            value={geometryOptics.perspective.vertical}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            onValueChange={(value) => setPerspective({ vertical: value })}
+                            className="w-full"
+                            disabled={!isImageLoaded}
+                          />
+
                       </div>
 
                       <div className="flex flex-col gap-1">
@@ -1115,21 +1117,22 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                             Horizontal
                           </label>
                           <span className="text-xs font-medium tabular-nums">
-                            {formatSignedInt(perspectiveHorizontal)}
+                            {formatSignedInt(geometryOptics.perspective.horizontal)}
                           </span>
                         </div>
-                        <DebouncedRange
-                          id="transform-horizontal"
-                          label="Horizontal"
-                          value={perspectiveHorizontal}
-                          defaultValue={0}
-                          min={-100}
-                          max={100}
-                          step={1}
-                          onValueChange={setPerspectiveHorizontal}
-                          className="w-full"
-                          disabled={!isImageLoaded}
-                        />
+                          <DebouncedRange
+                            id="transform-horizontal"
+                            label="Horizontal"
+                            value={geometryOptics.perspective.horizontal}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            onValueChange={(value) => setPerspective({ horizontal: value })}
+                            className="w-full"
+                            disabled={!isImageLoaded}
+                          />
+
                       </div>
 
                       <div className="flex flex-col gap-1">
@@ -1138,21 +1141,22 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                             Aspect
                           </label>
                           <span className="text-xs font-medium tabular-nums">
-                            {formatSignedInt(perspectiveAspect)}
+                            {formatSignedInt(geometryOptics.perspective.aspect ?? 0)}
                           </span>
                         </div>
-                        <DebouncedRange
-                          id="transform-aspect"
-                          label="Aspect"
-                          value={perspectiveAspect}
-                          defaultValue={0}
-                          min={-100}
-                          max={100}
-                          step={1}
-                          onValueChange={setPerspectiveAspect}
-                          className="w-full"
-                          disabled={!isImageLoaded}
-                        />
+                          <DebouncedRange
+                            id="transform-aspect"
+                            label="Aspect"
+                            value={geometryOptics.perspective.aspect ?? 0}
+                            defaultValue={0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            onValueChange={(value) => setPerspective({ aspect: value })}
+                            className="w-full"
+                            disabled={!isImageLoaded}
+                          />
+
                       </div>
 
                       <label className="flex items-center gap-2 text-xs">

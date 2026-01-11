@@ -8,7 +8,7 @@ export const perspectiveWarpProcessor = {
   isEnabled: (context) => {
     const p = context.geometryOptics?.perspective;
     if (!p) return false;
-    return p.vertical !== 0 || p.horizontal !== 0;
+    return p.vertical !== 0 || p.horizontal !== 0 || (p.aspect ?? 0) !== 0;
   },
   apply: (buffers, context) => {
     const width = context.width;
@@ -23,6 +23,7 @@ export const perspectiveWarpProcessor = {
     const matrix = getKeystoneHomography({
       vertical: perspective.vertical,
       horizontal: perspective.horizontal,
+      aspect: perspective.aspect,
     });
 
     warpImageDataWithHomography(buffers.in, buffers.temp, width, height, matrix);
