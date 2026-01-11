@@ -68,9 +68,9 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
 - [x] Render a circular brush cursor overlay when Healing active
   - [x] Cursor scales correctly with zoom (screen px)
   - [x] Cursor hides when pointer leaves canvas
-- [ ] Convert pointer events from canvas space → image space
-  - [ ] Use same transform path as crop/zoom/pan
-  - [ ] Store points in image space (stable across zoom/pan)
+- [x] Convert pointer events from canvas space → image space
+  - [x] Use same transform path as crop/zoom/pan
+  - [x] Store points in image space (stable across zoom/pan)
 - [ ] Input behaviors
   - [ ] `pointerdown` begins stroke (or spot)
   - [ ] `pointermove` appends points (throttle / distance threshold)

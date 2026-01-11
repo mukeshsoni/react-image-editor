@@ -186,8 +186,12 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
   const healingBrush = useHealingStore((state) => state.healingBrush);
-  const [healingCursor, setHealingCursor] = useState<{ x: number; y: number } | null>(null);
+  const [healingCursor, setHealingCursor] = useState<{
+    canvas: { x: number; y: number };
+    image: import("@/store/cropStore").Point | null;
+  } | null>(null);
   const cropCommitted = useCropStore((state) => state.cropCommitted);
+  const cropCommit = useCropStore((state) => state.cropCommit);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
@@ -324,6 +328,65 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       }
     };
   }, [setCamera]);
+
+  const getDrawTransform = useMemo(() => {
+    return () => {
+      if (cropCommitted && cropCommit) {
+        return {
+          zoomLevel: 1,
+          offset: cropCommit.bakedOffset,
+          rotationDegrees: cropCommit.rotationDegrees,
+        };
+      }
+
+      return {
+        zoomLevel,
+        offset,
+        rotationDegrees: rotation,
+      };
+    };
+  }, [cropCommit, cropCommitted, offset, rotation, zoomLevel]);
+
+  const canvasPointToImagePoint = useMemo(() => {
+    return (point: { x: number; y: number }): import("@/store/cropStore").Point | null => {
+      if (!imageRef.current) return null;
+
+      const { zoomLevel: drawZoom, offset: drawOffset, rotationDegrees } = getDrawTransform();
+
+      const imageWidth = imageRef.current.width;
+      const imageHeight = imageRef.current.height;
+
+      const center = {
+        x: drawOffset.x + (imageWidth * drawZoom) / 2,
+        y: drawOffset.y + (imageHeight * drawZoom) / 2,
+      };
+
+      const radians = (-rotationDegrees * Math.PI) / 180;
+      const cos = Math.cos(radians);
+      const sin = Math.sin(radians);
+
+      const dx = point.x - center.x;
+      const dy = point.y - center.y;
+
+      const unrotatedCanvasPoint = {
+        x: dx * cos - dy * sin + center.x,
+        y: dx * sin + dy * cos + center.y,
+      };
+
+      const x = (unrotatedCanvasPoint.x - drawOffset.x) / drawZoom;
+      const y = (unrotatedCanvasPoint.y - drawOffset.y) / drawZoom;
+
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      if (x < 0 || y < 0 || x > imageWidth || y > imageHeight) return null;
+
+      return { x, y };
+    };
+  }, [getDrawTransform]);
+
+  const drawZoomLevelForCursor = useMemo(() => {
+    const drawZoom = cropCommitted && cropCommit ? 1 : zoomLevel;
+    return drawZoom;
+  }, [cropCommit, cropCommitted, zoomLevel]);
 
   // Reset zoom when in crop mode
   useEffect(() => {
@@ -752,12 +815,22 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                    healingModeEnabled
                      ? {
                          ...listeners,
+                         onMouseDown: undefined,
+                         onMouseMove: undefined,
+                         onMouseUp: undefined,
+                         onMouseLeave: undefined,
                          onPointerMove: (event) => {
                            if (!canvasRef.current) return;
-                           const pos = getMousePosInCanvas(canvasRef.current, event);
-                           setHealingCursor({ x: pos.x, y: pos.y });
+                           const canvasPos = getMousePosInCanvas(canvasRef.current, event);
+                           setHealingCursor({
+                             canvas: canvasPos,
+                             image: canvasPointToImagePoint(canvasPos),
+                           });
                          },
                          onPointerLeave: () => {
+                           setHealingCursor(null);
+                         },
+                         onPointerCancel: () => {
                            setHealingCursor(null);
                          },
                        }
@@ -822,14 +895,14 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                  <div
                    className="pointer-events-none absolute left-0 top-0 z-10"
                    style={{
-                     transform: `translate(${healingCursor.x}px, ${healingCursor.y}px)`,
+                     transform: `translate(${healingCursor.canvas.x}px, ${healingCursor.canvas.y}px)`,
                    }}
                  >
                    <div
                      className="rounded-full border border-white shadow-[0_0_0_1px_rgba(0,0,0,0.65)]"
                      style={{
-                       width: Math.max(1, healingBrush.size * zoomLevel),
-                       height: Math.max(1, healingBrush.size * zoomLevel),
+                       width: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
+                       height: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
                        transform: "translate(-50%, -50%)",
                      }}
                    />
