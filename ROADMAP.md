@@ -86,6 +86,7 @@
 - Healing brush for seamless removal
 - Content-aware fill for object removal
 - Undo history for brush strokes
+- PRD: `prds/healing-and-spot-removal-prd.md`
 
 ### Advanced Filtering
 - Black & white conversion
