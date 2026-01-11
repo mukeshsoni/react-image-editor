@@ -72,6 +72,78 @@ export function getHistoryDisplayForEditsChange(
     return { label: "Crop" };
   }
 
+  if (!areJsonEqual(previous.geometryOptics, next.geometryOptics)) {
+    const prevP = previous.geometryOptics.perspective;
+    const nextP = next.geometryOptics.perspective;
+
+    const prevAspect = prevP.aspect ?? 0;
+    const nextAspect = nextP.aspect ?? 0;
+
+    if (prevP.vertical !== nextP.vertical) {
+      return {
+        label: "Perspective Vertical",
+        delta: formatSignedInteger(nextP.vertical - prevP.vertical),
+      };
+    }
+
+    if (prevP.horizontal !== nextP.horizontal) {
+      return {
+        label: "Perspective Horizontal",
+        delta: formatSignedInteger(nextP.horizontal - prevP.horizontal),
+      };
+    }
+
+    if (prevAspect !== nextAspect) {
+      return {
+        label: "Perspective Aspect",
+        delta: formatSignedInteger(nextAspect - prevAspect),
+      };
+    }
+
+    const prevLens = previous.geometryOptics.lensCorrections;
+    const nextLens = next.geometryOptics.lensCorrections;
+
+    if (prevLens.distortion !== nextLens.distortion) {
+      return {
+        label: "Lens Distortion",
+        delta: formatSignedInteger(nextLens.distortion - prevLens.distortion),
+      };
+    }
+
+    if (prevLens.chromaticAberration !== nextLens.chromaticAberration) {
+      return {
+        label: "Chromatic Aberration",
+        delta: nextLens.chromaticAberration ? "On" : "Off",
+      };
+    }
+
+    const prevOptics = previous.geometryOptics.optics;
+    const nextOptics = next.geometryOptics.optics;
+
+    if (prevOptics.vignette !== nextOptics.vignette) {
+      return {
+        label: "Vignette",
+        delta: formatSignedInteger(nextOptics.vignette - prevOptics.vignette),
+      };
+    }
+
+    if (prevOptics.grain !== nextOptics.grain) {
+      return {
+        label: "Grain",
+        delta: formatSignedInteger(nextOptics.grain - prevOptics.grain),
+      };
+    }
+
+    if (prevOptics.dehaze !== nextOptics.dehaze) {
+      return {
+        label: "Dehaze",
+        delta: formatSignedInteger(nextOptics.dehaze - prevOptics.dehaze),
+      };
+    }
+
+    return { label: "Geometry & Optics" };
+  }
+
   if (!areJsonEqual(previous.whiteBalance, next.whiteBalance)) {
     if (previous.whiteBalance.temperatureKelvin !== next.whiteBalance.temperatureKelvin) {
       return {
