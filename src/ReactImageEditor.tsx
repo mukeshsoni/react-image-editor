@@ -1207,7 +1207,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                  </summary>
 
                  <div className="px-3 pb-3">
-                   <GeometryOpticsPanel isImageLoaded={isImageLoaded} />
+                   <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="lens" />
                  </div>
                </details>
 
@@ -1220,7 +1220,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                  </summary>
 
                  <div className="px-3 pb-3">
-                   <GeometryOpticsPanel isImageLoaded={isImageLoaded} />
+                   <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="optics" />
                  </div>
                </details>
 
