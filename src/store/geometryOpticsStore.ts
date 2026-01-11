@@ -45,6 +45,8 @@ type GeometryOpticsStore = {
 
   setSettings: (settings: GeometryOpticsSettings) => void;
   setPerspective: (updates: Partial<PerspectiveSettings>) => void;
+  resetPerspective: () => void;
+
   setLensCorrections: (updates: Partial<LensCorrectionsSettings>) => void;
   setOptics: (updates: Partial<OpticsSettings>) => void;
 
@@ -101,6 +103,15 @@ export const useGeometryOpticsStore = create<GeometryOpticsStore>((set) => ({
           ),
           aspect: clamp(updates.aspect ?? state.settings.perspective.aspect ?? 0, -100, 100),
         },
+      },
+    }));
+  },
+
+  resetPerspective: () => {
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        perspective: { ...DEFAULT_GEOMETRY_OPTICS.perspective },
       },
     }));
   },

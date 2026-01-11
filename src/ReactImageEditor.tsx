@@ -1084,6 +1084,16 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                   <div className="border-t pt-3 mt-3">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-medium text-gray-700">Perspective</div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setPerspective({ vertical: 0, horizontal: 0, aspect: 0 })}
+                        disabled={!isImageLoaded}
+                      >
+                        Reset
+                      </Button>
                     </div>
 
                     <div className="mt-2 flex flex-col gap-3">
