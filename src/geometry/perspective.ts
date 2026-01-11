@@ -25,9 +25,10 @@ export function getKeystoneHomography(params: PerspectiveParams): number[] {
   const px = h * 0.0025;
   const py = v * 0.0025;
 
-  // Aspect acts as a gentle non-uniform scale.
-  const sx = 1 + aspect * 0.15;
-  const sy = 1 - aspect * 0.15;
+  // Aspect acts as a non-uniform scale (Lightroom-style).
+  // Use a stronger factor so changes are visually obvious.
+  const sx = clamp(1 + aspect * 0.6, 0.2, 5);
+  const sy = clamp(1 / sx, 0.2, 5);
 
   // 3x3 row-major homography.
   return [
