@@ -5,6 +5,7 @@ import { useCropStore } from "./cropStore";
 import { useDenoiseStore } from "./denoiseStore";
 import { useLightStore } from "./lightStore";
 import { useGeometryOpticsStore } from "./geometryOpticsStore";
+import { getHealingEditsSnapshot, useHealingStore } from "./healingStore";
 import { useSharpeningStore } from "./sharpeningStore";
 import { useToneCurveStore } from "./toneCurveStore";
 import { useWhiteBalanceStore } from "./whiteBalanceStore";
@@ -18,6 +19,7 @@ export function getImageEditorEdits(): ImageEditorEdits {
   const toneCurveState = useToneCurveStore.getState();
   const sharpeningState = useSharpeningStore.getState();
   const denoiseState = useDenoiseStore.getState();
+  const healingState = useHealingStore.getState();
 
   return {
     version: 1,
@@ -34,5 +36,10 @@ export function getImageEditorEdits(): ImageEditorEdits {
     toneCurve: toneCurveState.toneCurve,
     sharpening: sharpeningState.sharpening,
     denoise: denoiseState.denoise,
+    healing: getHealingEditsSnapshot({
+      healingMode: healingState.healingMode,
+      healingBrush: healingState.healingBrush,
+      healingOps: healingState.healingOps,
+    }),
   };
 }

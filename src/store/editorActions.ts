@@ -7,6 +7,7 @@ import { useLightStore } from "./lightStore";
 import { useToneCurveStore } from "./toneCurveStore";
 import { useWhiteBalanceStore } from "./whiteBalanceStore";
 import { useGeometryOpticsStore } from "./geometryOpticsStore";
+import { useHealingStore } from "./healingStore";
 
 export function useResetAll(): (bounds: Bounds) => void {
   const resetCropSettings = useCropStore((state) => state.resetCropSettings);
@@ -17,6 +18,7 @@ export function useResetAll(): (bounds: Bounds) => void {
   const resetColorAdjustments = useColorStore((state) => state.resetColorAdjustments);
   const resetToneCurve = useToneCurveStore((state) => state.resetToneCurve);
   const resetGeometryOptics = useGeometryOpticsStore((state) => state.resetGeometryOptics);
+  const resetHealing = useHealingStore((state) => state.resetHealing);
 
   return useCallback(
     (bounds) => {
@@ -27,6 +29,7 @@ export function useResetAll(): (bounds: Bounds) => void {
       resetColorAdjustments();
       resetToneCurve();
       resetGeometryOptics();
+      resetHealing();
     },
     [
       resetColorAdjustments,
@@ -35,6 +38,7 @@ export function useResetAll(): (bounds: Bounds) => void {
       resetLightAdjustments,
       resetToneCurve,
       resetGeometryOptics,
+      resetHealing,
       resetWhiteBalance,
     ],
   );

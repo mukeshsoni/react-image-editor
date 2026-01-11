@@ -5,6 +5,7 @@ import { useCropStore } from "@/store/cropStore";
 import { useDenoiseStore } from "@/store/denoiseStore";
 import { useLightStore } from "@/store/lightStore";
 import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
+import { useHealingStore } from "@/store/healingStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
@@ -57,4 +58,9 @@ export function applyEditsSnapshot(edits: ImageEditorEdits) {
   if (edits.denoise) {
     useDenoiseStore.getState().setDenoise(edits.denoise);
   }
+
+  const healingStore = useHealingStore.getState();
+  healingStore.setHealingMode(edits.healing.mode);
+  healingStore.setHealingBrushSettings(edits.healing.brush);
+  healingStore.setHealingOps(edits.healing.ops);
 }

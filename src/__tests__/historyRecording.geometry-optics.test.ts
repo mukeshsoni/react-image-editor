@@ -53,6 +53,12 @@ function makeBaseEdits(): ImageEditorEdits {
         },
       },
     },
+    healing: {
+      version: 1,
+      mode: "spot",
+      brush: { size: 30, feather: 50 },
+      ops: [],
+    },
   };
 }
 

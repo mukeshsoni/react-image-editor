@@ -679,6 +679,15 @@ export const useCropStore = create<CropStore>((set, get) => ({
         light: lightAdjustments,
         color: colorAdjustments,
         toneCurve,
+        healing: {
+          version: 1,
+          mode: "spot",
+          brush: {
+            size: 30,
+            feather: 50,
+          },
+          ops: [],
+        },
       };
 
    },
