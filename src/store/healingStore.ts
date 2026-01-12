@@ -17,6 +17,7 @@ export type HealingSpotOp = {
   radius: number;
   feather: number;
   opacity: number;
+  source?: Point;
 };
 
 export type HealingStrokeOp = {
@@ -66,6 +67,7 @@ type HealingStore = {
   addHealingOp: (op: HealingOp) => void;
   removeHealingOp: (id: string) => void;
   clearHealingOps: () => void;
+  setSpotSource: (id: string, source: Point) => void;
 
   setHealingOps: (ops: HealingOp[]) => void;
   resetHealing: () => void;
@@ -108,6 +110,19 @@ export const useHealingStore = create<HealingStore>((set) => ({
 
   clearHealingOps: () => {
     set({ healingOps: [], cloneSource: null });
+  },
+
+  setSpotSource: (id, source) => {
+    set((state) => ({
+      healingOps: state.healingOps.map((op) => {
+        if (op.type !== "spot") return op;
+        if (op.id !== id) return op;
+        return {
+          ...op,
+          source,
+        };
+      }),
+    }));
   },
 
   setHealingOps: (ops) => {

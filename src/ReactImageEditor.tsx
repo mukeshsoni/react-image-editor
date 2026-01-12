@@ -190,10 +190,14 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const cloneSource = useHealingStore((state) => state.cloneSource);
   const setCloneSource = useHealingStore((state) => state.setCloneSource);
   const addHealingOp = useHealingStore((state) => state.addHealingOp);
+  const healingOps = useHealingStore((state) => state.healingOps);
+  const setSpotSource = useHealingStore((state) => state.setSpotSource);
   const [healingCursor, setHealingCursor] = useState<{
     canvas: { x: number; y: number };
     image: import("@/store/cropStore").Point | null;
   } | null>(null);
+  const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+  const draggingSpotSourceIdRef = useRef<string | null>(null);
   const draftStrokeRef = useRef<{ points: import("@/store/cropStore").Point[] } | null>(null);
   const panRef = useRef<{ isPanning: boolean; last: { x: number; y: number } | null }>({
     isPanning: false,
@@ -427,6 +431,97 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
     const drawZoom = cropCommitted && cropCommit ? 1 : zoomLevel;
     return drawZoom;
   }, [cropCommit, cropCommitted, zoomLevel]);
+
+  const imagePointToCanvasPoint = useMemo(() => {
+    return (point: import("@/store/cropStore").Point): { x: number; y: number } | null => {
+      if (!imageRef.current) return null;
+
+      const { zoomLevel: drawZoom, offset: drawOffset, rotationDegrees } = getDrawTransform();
+
+      const imageWidth = imageRef.current.width;
+      const imageHeight = imageRef.current.height;
+
+      const unrotated = {
+        x: drawOffset.x + point.x * drawZoom,
+        y: drawOffset.y + point.y * drawZoom,
+      };
+
+      const center = {
+        x: drawOffset.x + (imageWidth * drawZoom) / 2,
+        y: drawOffset.y + (imageHeight * drawZoom) / 2,
+      };
+
+      const radians = (rotationDegrees * Math.PI) / 180;
+      const cos = Math.cos(radians);
+      const sin = Math.sin(radians);
+
+      const dx = unrotated.x - center.x;
+      const dy = unrotated.y - center.y;
+
+      return {
+        x: dx * cos - dy * sin + center.x,
+        y: dx * sin + dy * cos + center.y,
+      };
+    };
+  }, [getDrawTransform]);
+
+  const spotPins = useMemo(() => {
+    if (!imageRef.current) return [] as Array<{
+      id: string;
+      centerCanvas: { x: number; y: number };
+      sourceCanvas: { x: number; y: number };
+    }>;
+
+    const imageWidth = imageRef.current.width;
+    const imageHeight = imageRef.current.height;
+
+    return healingOps
+      .filter((op) => op.type === "spot")
+      .map((op) => {
+        const centerCanvas = imagePointToCanvasPoint(op.center);
+        if (!centerCanvas) return null;
+
+        const radius = op.radius;
+        const sourceImage = op.source ?? {
+          x: Math.max(0, Math.min(imageWidth, op.center.x + radius * 2)),
+          y: Math.max(0, Math.min(imageHeight, op.center.y)),
+        };
+
+        const sourceCanvas = imagePointToCanvasPoint(sourceImage);
+        if (!sourceCanvas) return null;
+
+        return {
+          id: op.id,
+          centerCanvas,
+          sourceCanvas,
+        };
+      })
+      .filter(Boolean) as Array<{
+      id: string;
+      centerCanvas: { x: number; y: number };
+      sourceCanvas: { x: number; y: number };
+    }>;
+  }, [healingOps, imagePointToCanvasPoint]);
+
+  const selectedSpotPin = useMemo(() => {
+    if (!selectedSpotId) return null;
+    return spotPins.find((pin) => pin.id === selectedSpotId) ?? null;
+  }, [selectedSpotId, spotPins]);
+
+  useEffect(() => {
+    if (!selectedSpotId) return;
+
+    if (!spotPins.some((pin) => pin.id === selectedSpotId)) {
+      setSelectedSpotId(null);
+    }
+  }, [selectedSpotId, spotPins]);
+
+  useEffect(() => {
+    if (!healingModeEnabled || healingMode !== "spot") {
+      draggingSpotSourceIdRef.current = null;
+      setSelectedSpotId(null);
+    }
+  }, [healingMode, healingModeEnabled]);
 
   // Reset zoom when in crop mode
   useEffect(() => {
@@ -867,6 +962,36 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                             const isPickCloneSource =
                               healingMode === "clone" && (event.altKey || event.metaKey);
 
+                            if (healingMode === "spot") {
+                              const canvasPos = getMousePosInCanvas(canvasRef.current, event);
+
+                              // Select an existing spot by clicking its target pin.
+                              const hitRadius = 10;
+                              for (const pin of spotPins) {
+                                const dx = canvasPos.x - pin.centerCanvas.x;
+                                const dy = canvasPos.y - pin.centerCanvas.y;
+                                if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+                                  event.preventDefault();
+                                  setSelectedSpotId(pin.id);
+                                  return;
+                                }
+                              }
+
+                              // Drag the source pin for the selected spot.
+                              if (selectedSpotPin) {
+                                const dx = canvasPos.x - selectedSpotPin.sourceCanvas.x;
+                                const dy = canvasPos.y - selectedSpotPin.sourceCanvas.y;
+                                if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+                                  event.preventDefault();
+                                  draggingSpotSourceIdRef.current = selectedSpotPin.id;
+                                  (event.currentTarget as HTMLElement).setPointerCapture?.(
+                                    event.pointerId,
+                                  );
+                                  return;
+                                }
+                              }
+                            }
+
                            const canvasPos = getMousePosInCanvas(canvasRef.current, event);
 
                             const imagePos = canvasPointToImagePoint(canvasPos);
@@ -894,12 +1019,19 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                             draftStrokeRef.current = { points: [imagePos] };
 
                          },
-                         onPointerMove: (event) => {
-                           if (!canvasRef.current) return;
+                          onPointerMove: (event) => {
+                            if (!canvasRef.current) return;
 
-                           const canvasPos = getMousePosInCanvas(canvasRef.current, event);
-                           const imagePos = canvasPointToImagePoint(canvasPos);
-                           setHealingCursor({ canvas: canvasPos, image: imagePos });
+                            const canvasPos = getMousePosInCanvas(canvasRef.current, event);
+                            const imagePos = canvasPointToImagePoint(canvasPos);
+                            setHealingCursor({ canvas: canvasPos, image: imagePos });
+
+                            const draggingSpotId = draggingSpotSourceIdRef.current;
+                            if (healingMode === "spot" && draggingSpotId && imagePos) {
+                              setSpotSource(draggingSpotId, imagePos);
+                              return;
+                            }
+
 
                            if (panRef.current.isPanning) {
                              const last = panRef.current.last;
@@ -932,9 +1064,11 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
                            draft.points.push(imagePos);
                          },
-                         onPointerUp: () => {
-                           panRef.current.isPanning = false;
-                           panRef.current.last = null;
+                          onPointerUp: () => {
+                            draggingSpotSourceIdRef.current = null;
+                            panRef.current.isPanning = false;
+                            panRef.current.last = null;
+
 
                            const draft = draftStrokeRef.current;
                            draftStrokeRef.current = null;
@@ -947,19 +1081,30 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                                ? crypto.randomUUID()
                                : `${Date.now()}-${Math.random()}`;
 
-                           if (healingMode === "spot") {
-                             const center = draft.points[draft.points.length - 1];
-                             addHealingOp({
-                               id,
-                               type: "spot",
-                               mode: "spot",
-                               center,
-                               radius: healingBrush.size / 2,
-                               feather: healingBrush.feather,
-                               opacity: 255,
-                             });
-                             return;
-                           }
+                            if (healingMode === "spot") {
+                              const center = draft.points[draft.points.length - 1];
+                              const radius = healingBrush.size / 2;
+                              const imageWidth = imageRef.current?.width ?? 0;
+                              const imageHeight = imageRef.current?.height ?? 0;
+                              const source = {
+                                x: Math.max(0, Math.min(imageWidth, center.x + radius * 2)),
+                                y: Math.max(0, Math.min(imageHeight, center.y)),
+                              };
+
+                              addHealingOp({
+                                id,
+                                type: "spot",
+                                mode: "spot",
+                                center,
+                                radius,
+                                feather: healingBrush.feather,
+                                opacity: 255,
+                                source,
+                              });
+                              setSelectedSpotId(id);
+                              return;
+                            }
+
 
                             addHealingOp({
                               id,
@@ -973,15 +1118,19 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                             });
 
                          },
-                         onPointerCancel: () => {
-                           panRef.current.isPanning = false;
-                           panRef.current.last = null;
-                           draftStrokeRef.current = null;
-                           setHealingCursor(null);
-                         },
-                         onPointerLeave: () => {
-                           setHealingCursor(null);
-                         },
+                          onPointerCancel: () => {
+                            draggingSpotSourceIdRef.current = null;
+                            panRef.current.isPanning = false;
+                            panRef.current.last = null;
+                            draftStrokeRef.current = null;
+                            setHealingCursor(null);
+                          },
+
+                          onPointerLeave: () => {
+                            draggingSpotSourceIdRef.current = null;
+                            setHealingCursor(null);
+                          },
+
                        }
                      : listeners
                  }
@@ -1040,23 +1189,82 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 }}
                />
 
-               {healingModeEnabled && healingCursor ? (
-                 <div
-                   className="pointer-events-none absolute left-0 top-0 z-10"
-                   style={{
-                     transform: `translate(${healingCursor.canvas.x}px, ${healingCursor.canvas.y}px)`,
-                   }}
-                 >
-                   <div
-                     className="rounded-full border border-white shadow-[0_0_0_1px_rgba(0,0,0,0.65)]"
-                     style={{
-                       width: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
-                       height: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
-                       transform: "translate(-50%, -50%)",
-                     }}
-                   />
-                 </div>
-               ) : null}
+                {healingModeEnabled && healingCursor ? (
+                  <div
+                    className="pointer-events-none absolute left-0 top-0 z-10"
+                    style={{
+                      transform: `translate(${healingCursor.canvas.x}px, ${healingCursor.canvas.y}px)`,
+                    }}
+                  >
+                    <div
+                      className="rounded-full border border-white shadow-[0_0_0_1px_rgba(0,0,0,0.65)]"
+                      style={{
+                        width: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
+                        height: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    />
+                  </div>
+                ) : null}
+
+                {healingModeEnabled && healingMode === "spot" ? (
+                  <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-full">
+                    {spotPins.map((pin) => (
+                      <div
+                        key={pin.id}
+                        className={
+                          pin.id === selectedSpotId
+                            ? "absolute rounded-full bg-white shadow-[0_0_0_2px_rgba(0,0,0,0.75)]"
+                            : "absolute rounded-full bg-white/70 shadow-[0_0_0_2px_rgba(0,0,0,0.55)]"
+                        }
+                        style={{
+                          left: pin.centerCanvas.x,
+                          top: pin.centerCanvas.y,
+                          width: 10,
+                          height: 10,
+                          transform: "translate(-50%, -50%)",
+                        }}
+                      />
+                    ))}
+
+                    {selectedSpotPin ? (
+                      <>
+                        <svg
+                          className="absolute left-0 top-0 h-full w-full"
+                          aria-hidden="true"
+                        >
+                          <line
+                            x1={selectedSpotPin.centerCanvas.x}
+                            y1={selectedSpotPin.centerCanvas.y}
+                            x2={selectedSpotPin.sourceCanvas.x}
+                            y2={selectedSpotPin.sourceCanvas.y}
+                            stroke="rgba(0,0,0,0.55)"
+                            strokeWidth={3}
+                          />
+                          <line
+                            x1={selectedSpotPin.centerCanvas.x}
+                            y1={selectedSpotPin.centerCanvas.y}
+                            x2={selectedSpotPin.sourceCanvas.x}
+                            y2={selectedSpotPin.sourceCanvas.y}
+                            stroke="rgba(255,255,255,0.9)"
+                            strokeWidth={1.5}
+                          />
+                        </svg>
+                        <div
+                          className="absolute rounded-full bg-white shadow-[0_0_0_2px_rgba(0,0,0,0.75)]"
+                          style={{
+                            left: selectedSpotPin.sourceCanvas.x,
+                            top: selectedSpotPin.sourceCanvas.y,
+                            width: 10,
+                            height: 10,
+                            transform: "translate(-50%, -50%)",
+                          }}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+
                <CropToolOverlay
 
                 cropMode={cropMode}

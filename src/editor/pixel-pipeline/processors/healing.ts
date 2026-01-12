@@ -140,6 +140,7 @@ export function projectHealingOpsToCanvas(params: {
         radiusPx: op.radius * draw.zoomLevel,
         feather: op.feather,
         opacity: op.opacity,
+        source: op.source ? imageToCanvas(op.source) : undefined,
       };
     }
 

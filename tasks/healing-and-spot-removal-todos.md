@@ -108,10 +108,10 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [ ] Implement clone + basic luma matching / blend
   - [ ] Validate seams are reduced vs pure clone
 - [ ] Spot (tap)
-  - [ ] Auto-source heuristic (initial source point)
-  - [ ] Show target + source pins + connecting line
-  - [ ] Click target pin to select spot
-  - [ ] Drag source pin to change sampled area
+  - [x] Auto-source heuristic (initial source point)
+  - [x] Show target + source pins + connecting line
+  - [x] Click target pin to select spot
+  - [x] Drag source pin to change sampled area
   - [ ] Apply patch with feather
 
 ### v2 (object removal)
