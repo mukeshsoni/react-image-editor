@@ -126,10 +126,10 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [ ] Edge-aware blending / Poisson-like approximation (future)
 
 ## 6) Undo/Redo integration
-- [ ] Ensure each completed stroke/spot becomes one history entry
-  - [ ] If global history exists: push snapshot after op commit
-  - [ ] Otherwise (fallback): local undo stack for healing ops only
-- [ ] `Clear` action is undoable (one history entry)
+- [x] Ensure each completed stroke/spot becomes one history entry
+  - [x] If global history exists: push snapshot after op commit
+  - [x] Spot sample drag records one `Spot Sample` entry
+- [x] `Clear` action is undoable (one history entry)
 
 ## 7) Edge cases + guards
 - [ ] Large images

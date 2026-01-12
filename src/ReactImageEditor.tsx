@@ -709,6 +709,14 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         return;
       }
 
+      // Spot sample pin dragging updates the store continuously; record a single
+      // history entry on drag end instead of spamming snapshots.
+      if (draggingSpotSourceIdRef.current) {
+        lastCommittedEditsRef.current = nextEdits;
+        onEditsChange?.(nextEdits);
+        return;
+      }
+
       if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
         const display = getHistoryDisplayForEditsChange(
           lastCommittedEditsRef.current,
@@ -1065,12 +1073,29 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                            draft.points.push(imagePos);
                          },
                           onPointerUp: () => {
+                            const draggedSpotId = draggingSpotSourceIdRef.current;
                             draggingSpotSourceIdRef.current = null;
                             panRef.current.isPanning = false;
                             panRef.current.last = null;
 
+                            if (draggedSpotId) {
+                              const nextEdits = getImageEditorEdits();
+                              editsPush({
+                                label: "Spot Sample",
+                                state: createEditorSerializableState({
+                                  edits: nextEdits,
+                                  zoomLevel: zoomPanStateRef.current.zoomLevel,
+                                  offset: zoomPanStateRef.current.offset,
+                                }),
+                              });
 
-                           const draft = draftStrokeRef.current;
+                              lastCommittedEditsRef.current = nextEdits;
+                              onEditsChange?.(nextEdits);
+                              return;
+                            }
+
+                            const draft = draftStrokeRef.current;
+
                            draftStrokeRef.current = null;
 
                            if (!draft) return;
