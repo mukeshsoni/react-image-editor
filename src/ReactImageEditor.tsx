@@ -197,6 +197,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
     image: import("@/store/cropStore").Point | null;
   } | null>(null);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+  const [isHoveringSpotSource, setIsHoveringSpotSource] = useState(false);
+  const [isDraggingSpotSource, setIsDraggingSpotSource] = useState(false);
   const draggingSpotSourceIdRef = useRef<string | null>(null);
   const draftStrokeRef = useRef<{ points: import("@/store/cropStore").Point[] } | null>(null);
   const panRef = useRef<{ isPanning: boolean; last: { x: number; y: number } | null }>({
@@ -519,6 +521,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   useEffect(() => {
     if (!healingModeEnabled || healingMode !== "spot") {
       draggingSpotSourceIdRef.current = null;
+      setIsDraggingSpotSource(false);
+      setIsHoveringSpotSource(false);
       setSelectedSpotId(null);
     }
   }, [healingMode, healingModeEnabled]);
@@ -992,6 +996,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                                 if (dx * dx + dy * dy <= hitRadius * hitRadius) {
                                   event.preventDefault();
                                   draggingSpotSourceIdRef.current = selectedSpotPin.id;
+                                  setIsDraggingSpotSource(true);
+                                  setIsHoveringSpotSource(true);
                                   (event.currentTarget as HTMLElement).setPointerCapture?.(
                                     event.pointerId,
                                   );
@@ -1034,6 +1040,19 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                             const imagePos = canvasPointToImagePoint(canvasPos);
                             setHealingCursor({ canvas: canvasPos, image: imagePos });
 
+                            if (healingMode === "spot") {
+                              if (selectedSpotPin) {
+                                const hitRadius = 10;
+                                const dx = canvasPos.x - selectedSpotPin.sourceCanvas.x;
+                                const dy = canvasPos.y - selectedSpotPin.sourceCanvas.y;
+                                setIsHoveringSpotSource(dx * dx + dy * dy <= hitRadius * hitRadius);
+                              } else {
+                                setIsHoveringSpotSource(false);
+                              }
+                            } else if (isHoveringSpotSource) {
+                              setIsHoveringSpotSource(false);
+                            }
+
                             const draggingSpotId = draggingSpotSourceIdRef.current;
                             if (healingMode === "spot" && draggingSpotId && imagePos) {
                               setSpotSource(draggingSpotId, imagePos);
@@ -1075,6 +1094,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                           onPointerUp: () => {
                             const draggedSpotId = draggingSpotSourceIdRef.current;
                             draggingSpotSourceIdRef.current = null;
+                            setIsDraggingSpotSource(false);
                             panRef.current.isPanning = false;
                             panRef.current.last = null;
 
@@ -1145,6 +1165,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                          },
                           onPointerCancel: () => {
                             draggingSpotSourceIdRef.current = null;
+                            setIsDraggingSpotSource(false);
                             panRef.current.isPanning = false;
                             panRef.current.last = null;
                             draftStrokeRef.current = null;
@@ -1153,13 +1174,24 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
                           onPointerLeave: () => {
                             draggingSpotSourceIdRef.current = null;
+                            setIsDraggingSpotSource(false);
+                            setIsHoveringSpotSource(false);
                             setHealingCursor(null);
                           },
 
                        }
                      : listeners
                  }
-                 cursor={healingModeEnabled ? "none" : undefined}
+                  cursor={
+                    healingModeEnabled
+                      ? healingMode === "spot" && selectedSpotPin && (isHoveringSpotSource || isDraggingSpotSource)
+                        ? isDraggingSpotSource
+                          ? "grabbing"
+                          : "pointer"
+                        : "none"
+                      : undefined
+                  }
+
                  isPickingWhiteBalance={isPickingWhiteBalance}
 
                 onPickWhiteBalance={(event) => {
