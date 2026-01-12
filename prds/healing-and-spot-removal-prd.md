@@ -20,6 +20,7 @@ Initial scope focuses on spot removal and a basic healing brush (clone + blend).
 
 ## User Stories
 - As a user, I can click a dust spot to remove it.
+- As a user, I can select a spot after creating it and adjust the sampled/source area.
 - As a user, I can paint over a blemish and have it blend into surrounding pixels.
 - As a user, I can adjust brush size and hardness/feather.
 - As a user, I can switch between Spot, Clone, and Heal modes.
@@ -46,6 +47,12 @@ Initial scope focuses on spot removal and a basic healing brush (clone + blend).
 - While painting, show a live overlay preview of the stroke mask/area.
 - After completion, optionally show a subtle outline on hover/selection (nice-to-have).
 
+### Pins (Lightroom-style)
+- Each spot creates a target pin and a sampled/source pin connected by a line.
+- Users can click a target pin to select that spot.
+- When selected, users can drag the sampled/source pin to change the sampled area.
+- Pins should be hidden when Healing tool is inactive.
+
 ### Accessibility
 - Controls are keyboard accessible.
 - Provide clear ARIA labels for sliders and mode selector.
@@ -55,6 +62,9 @@ Initial scope focuses on spot removal and a basic healing brush (clone + blend).
 ### Spot removal (tap)
 - User taps/clicks a point; editor applies a circular heal/clone patch with feathering.
 - Intended for dust spots and small blemishes.
+- A spot operation stores both:
+  - target center
+  - sampled/source point (auto-picked initially, user-adjustable via pin drag)
 
 ### Healing brush (stroke)
 - User paints a stroke; the editor fills the stroke region using sampled source pixels plus blending.
@@ -80,7 +90,7 @@ Suggested types:
 - `HealingMode = "spot" | "heal" | "clone"`
 - `HealingBrushSettings = { size: number; feather: number; opacity: number }`
 - `HealingOp = SpotOp | StrokeOp`
-  - `SpotOp`: `{ id, mode: "spot" | "heal"; center: {x,y}; radius; feather; opacity }`
+  - `SpotOp`: `{ id, mode: "spot" | "heal"; center: {x,y}; radius; feather; opacity; source?: {x,y} }`
   - `StrokeOp`: `{ id, mode: "heal" | "clone"; points: Point[]; radius; feather; opacity; source?: {x,y} }`
 
 Actions:
@@ -155,3 +165,4 @@ Initial implementation can be pragmatic and iterative.
 - What is the v1 heuristic for choosing source pixels for Spot removal?
 - Should strokes be selectable/editable after creation (move/resize/delete), or is v1 append-only?
 - Should healing apply before or after color/light adjustments (best perceptual results)?
+- Should spot pins support “auto re-sample” (like Lightroom’s `/`) in v1?

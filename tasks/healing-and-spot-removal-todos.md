@@ -19,6 +19,9 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
 ## 0) Product decisions to lock
 
 ### v1 decisions
+- [x] Spot pins and selection
+  - [x] Click target pin selects that spot
+  - [x] Drag source pin changes sampling
 - [x] Confirm behavior when Healing tool active
   - [x] Primary drag paints
   - [x] Pan modifier: `Space + drag`
@@ -105,7 +108,10 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [ ] Implement clone + basic luma matching / blend
   - [ ] Validate seams are reduced vs pure clone
 - [ ] Spot (tap)
-  - [ ] Auto-source heuristic (ring sample around spot)
+  - [ ] Auto-source heuristic (initial source point)
+  - [ ] Show target + source pins + connecting line
+  - [ ] Click target pin to select spot
+  - [ ] Drag source pin to change sampled area
   - [ ] Apply patch with feather
 
 ### v2 (object removal)
