@@ -687,6 +687,7 @@ export const useCropStore = create<CropStore>((set, get) => ({
             feather: 50,
           },
           ops: [],
+          cloneSource: null,
         },
       };
 

@@ -40,6 +40,7 @@ export function getImageEditorEdits(): ImageEditorEdits {
       healingMode: healingState.healingMode,
       healingBrush: healingState.healingBrush,
       healingOps: healingState.healingOps,
+      cloneSource: healingState.cloneSource,
     }),
   };
 }

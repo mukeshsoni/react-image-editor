@@ -187,6 +187,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
   const healingMode = useHealingStore((state) => state.healingMode);
   const healingBrush = useHealingStore((state) => state.healingBrush);
+  const cloneSource = useHealingStore((state) => state.cloneSource);
+  const setCloneSource = useHealingStore((state) => state.setCloneSource);
   const addHealingOp = useHealingStore((state) => state.addHealingOp);
   const [healingCursor, setHealingCursor] = useState<{
     canvas: { x: number; y: number };
@@ -861,22 +863,36 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                            if (!canvasRef.current) return;
                            if (!healingModeEnabled) return;
 
-                           const isPanGesture = spaceDownRef.current;
+                            const isPanGesture = spaceDownRef.current;
+                            const isPickCloneSource =
+                              healingMode === "clone" && (event.altKey || event.metaKey);
+
                            const canvasPos = getMousePosInCanvas(canvasRef.current, event);
 
-                           if (isPanGesture) {
-                             panRef.current.isPanning = true;
-                             panRef.current.last = canvasPos;
-                             return;
-                           }
+                            const imagePos = canvasPointToImagePoint(canvasPos);
+                            if (!imagePos) return;
 
-                           const imagePos = canvasPointToImagePoint(canvasPos);
-                           if (!imagePos) return;
+                            if (isPickCloneSource) {
+                              event.preventDefault();
+                              setCloneSource(imagePos);
+                              return;
+                            }
 
-                           event.preventDefault();
-                           (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+                            if (isPanGesture) {
+                              panRef.current.isPanning = true;
+                              panRef.current.last = canvasPos;
+                              return;
+                            }
 
-                           draftStrokeRef.current = { points: [imagePos] };
+                            if (healingMode === "clone" && !cloneSource) {
+                              return;
+                            }
+
+                            event.preventDefault();
+                            (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+
+                            draftStrokeRef.current = { points: [imagePos] };
+
                          },
                          onPointerMove: (event) => {
                            if (!canvasRef.current) return;
@@ -945,15 +961,17 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                              return;
                            }
 
-                           addHealingOp({
-                             id,
-                             type: "stroke",
-                             mode: healingMode,
-                             points: draft.points,
-                             radius: healingBrush.size / 2,
-                             feather: healingBrush.feather,
-                             opacity: 255,
-                           });
+                            addHealingOp({
+                              id,
+                              type: "stroke",
+                              mode: healingMode,
+                              points: draft.points,
+                              radius: healingBrush.size / 2,
+                              feather: healingBrush.feather,
+                              opacity: 255,
+                              source: healingMode === "clone" ? cloneSource ?? undefined : undefined,
+                            });
+
                          },
                          onPointerCancel: () => {
                            panRef.current.isPanning = false;

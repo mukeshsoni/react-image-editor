@@ -63,4 +63,5 @@ export function applyEditsSnapshot(edits: ImageEditorEdits) {
   healingStore.setHealingMode(edits.healing.mode);
   healingStore.setHealingBrushSettings(edits.healing.brush);
   healingStore.setHealingOps(edits.healing.ops);
+  healingStore.setCloneSource(edits.healing.cloneSource ?? null);
 }

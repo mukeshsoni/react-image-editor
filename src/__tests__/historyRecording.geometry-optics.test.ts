@@ -58,6 +58,7 @@ function makeBaseEdits(): ImageEditorEdits {
       mode: "spot",
       brush: { size: 30, feather: 50 },
       ops: [],
+      cloneSource: null,
     },
   };
 }

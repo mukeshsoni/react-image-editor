@@ -37,6 +37,7 @@ export type HealingEdits = {
   mode: HealingMode;
   brush: HealingBrushSettings;
   ops: HealingOp[];
+  cloneSource: Point | null;
 };
 
 const DEFAULT_HEALING_BRUSH: HealingBrushSettings = {
@@ -49,15 +50,18 @@ const DEFAULT_HEALING_EDITS: HealingEdits = {
   mode: "spot",
   brush: { ...DEFAULT_HEALING_BRUSH },
   ops: [],
+  cloneSource: null,
 };
 
 type HealingStore = {
   healingMode: HealingMode;
   healingBrush: HealingBrushSettings;
   healingOps: HealingOp[];
+  cloneSource: Point | null;
 
   setHealingMode: (mode: HealingMode) => void;
   setHealingBrushSettings: (updates: Partial<HealingBrushSettings>) => void;
+  setCloneSource: (source: Point | null) => void;
 
   addHealingOp: (op: HealingOp) => void;
   removeHealingOp: (id: string) => void;
@@ -71,6 +75,7 @@ export const useHealingStore = create<HealingStore>((set) => ({
   healingMode: DEFAULT_HEALING_EDITS.mode,
   healingBrush: { ...DEFAULT_HEALING_BRUSH },
   healingOps: [],
+  cloneSource: null,
 
   setHealingMode: (mode) => {
     set({ healingMode: mode });
@@ -83,6 +88,10 @@ export const useHealingStore = create<HealingStore>((set) => ({
         ...updates,
       },
     }));
+  },
+
+  setCloneSource: (source) => {
+    set({ cloneSource: source });
   },
 
   addHealingOp: (op) => {
@@ -98,7 +107,7 @@ export const useHealingStore = create<HealingStore>((set) => ({
   },
 
   clearHealingOps: () => {
-    set({ healingOps: [] });
+    set({ healingOps: [], cloneSource: null });
   },
 
   setHealingOps: (ops) => {
@@ -110,6 +119,7 @@ export const useHealingStore = create<HealingStore>((set) => ({
       healingMode: DEFAULT_HEALING_EDITS.mode,
       healingBrush: { ...DEFAULT_HEALING_BRUSH },
       healingOps: [],
+      cloneSource: null,
     });
   },
 }));
@@ -118,11 +128,13 @@ export function getHealingEditsSnapshot(params: {
   healingMode: HealingMode;
   healingBrush: HealingBrushSettings;
   healingOps: HealingOp[];
+  cloneSource: Point | null;
 }): HealingEdits {
   return {
     version: 1,
     mode: params.healingMode,
     brush: params.healingBrush,
     ops: params.healingOps,
+    cloneSource: params.cloneSource,
   };
 }

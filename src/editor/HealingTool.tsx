@@ -43,6 +43,7 @@ export function HealingToolPanel({ enabled, isImageLoaded }: Props) {
   const mode = useHealingStore((state) => state.healingMode);
   const brush = useHealingStore((state) => state.healingBrush);
   const opsCount = useHealingStore((state) => state.healingOps.length);
+  const cloneSource = useHealingStore((state) => state.cloneSource);
 
   const setMode = useHealingStore((state) => state.setHealingMode);
   const setBrush = useHealingStore((state) => state.setHealingBrushSettings);
@@ -143,6 +144,12 @@ export function HealingToolPanel({ enabled, isImageLoaded }: Props) {
               onValueChange={(value) => setBrush({ feather: value })}
             />
           </div>
+
+          {mode === "clone" ? (
+            <div className="text-xs text-gray-600">
+              Hold Alt/Option and click to set clone source{cloneSource ? " (set)" : ""}
+            </div>
+          ) : null}
 
           <div className="text-xs text-gray-600">Pan: hold Space + drag</div>
         </div>

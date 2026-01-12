@@ -12,6 +12,7 @@ export type HealingCanvasOp = {
   radiusPx: number;
   feather: number;
   opacity: number;
+  source?: Point;
 };
 
 function clampByte(value: number): number {
@@ -150,6 +151,7 @@ export function projectHealingOpsToCanvas(params: {
       radiusPx: op.radius * draw.zoomLevel,
       feather: op.feather,
       opacity: op.opacity,
+      source: op.source ? imageToCanvas(op.source) : undefined,
     };
   });
 }
@@ -176,10 +178,17 @@ export const healingProcessor = {
       const feather = op.feather;
       const opacity = op.opacity;
 
-      const sourceOffset: Point = {
-        x: Math.max(8, radiusPx * 2),
-        y: 0,
-      };
+      const anchor = op.center ?? op.points?.[0];
+      const sourceOffset: Point =
+        op.source && anchor
+          ? {
+              x: op.source.x - anchor.x,
+              y: op.source.y - anchor.y,
+            }
+          : {
+              x: Math.max(8, radiusPx * 2),
+              y: 0,
+            };
 
       if (op.type === "spot" && op.center) {
         applyCircularClone({

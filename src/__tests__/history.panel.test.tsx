@@ -85,6 +85,7 @@ const hoisted = vi.hoisted(() => {
           mode: "spot",
           brush: { size: 30, feather: 50 },
           ops: [],
+          cloneSource: null,
         },
       },
        camera: {

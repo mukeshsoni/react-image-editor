@@ -61,6 +61,7 @@ const dummyState: EditorSerializableState = {
       mode: "spot",
       brush: { size: 30, feather: 50 },
       ops: [],
+      cloneSource: null,
     },
   },
   camera: { zoomLevel: 1, offset: { x: 0, y: 0 } },
