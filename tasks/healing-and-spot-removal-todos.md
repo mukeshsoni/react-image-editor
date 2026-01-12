@@ -13,8 +13,11 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
 
 ### v2 (Object Removal)
 - Content-aware fill / inpainting for larger object removal.
-- More advanced texture synthesis and edge-aware blending.
-- Select/paint + expand/shrink selection + feather controls.
+- Mask-based selection (paint/erase) with feather + expand/shrink.
+- Apply/Cancel workflow (draft mask doesn’t enter history until Apply).
+- Regenerate/Refresh (re-run fill with different seed).
+- Web Worker execution + progress/cancel.
+- Deterministic export (same seed/settings).
 
 ## 0) Product decisions to lock
 
@@ -115,15 +118,71 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [ ] Apply patch with feather
 
 ### v2 (object removal)
-- [ ] Selection/mask model
-  - [ ] Store mask in image-space (vector or raster)
-  - [ ] Add feather + expand/shrink operations
-- [ ] Fill algorithm options
-  - [ ] PatchMatch-style fill (CPU; likely slow)
-  - [ ] WebGL-based iterative fill (experimental)
-  - [ ] Model-backed inpainting (future; requires backend or WASM model)
-- [ ] Seam blending
-  - [ ] Edge-aware blending / Poisson-like approximation (future)
+
+#### A) UX + interactions
+- [ ] Add new mode: `Remove (content-aware)`
+- [ ] Selection creation
+  - [ ] Brush to paint selection mask
+  - [ ] Erase modifier (e.g. `Shift` toggles add/subtract)
+  - [ ] Feather slider (edge softness)
+  - [ ] Expand/Shrink slider (grow/shrink mask)
+- [ ] Overlay visualization
+  - [ ] Show selection mask overlay (tint)
+  - [ ] Show outline/marching ants (optional)
+- [ ] Apply model
+  - [ ] Apply button commits one `RemoveOp`
+  - [ ] Cancel discards draft mask
+- [ ] Re-sample / regenerate
+  - [ ] “Refresh” button (re-run fill with different seed)
+  - [ ] Optional shortcut `/` to re-run (Lightroom-like)
+- [ ] Pins
+  - [ ] Create a pin per `RemoveOp`
+  - [ ] Select pin to view/edit settings (v2.1)
+
+#### B) State model
+- [ ] Define `RemoveOp` (versioned + serializable)
+  - [ ] `id`, `type: "remove"`, `mode: "contentAware"`
+  - [ ] `mask` representation (see below)
+  - [ ] `feather`, `expand`, `seed`, `status` (draft/applied)
+- [ ] Decide mask representation
+  - [ ] Raster mask (`Uint8Array` + width/height) at fixed resolution
+  - [ ] Or vector strokes → rasterize at apply-time
+- [ ] Store draft state separately from committed ops
+  - [ ] `removeDraftMask` (ephemeral)
+
+#### C) Processing pipeline
+- [ ] Add remove stage to render pipeline (after healing, before tone/color)
+- [ ] Ensure deterministic export (same algorithm + seed)
+- [ ] Ensure async execution (don’t block UI)
+  - [ ] Run in a Web Worker
+  - [ ] Progress indicator
+  - [ ] Allow cancel mid-run
+
+#### D) Algorithm (pick v2 baseline)
+- [ ] CPU PatchMatch-style inpainting (recommended offline baseline)
+  - [ ] Multi-scale pyramid (coarse → fine)
+  - [ ] Deterministic seed
+  - [ ] Fixed patch size (configurable later)
+- [ ] Seam handling / blending
+  - [ ] Feathered compositing at boundary
+  - [ ] Poisson-like blend (v2.1+)
+- [ ] Guardrails
+  - [ ] Max selection size warning/limit
+  - [ ] Downscale preview processing for large selections
+
+#### E) Performance + caching
+- [ ] Cache intermediate results per `RemoveOp`
+- [ ] Avoid full pipeline recompute during mask paint
+- [ ] Memory bounds (avoid huge arrays full-res)
+
+#### F) Undo/Redo
+- [ ] One history entry per Apply / Refresh
+- [ ] Draft mask painting does not enter history
+
+#### G) Tests
+- [ ] Unit tests for mask rasterization + expand/shrink + feather
+- [ ] Determinism test (fixed seed → fixed output hash on small fixture)
+- [ ] Worker integration test (message protocol)
 
 ## 6) Undo/Redo integration
 - [x] Ensure each completed stroke/spot becomes one history entry
