@@ -248,6 +248,10 @@ export function getHistoryDisplayForEditsChange(
 
     if (prevOps.length !== nextOps.length) {
       if (nextOps.length === 0 && prevOps.length > 0) {
+        if (prevOps.length === 1 && prevOps[0]?.type === "spot") {
+          return { label: "Delete Spot" };
+        }
+
         return { label: "Clear Healing" };
       }
 
@@ -261,6 +265,12 @@ export function getHistoryDisplayForEditsChange(
         }
 
         return { label: "Healing" };
+      }
+
+      const removedSpotsCount = prevOps.filter((op) => op.type === "spot").length;
+      const nextSpotsCount = nextOps.filter((op) => op.type === "spot").length;
+      if (removedSpotsCount > nextSpotsCount) {
+        return { label: "Delete Spot" };
       }
 
       return { label: "Healing" };

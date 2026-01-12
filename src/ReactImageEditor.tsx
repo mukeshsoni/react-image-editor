@@ -192,6 +192,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const addHealingOp = useHealingStore((state) => state.addHealingOp);
   const healingOps = useHealingStore((state) => state.healingOps);
   const setSpotSource = useHealingStore((state) => state.setSpotSource);
+  const removeHealingOp = useHealingStore((state) => state.removeHealingOp);
   const [healingCursor, setHealingCursor] = useState<{
     canvas: { x: number; y: number };
     image: import("@/store/cropStore").Point | null;
@@ -526,6 +527,48 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
       setSelectedSpotId(null);
     }
   }, [healingMode, healingModeEnabled]);
+
+  useEffect(() => {
+    if (!healingModeEnabled) return;
+    if (healingMode !== "spot") return;
+    if (!selectedSpotId) return;
+
+    const spotId = selectedSpotId;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement) return;
+      if (target instanceof HTMLElement && target.isContentEditable) return;
+
+      if (target instanceof HTMLInputElement) {
+        const inputType = (target.type || "text").toLowerCase();
+        const isTextEntryType =
+          inputType === "text" ||
+          inputType === "search" ||
+          inputType === "email" ||
+          inputType === "password" ||
+          inputType === "tel" ||
+          inputType === "url" ||
+          inputType === "number" ||
+          inputType === "date" ||
+          inputType === "time" ||
+          inputType === "datetime-local";
+
+        if (isTextEntryType) return;
+      }
+
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+
+      event.preventDefault();
+      removeHealingOp(spotId);
+      setSelectedSpotId(null);
+    }
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [healingMode, healingModeEnabled, removeHealingOp, selectedSpotId]);
 
   // Reset zoom when in crop mode
   useEffect(() => {

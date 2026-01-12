@@ -119,7 +119,7 @@ describe("historyRecording healing labels", () => {
     });
   });
 
-  test("labels clear healing when ops cleared", () => {
+  test("labels delete spot when a spot is removed", () => {
     const prev = makeBaseEdits();
     const withOps: ImageEditorEdits = {
       ...prev,
@@ -141,6 +141,50 @@ describe("historyRecording healing labels", () => {
     };
 
     expect(getHistoryDisplayForEditsChange(withOps, prev)).toEqual({
+      label: "Delete Spot",
+    });
+  });
+
+  test("labels clear healing when multiple ops are cleared", () => {
+    const prev = makeBaseEdits();
+    const withOps: ImageEditorEdits = {
+      ...prev,
+      healing: {
+        ...prev.healing,
+        ops: [
+          {
+            id: "spot1",
+            type: "spot",
+            mode: "spot",
+            center: { x: 10, y: 10 },
+            radius: 5,
+            feather: 50,
+            opacity: 255,
+            source: { x: 20, y: 10 },
+          },
+          {
+            id: "spot2",
+            type: "spot",
+            mode: "spot",
+            center: { x: 50, y: 50 },
+            radius: 5,
+            feather: 50,
+            opacity: 255,
+            source: { x: 60, y: 50 },
+          },
+        ],
+      },
+    };
+
+    const cleared: ImageEditorEdits = {
+      ...withOps,
+      healing: {
+        ...withOps.healing,
+        ops: [],
+      },
+    };
+
+    expect(getHistoryDisplayForEditsChange(withOps, cleared)).toEqual({
       label: "Clear Healing",
     });
   });
