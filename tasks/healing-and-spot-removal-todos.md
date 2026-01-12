@@ -28,6 +28,10 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [x] Size: `5…200`
   - [x] Feather: `0…100`
   - [x] Opacity: fixed at `100%` (no v1 control)
+- [ ] Clone source selection (v1)
+  - [ ] `Alt/Option + click` sets clone source
+  - [ ] Source persists until changed (or cleared)
+  - [ ] Painting is disabled until a source is set
 
 ### v2 decisions
 - [ ] Define UX for object removal
@@ -95,6 +99,7 @@ Source PRD: `prds/healing-and-spot-removal-prd.md`
   - [ ] Source selection UX
     - [ ] Option A: `Alt/Option + click` to set source
     - [ ] Option B: auto-source offset from stroke start (fallback)
+  - [ ] Persist source across strokes
   - [ ] Composite with feather + opacity
 - [ ] Heal (stroke)
   - [ ] Implement clone + basic luma matching / blend
