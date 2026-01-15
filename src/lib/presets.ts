@@ -3,7 +3,7 @@ import type {
   LightAdjustments,
   WhiteBalanceSettings,
 } from "@/store/cropStore";
-import type { PresetId } from "@/store/edits";
+import type { PresetEdits, PresetId } from "@/store/edits";
 
 export type PresetDeltas = {
   light?: Partial<LightAdjustments>;
@@ -19,6 +19,94 @@ export type PresetDefinition = {
   name: string;
   deltas: PresetDeltas;
 };
+
+export const BUILT_IN_PRESETS: ReadonlyArray<PresetDefinition> = [
+  { id: "none", name: "None", deltas: {} },
+  {
+    id: "auto-enhance",
+    name: "Auto Enhance",
+    deltas: {
+      light: { exposure: 0.1, contrast: 10, highlights: -5, shadows: 5 },
+      color: { vibrance: 10, saturation: 5 },
+    },
+  },
+  {
+    id: "vibrant",
+    name: "Vibrant",
+    deltas: {
+      light: { contrast: 10 },
+      color: { vibrance: 30, saturation: 15 },
+    },
+  },
+  {
+    id: "warm",
+    name: "Warm",
+    deltas: {
+      whiteBalance: { temperatureKelvin: 400, tint: 2 },
+      color: { saturation: 5 },
+    },
+  },
+  {
+    id: "cool",
+    name: "Cool",
+    deltas: {
+      whiteBalance: { temperatureKelvin: -400, tint: -2 },
+      light: { contrast: 5 },
+    },
+  },
+  {
+    id: "matte",
+    name: "Matte",
+    deltas: {
+      light: { contrast: -15, highlights: -5, shadows: 10, blacks: 20 },
+      color: { saturation: -5 },
+    },
+  },
+  {
+    id: "bw",
+    name: "B&W",
+    deltas: {
+      color: { saturation: -100 },
+      light: { contrast: 10 },
+    },
+  },
+  {
+    id: "bw-high-contrast",
+    name: "B&W High Contrast",
+    deltas: {
+      color: { saturation: -100 },
+      light: { contrast: 30, blacks: -10, whites: 5 },
+    },
+  },
+  {
+    id: "vintage-film",
+    name: "Vintage Film",
+    deltas: {
+      whiteBalance: { temperatureKelvin: 300, tint: 2 },
+      light: { contrast: -10, highlights: -5, shadows: 10, blacks: 15 },
+      color: { saturation: -15, vibrance: -5 },
+    },
+  },
+];
+
+export function getPresetDefinition(presetId: PresetId): PresetDefinition | undefined {
+  return BUILT_IN_PRESETS.find((preset) => preset.id === presetId);
+}
+
+export function getEffectiveAdjustments(params: {
+  manual: ManualAdjustments;
+  preset: PresetEdits;
+}): ManualAdjustments {
+  const definition = getPresetDefinition(params.preset.activePresetId);
+  if (!definition || definition.id === "none") {
+    return params.manual;
+  }
+
+  return combineAdjustments(
+    params.manual,
+    scalePresetAdjustments(definition.deltas, params.preset.intensity),
+  );
+}
 
 export type ManualAdjustments = {
   whiteBalance: WhiteBalanceSettings;

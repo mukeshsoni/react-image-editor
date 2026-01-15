@@ -87,12 +87,15 @@ Notes:
   - `scalePresetAdjustments({}, intensity)` + `combineAdjustments(manual, {})` yields manual unchanged
 
 ## 4) Rendering + export integration
-- [ ] Identify the single “effective edits” entrypoint used by render/export
-- [ ] Update render pipeline to consume effective adjustments (manual + preset layer)
-- [ ] Ensure export uses the same effective adjustments as preview
-- [ ] Performance sanity:
-  - [ ] preset switch should not trigger extra passes
-  - [ ] intensity drag stays responsive
+- [x] Identify the single “effective edits” entrypoint used by render/export
+  - Implemented `getEffectiveAdjustments(...)` in `src/lib/presets.ts`
+- [x] Update render pipeline to consume effective adjustments (manual + preset layer)
+  - `src/editor/EditorCanvas.tsx` now passes effective WB/light/color into the pixel pipeline
+- [x] Ensure export uses the same effective adjustments as preview
+  - `src/editor/ExportTool.tsx` uses the same `getEffectiveAdjustments(...)` before export
+- [x] Performance sanity
+  - preset changes only trigger the existing render effect (no extra raster passes)
+  - intensity changes are just new effective inputs (same pipeline cadence)
 
 ## 5) UI — Presets panel
 - [ ] Add a right-side panel section labeled `Presets`

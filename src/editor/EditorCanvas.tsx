@@ -26,6 +26,8 @@ import { useHealingStore } from "@/store/healingStore";
 import { useLightStore } from "@/store/lightStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
+import { getEffectiveAdjustments } from "@/lib/presets";
+import { usePresetStore } from "@/store/presetStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 type RenderCache = {
@@ -206,6 +208,16 @@ export function EditorCanvas({
   const whiteBalance = useWhiteBalanceStore((state) => state.whiteBalance);
   const lightAdjustments = useLightStore((state) => state.lightAdjustments);
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
+  const preset = usePresetStore((state) => state.preset);
+
+  const effectiveAdjustments = getEffectiveAdjustments({
+    manual: {
+      whiteBalance,
+      light: lightAdjustments,
+      color: colorAdjustments,
+    },
+    preset,
+  });
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
   const denoise = useDenoiseStore((state) => state.denoise);
   const sharpening = useSharpeningStore((state) => state.sharpening);
@@ -246,10 +258,10 @@ export function EditorCanvas({
           offset,
           rotation,
           cropCommitted ? cropCommit : null,
-          whiteBalance,
-          lightAdjustments,
+          effectiveAdjustments.whiteBalance,
+          effectiveAdjustments.light,
           toneCurve,
-          colorAdjustments,
+          effectiveAdjustments.color,
           denoise,
           sharpening,
           renderCacheRef.current ?? undefined,
@@ -259,20 +271,20 @@ export function EditorCanvas({
     });
     }, [
       canvasRef,
-      colorAdjustments,
       cropCommit,
       cropCommitted,
+      denoise,
+      effectiveAdjustments.color,
+      effectiveAdjustments.light,
+      effectiveAdjustments.whiteBalance,
       geometryOptics,
       healingOps,
       imageRef,
-      lightAdjustments,
       offset,
       rotation,
-      toneCurve,
-      whiteBalance,
-      zoomLevel,
-      denoise,
       sharpening,
+      toneCurve,
+      zoomLevel,
     ]);
 
 
