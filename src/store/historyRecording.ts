@@ -242,6 +242,59 @@ export function getHistoryDisplayForEditsChange(
     return { label: "Denoise" };
   }
 
+  if (!areJsonEqual(previous.healing, next.healing)) {
+    const prevOps = previous.healing.ops;
+    const nextOps = next.healing.ops;
+
+    if (prevOps.length !== nextOps.length) {
+      if (nextOps.length === 0 && prevOps.length > 0) {
+        if (prevOps.length === 1 && prevOps[0]?.type === "spot") {
+          return { label: "Delete Spot" };
+        }
+
+        return { label: "Clear Healing" };
+      }
+
+      if (nextOps.length > prevOps.length) {
+        const added = nextOps[nextOps.length - 1];
+        if (added?.type === "spot") {
+          return { label: "Spot Removal" };
+        }
+        if (added?.type === "stroke") {
+          return { label: added.mode === "clone" ? "Clone Stroke" : "Healing Stroke" };
+        }
+
+        return { label: "Healing" };
+      }
+
+      const removedSpotsCount = prevOps.filter((op) => op.type === "spot").length;
+      const nextSpotsCount = nextOps.filter((op) => op.type === "spot").length;
+      if (removedSpotsCount > nextSpotsCount) {
+        return { label: "Delete Spot" };
+      }
+
+      return { label: "Healing" };
+    }
+
+    // Same count: likely a source tweak or in-place change.
+    const anySpotSourceChanged = nextOps.some((nextOp, idx) => {
+      const prevOp = prevOps[idx];
+      if (!prevOp || prevOp.type !== "spot" || nextOp.type !== "spot") return false;
+      return !areJsonEqual(prevOp.source ?? null, nextOp.source ?? null);
+    });
+
+    if (anySpotSourceChanged) {
+      return { label: "Spot Sample" };
+    }
+
+    const anyCloneSourceChanged = !areJsonEqual(previous.healing.cloneSource, next.healing.cloneSource);
+    if (anyCloneSourceChanged) {
+      return { label: "Clone Source" };
+    }
+
+    return { label: "Healing" };
+  }
+
   return { label: "Edit" };
 }
 

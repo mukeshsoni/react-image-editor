@@ -22,6 +22,7 @@ import { useLightStore } from "@/store/lightStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
 import { useCropStore } from "@/store/cropStore";
+import { useHealingStore } from "@/store/healingStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 type Props = {
@@ -63,6 +64,7 @@ export function ExportTool({
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
   const sharpening = useSharpeningStore((state) => state.sharpening);
   const geometryOptics = useGeometryOpticsStore((state) => state.settings);
+  const healingOps = useHealingStore((state) => state.healingOps);
 
   async function handleDownload() {
     if (!imageRef.current) return;
@@ -92,17 +94,19 @@ export function ExportTool({
             })
           : null;
 
-       const offscreen = renderCommittedImageToOffscreenCanvas(
-         cropCanvas ?? baseImage,
-         cropCanvas ? 0 : rotation,
-         background,
-         whiteBalance,
-         lightAdjustments,
-         toneCurve,
-         colorAdjustments,
-         sharpening,
-         geometryOptics,
-       );
+        const offscreen = renderCommittedImageToOffscreenCanvas(
+          cropCanvas ?? baseImage,
+          cropCanvas ? 0 : rotation,
+          background,
+          whiteBalance,
+          lightAdjustments,
+          toneCurve,
+          colorAdjustments,
+          sharpening,
+          geometryOptics,
+          healingOps,
+        );
+
 
 
       if (!offscreen) {

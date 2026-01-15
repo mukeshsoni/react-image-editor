@@ -75,12 +75,19 @@ const hoisted = vi.hoisted(() => {
           detail: 25,
           masking: 0,
         },
-         denoise: {
-           luminance: 0,
-           color: 0,
-           detail: 50,
+        denoise: {
+          luminance: 0,
+          color: 0,
+          detail: 50,
         },
-       },
+        healing: {
+          version: 1,
+          mode: "spot",
+          brush: { size: 30, feather: 50 },
+          ops: [],
+          cloneSource: null,
+        },
+      },
        camera: {
 
         zoomLevel: 1,

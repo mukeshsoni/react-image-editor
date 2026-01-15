@@ -9,6 +9,7 @@ import type {
   WhiteBalanceSettings,
 } from "./cropStore";
 import type { GeometryOpticsSettings } from "./geometryOpticsStore";
+import type { HealingEdits } from "./healingStore";
 
 export type ImageEditorEdits = {
   version: 1;
@@ -33,4 +34,5 @@ export type ImageEditorEdits = {
   toneCurve: ToneCurveSettings;
   sharpening?: SharpeningSettings;
   denoise?: DenoiseSettings;
+  healing: HealingEdits;
 };

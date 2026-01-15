@@ -14,6 +14,7 @@ import type {
 
 type PipelineInputs = {
   geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings;
+  healingOps?: import("@/editor/pixel-pipeline/processors/healing").HealingCanvasOp[];
 
   whiteBalance?: WhiteBalanceSettings;
   lightAdjustments?: LightAdjustments;
@@ -40,6 +41,7 @@ export function applyPixelPipelineToCanvas(
     height,
 
     geometryOptics: inputs.geometryOptics,
+    healingOps: inputs.healingOps,
 
     whiteBalance: inputs.whiteBalance,
     lightAdjustments: inputs.lightAdjustments,

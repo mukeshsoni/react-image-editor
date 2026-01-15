@@ -7,6 +7,7 @@ import type {
   WhiteBalanceSettings,
 } from "@/store/cropStore";
 import type { GeometryOpticsSettings } from "@/store/geometryOpticsStore";
+import type { HealingCanvasOp } from "@/editor/pixel-pipeline/processors/healing";
 
 export type PipelineBuffers = {
   in: Uint8ClampedArray;
@@ -36,6 +37,7 @@ export type PixelPipelineContext = {
   height?: number;
 
   geometryOptics?: GeometryOpticsSettings;
+  healingOps?: HealingCanvasOp[];
 
   whiteBalance?: WhiteBalanceSettings;
   lightAdjustments?: LightAdjustments;
