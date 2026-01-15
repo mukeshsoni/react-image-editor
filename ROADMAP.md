@@ -104,6 +104,13 @@
 - Before/after comparison view
 - History panel with all adjustments
 
+### Popular Preset Edits (Built-in)
+- Ship a small set of curated one-click presets (e.g., B&W, Vintage, Matte, Film, Warm, Cool, Vibrant, Portrait)
+- Store presets as adjustment parameter sets and apply them non-destructively
+- Add preset preview thumbnails + an intensity/strength slider
+- PRD: `prds/presets-prd.md`
+- **Impact**: Faster “good-looking” edits and better onboarding
+
 ### Local Adjustments
 - Graduated filter (for sky/foreground)
 - Radial filter (vignette-style local adjustments)
