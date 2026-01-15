@@ -9,9 +9,47 @@ Source PRD: `prds/presets-prd.md`
 - Export/download output matches preview.
 
 ## 1) Data model
-- [ ] Define `PresetId` union and `PresetDefinition` type
-- [ ] Create built-in preset list (ids, names, adjustment deltas)
-- [ ] Decide how presets map to available adjustments (skip unsupported fields)
+- [x] Define `PresetId` union and `PresetDefinition` type
+  - `PresetId` (v1):
+    - `"none" | "auto-enhance" | "vibrant" | "warm" | "cool" | "matte" | "bw" | "bw-high-contrast" | "vintage-film"`
+  - `PresetDefinition` (v1):
+    - `{ id: PresetId; name: string; deltas: PresetDeltas }`
+  - `PresetDeltas` (v1)
+    - `light?: Partial<LightAdjustments>`
+    - `color?: Partial<ColorAdjustments>`
+    - `whiteBalance?: { temperatureKelvin?: number; tint?: number }` (treated as deltas)
+
+- [x] Create built-in preset list (ids, names, adjustment deltas)
+  - `none` — None (no deltas)
+  - `auto-enhance` — Auto Enhance
+    - light: `{ exposure: 5, contrast: 10, highlights: -5, shadows: 5 }`
+    - color: `{ vibrance: 10, saturation: 5 }`
+  - `vibrant` — Vibrant
+    - light: `{ contrast: 10 }`
+    - color: `{ vibrance: 30, saturation: 15 }`
+  - `warm` — Warm
+    - whiteBalance: `{ temperatureKelvin: 400, tint: 2 }`
+    - color: `{ saturation: 5 }`
+  - `cool` — Cool
+    - whiteBalance: `{ temperatureKelvin: -400, tint: -2 }`
+    - light: `{ contrast: 5 }`
+  - `matte` — Matte
+    - light: `{ contrast: -15, highlights: -5, shadows: 10, blacks: 20 }`
+    - color: `{ saturation: -5 }`
+  - `bw` — B&W
+    - color: `{ saturation: -100 }`
+    - light: `{ contrast: 10 }`
+  - `bw-high-contrast` — B&W High Contrast
+    - color: `{ saturation: -100 }`
+    - light: `{ contrast: 30, blacks: -10, whites: 5 }`
+  - `vintage-film` — Vintage Film
+    - whiteBalance: `{ temperatureKelvin: 300, tint: 2 }`
+    - light: `{ contrast: -10, highlights: -5, shadows: 10, blacks: 15 }`
+    - color: `{ saturation: -15, vibrance: -5 }`
+
+- [x] Decide how presets map to available adjustments (skip unsupported fields)
+  - v1 presets only use `light`, `color`, and `whiteBalance` numeric deltas.
+  - Ignore other edit domains (tone curve, geometry/optics, denoise, sharpening, healing) until they have defined combine rules.
 
 ## 2) Store + serialization
 - [ ] Add preset state store (recommended: `src/store/presetStore.ts`)
