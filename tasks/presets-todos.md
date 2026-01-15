@@ -98,15 +98,17 @@ Notes:
   - intensity changes are just new effective inputs (same pipeline cadence)
 
 ## 5) UI — Presets panel
-- [ ] Add a right-side panel section labeled `Presets`
-- [ ] Render preset tiles (grid or horizontal list)
-  - [ ] include `None` tile
-  - [ ] highlight selected tile
-  - [ ] keyboard focus + `aria-selected`/`aria-pressed`
-- [ ] Wire clicks to `setActivePreset(...)`
-- [ ] Show `Intensity` slider only when preset != `none`
-  - [ ] wire to `setPresetIntensity(...)`
-- [ ] Ensure clearing preset preserves manual adjustments
+- [x] Add a right-side panel section labeled `Presets`
+  - Added panel module `src/editor/panels/presets.panel.tsx`
+- [x] Render preset tiles (grid)
+  - [x] include `None` tile ("None")
+  - [x] highlight selected tile (darker border)
+  - [x] keyboard focus + `aria-pressed`
+- [x] Wire clicks to `setActivePreset(...)`
+- [x] Show `Intensity` slider only when preset != `none`
+  - [x] wired to `setPresetIntensity(...)`
+- [x] Ensure clearing preset preserves manual adjustments
+  - `Clear` only resets preset state (does not touch manual stores)
 
 ## 6) Tests (Vitest)
 - [ ] Unit tests for composition helpers:
