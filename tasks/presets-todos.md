@@ -52,13 +52,25 @@ Source PRD: `prds/presets-prd.md`
   - Ignore other edit domains (tone curve, geometry/optics, denoise, sharpening, healing) until they have defined combine rules.
 
 ## 2) Store + serialization
-- [ ] Add preset state store (recommended: `src/store/presetStore.ts`)
-  - [ ] `activePresetId` (default: `"none"`)
-  - [ ] `presetIntensity` (default: `100`)
-  - [ ] actions: `setActivePreset`, `setPresetIntensity`, `clearPreset`
-- [ ] Extend `src/store/edits.ts` to include preset state in `ImageEditorEdits`
-- [ ] Extend `src/store/selectEdits.ts` to include preset state
-- [ ] Extend `src/store/applyEditsSnapshot.ts` to restore preset state
+- [x] Add preset state store (`src/store/presetStore.ts`)
+  - [x] `activePresetId` stored in `preset.activePresetId` (default: `"none"`)
+  - [x] `presetIntensity` stored in `preset.intensity` (default: `100`)
+  - [x] actions:
+    - [x] `setActivePreset(presetId)` (selects preset; resets intensity to `100` when selecting non-`none`)
+    - [x] `setPresetIntensity(intensity)`
+    - [x] `clearPreset()`
+
+- [x] Extend `src/store/edits.ts` to include preset state in `ImageEditorEdits`
+  - Added `PresetId`, `PresetEdits`, and `preset: PresetEdits` field
+
+- [x] Extend `src/store/selectEdits.ts` to include preset state
+  - Includes `preset: usePresetStore.getState().preset`
+
+- [x] Extend `src/store/applyEditsSnapshot.ts` to restore preset state
+  - Applies `edits.preset.activePresetId` and `edits.preset.intensity`
+
+Notes:
+- `src/store/cropStore.ts#getEdits()` remains legacy, but now includes a default `preset` field to satisfy the `ImageEditorEdits` type.
 
 ## 3) Effective adjustments composition
 - [ ] Implement pure helpers:
