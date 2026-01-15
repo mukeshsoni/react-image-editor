@@ -73,12 +73,18 @@ Notes:
 - `src/store/cropStore.ts#getEdits()` remains legacy, but now includes a default `preset` field to satisfy the `ImageEditorEdits` type.
 
 ## 3) Effective adjustments composition
-- [ ] Implement pure helpers:
-  - [ ] `scalePresetAdjustments(presetAdjustments, intensity)`
-  - [ ] `combineAdjustments(manual, presetScaled)`
-- [ ] Define per-field combination rules (additive by default)
-- [ ] Clamp combined values to legal ranges
-- [ ] Ensure `None` preset produces no changes
+- [x] Implement pure helpers (`src/lib/presets.ts`):
+  - [x] `scalePresetAdjustments(presetDeltas, intensity)`
+  - [x] `combineAdjustments(manual, presetScaled)`
+- [x] Define per-field combination rules (v1)
+  - Light/color/WB are additive: `manual + presetDelta * (intensity/100)`
+  - White balance deltas set `preset: "custom"` when non-zero
+- [x] Clamp combined values to legal UI ranges
+  - Light: exposure `[-2..2]`, others `[-100..100]`
+  - Color: `[-100..100]`
+  - WB: temp `[2000..10000]`, tint `[-100..100]`
+- [x] Ensure `None` preset produces no changes
+  - `scalePresetAdjustments({}, intensity)` + `combineAdjustments(manual, {})` yields manual unchanged
 
 ## 4) Rendering + export integration
 - [ ] Identify the single “effective edits” entrypoint used by render/export
