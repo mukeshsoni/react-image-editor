@@ -23,6 +23,8 @@ import { useSharpeningStore } from "@/store/sharpeningStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
 import { useCropStore } from "@/store/cropStore";
 import { useHealingStore } from "@/store/healingStore";
+import { getEffectiveAdjustments } from "@/lib/presets";
+import { usePresetStore } from "@/store/presetStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 type Props = {
@@ -62,9 +64,19 @@ export function ExportTool({
   const lightAdjustments = useLightStore((state) => state.lightAdjustments);
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
+  const preset = usePresetStore((state) => state.preset);
   const sharpening = useSharpeningStore((state) => state.sharpening);
   const geometryOptics = useGeometryOpticsStore((state) => state.settings);
   const healingOps = useHealingStore((state) => state.healingOps);
+
+  const effectiveAdjustments = getEffectiveAdjustments({
+    manual: {
+      whiteBalance,
+      light: lightAdjustments,
+      color: colorAdjustments,
+    },
+    preset,
+  });
 
   async function handleDownload() {
     if (!imageRef.current) return;
@@ -98,10 +110,10 @@ export function ExportTool({
           cropCanvas ?? baseImage,
           cropCanvas ? 0 : rotation,
           background,
-          whiteBalance,
-          lightAdjustments,
+          effectiveAdjustments.whiteBalance,
+          effectiveAdjustments.light,
           toneCurve,
-          colorAdjustments,
+          effectiveAdjustments.color,
           sharpening,
           geometryOptics,
           healingOps,

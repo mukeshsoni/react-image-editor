@@ -53,6 +53,7 @@ function makeBaseEdits(): ImageEditorEdits {
         },
       },
     },
+    preset: { activePresetId: "none", intensity: 100 },
     healing: {
       version: 1,
       mode: "spot",

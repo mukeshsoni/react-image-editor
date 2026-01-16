@@ -7,6 +7,7 @@ import { useLightStore } from "@/store/lightStore";
 import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
 import { useHealingStore } from "@/store/healingStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
+import { usePresetStore } from "@/store/presetStore";
 import { useToneCurveStore } from "@/store/toneCurveStore";
 import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
@@ -39,6 +40,10 @@ export function applyEditsSnapshot(edits: ImageEditorEdits) {
 
   useToneCurveStore.getState().setToneCurveMode(edits.toneCurve.mode);
   useToneCurveStore.getState().setToneCurveChannel(edits.toneCurve.activeChannel);
+
+  const preset = edits.preset ?? { activePresetId: "none", intensity: 100 };
+  usePresetStore.getState().setActivePreset(preset.activePresetId);
+  usePresetStore.getState().setPresetIntensity(preset.intensity);
   for (const [channel, points] of Object.entries(edits.toneCurve.point)) {
     useToneCurveStore.getState().setToneCurvePoints(
       channel as keyof typeof edits.toneCurve.point,

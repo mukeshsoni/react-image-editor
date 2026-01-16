@@ -1,4 +1,4 @@
-export type { ImageEditorEdits } from "./edits";
+export type { ImageEditorEdits, PresetEdits, PresetId } from "./edits";
 
 export type { EditorSerializableState, HistoryEntry } from "./historyStore";
 export {

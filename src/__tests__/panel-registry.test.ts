@@ -7,6 +7,7 @@ describe("panel registry", () => {
     const panels = getPanelRegistry();
 
     expect(panels.map((panel) => panel.id)).toEqual([
+      "presets",
       "white-balance",
       "light",
       "color",
