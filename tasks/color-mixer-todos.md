@@ -3,18 +3,18 @@
 Source PRD: `prds/color-mixer-prd.md`
 
 ## 1) State + Types
-- [ ] Extend `ColorAdjustments` to include:
-  - [ ] `mixerHsl`: per-band `{ hue, saturation, luminance }`
-  - [ ] `pointColor`: selected hue + shifts + range
-- [ ] Define defaults for all new fields (neutral)
-- [ ] Add/extend Zustand actions:
-  - [ ] `setMixerBandAdjustment(band, channel, value)`
-  - [ ] `resetMixerBand(band)`
-  - [ ] `resetMixer()`
-  - [ ] `setPointColor({ ... })`
-  - [ ] `resetPointColor()`
-- [ ] Ensure state is serializable and included in `getImageEditorEdits()` snapshot
-- [ ] Ensure presets composition uses effective adjustments (already used by `EditorCanvas`)
+- [x] Extend `ColorAdjustments` to include:
+  - [x] `mixerHsl`: per-band `{ hue, saturation, luminance }`
+  - [x] `pointColor`: selected hue + shifts + range
+- [x] Define defaults for all new fields (neutral)
+- [x] Add/extend Zustand actions:
+  - [x] `setMixerBandAdjustment(band, channel, value)`
+  - [x] `resetMixerBand(band)`
+  - [x] `resetMixer()`
+  - [x] `setPointColor({ ... })`
+  - [x] `resetPointColor()`
+- [x] Ensure state is serializable and included in `getImageEditorEdits()` snapshot
+- [x] Ensure presets composition uses effective adjustments (already used by `EditorCanvas`)
 
 ## 2) Mixer (HSL) Pixel Math
 - [ ] Implement band model (red/orange/yellow/green/aqua/blue/purple/magenta)
