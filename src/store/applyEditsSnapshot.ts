@@ -34,9 +34,19 @@ export function applyEditsSnapshot(edits: ImageEditorEdits) {
   }
 
   const colorStore = useColorStore.getState();
-  for (const [key, value] of Object.entries(edits.color)) {
-    colorStore.setColorAdjustment(key as keyof typeof edits.color, value);
-  }
+  colorStore.resetColorAdjustments();
+  colorStore.setColorAdjustment("vibrance", edits.color.vibrance);
+  colorStore.setColorAdjustment("saturation", edits.color.saturation);
+
+  // Mixer / point color are not supported by `setColorAdjustment` (they are structured).
+  // We'll add dedicated actions for those, and update snapshot restore accordingly.
+  useColorStore.setState((state) => ({
+    colorAdjustments: {
+      ...state.colorAdjustments,
+      mixerHsl: edits.color.mixerHsl,
+      pointColor: edits.color.pointColor,
+    },
+  }));
 
   useToneCurveStore.getState().setToneCurveMode(edits.toneCurve.mode);
   useToneCurveStore.getState().setToneCurveChannel(edits.toneCurve.activeChannel);

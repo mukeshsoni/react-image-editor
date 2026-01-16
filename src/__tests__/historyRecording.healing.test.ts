@@ -22,7 +22,27 @@ function makeBaseEdits(): ImageEditorEdits {
     },
     whiteBalance: { preset: "custom", temperatureKelvin: 6500, tint: 0 },
     light: { exposure: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0 },
-    color: { vibrance: 0, saturation: 0 },
+    color: {
+      vibrance: 0,
+      saturation: 0,
+      mixerHsl: {
+        red: { hue: 0, saturation: 0, luminance: 0 },
+        orange: { hue: 0, saturation: 0, luminance: 0 },
+        yellow: { hue: 0, saturation: 0, luminance: 0 },
+        green: { hue: 0, saturation: 0, luminance: 0 },
+        aqua: { hue: 0, saturation: 0, luminance: 0 },
+        blue: { hue: 0, saturation: 0, luminance: 0 },
+        purple: { hue: 0, saturation: 0, luminance: 0 },
+        magenta: { hue: 0, saturation: 0, luminance: 0 },
+      },
+      pointColor: {
+        hue: null,
+        range: 50,
+        hueShift: 0,
+        saturationShift: 0,
+        luminanceShift: 0,
+      },
+    },
     toneCurve: {
       mode: "point",
       activeChannel: "rgb",

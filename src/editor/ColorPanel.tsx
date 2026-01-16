@@ -18,7 +18,7 @@ type Props = {
   isImageLoaded: boolean;
   colorAdjustments: ColorAdjustments;
   resetColorAdjustments: () => void;
-  setColorAdjustment: (name: keyof ColorAdjustments, value: number) => void;
+  setColorAdjustment: (name: "vibrance" | "saturation", value: number) => void;
   formatSignedInt: (value: number) => string;
   Slider: (props: SliderProps) => import("react").ReactNode;
 };

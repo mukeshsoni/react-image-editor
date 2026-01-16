@@ -1,11 +1,9 @@
 import { create } from "zustand";
 
 import type { ColorAdjustmentName, ColorAdjustments } from "./cropStore";
+import { createDefaultColorAdjustments } from "./cropStore";
 
-const DEFAULT_COLOR_ADJUSTMENTS: ColorAdjustments = {
-  vibrance: 0,
-  saturation: 0,
-};
+const DEFAULT_COLOR_ADJUSTMENTS: ColorAdjustments = createDefaultColorAdjustments();
 
 type ColorStore = {
   colorAdjustments: ColorAdjustments;
@@ -16,7 +14,7 @@ type ColorStore = {
 };
 
 export const useColorStore = create<ColorStore>((set) => ({
-  colorAdjustments: { ...DEFAULT_COLOR_ADJUSTMENTS },
+  colorAdjustments: DEFAULT_COLOR_ADJUSTMENTS,
 
   setColorAdjustment: (name, value) => {
     set((state) => ({
@@ -28,7 +26,7 @@ export const useColorStore = create<ColorStore>((set) => ({
   },
 
   resetColorAdjustments: () => {
-    set({ colorAdjustments: { ...DEFAULT_COLOR_ADJUSTMENTS } });
+    set({ colorAdjustments: createDefaultColorAdjustments() });
   },
 
   resetColorAdjustment: (name) => {
