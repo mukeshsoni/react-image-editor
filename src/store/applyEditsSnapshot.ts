@@ -38,8 +38,7 @@ export function applyEditsSnapshot(edits: ImageEditorEdits) {
   colorStore.setColorAdjustment("vibrance", edits.color.vibrance);
   colorStore.setColorAdjustment("saturation", edits.color.saturation);
 
-  // Mixer / point color are not supported by `setColorAdjustment` (they are structured).
-  // We'll add dedicated actions for those, and update snapshot restore accordingly.
+  // Apply structured color adjustments.
   useColorStore.setState((state) => ({
     colorAdjustments: {
       ...state.colorAdjustments,
