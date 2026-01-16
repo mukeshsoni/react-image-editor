@@ -30,6 +30,7 @@ import {
   createEditorSerializableState,
   getHistoryDisplayForEditsChange,
 } from "@/store/historyRecording";
+import { useHistoryLabelStore } from "@/store/historyLabelStore";
 
 import type { ExportFormat } from "./export-download";
 import { getMousePosInCanvas } from "./dom-helpers";
@@ -764,11 +765,14 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         return;
       }
 
-      if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
-        const display = getHistoryDisplayForEditsChange(
-          lastCommittedEditsRef.current,
-          nextEdits,
-        );
+       if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
+         const pendingLabel =
+           useHistoryLabelStore.getState().consumePendingHistoryLabel();
+
+         const display = pendingLabel
+           ? { label: pendingLabel }
+           : getHistoryDisplayForEditsChange(lastCommittedEditsRef.current, nextEdits);
+
 
         editsPush({
           label: display.label,

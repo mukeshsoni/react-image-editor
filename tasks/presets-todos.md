@@ -101,14 +101,16 @@ Notes:
 - [x] Add a right-side panel section labeled `Presets`
   - Added panel module `src/editor/panels/presets.panel.tsx`
 - [x] Render preset tiles (grid)
-  - [x] include `None` tile ("None")
-  - [x] highlight selected tile (darker border)
-  - [x] keyboard focus + `aria-pressed`
-- [x] Wire clicks to `setActivePreset(...)`
-- [x] Show `Intensity` slider only when preset != `none`
-  - [x] wired to `setPresetIntensity(...)`
-- [x] Ensure clearing preset preserves manual adjustments
-  - `Clear` only resets preset state (does not touch manual stores)
+  - [x] includes `None` tile ("None")
+  - [x] keyboard focus (native button)
+- [x] Clicking a preset updates slider stores
+  - Applies the preset into `whiteBalanceStore`/`lightStore`/`colorStore`
+  - Clears preset overlay so adjustments don’t double-apply
+- [x] Strength slider
+  - Always available as "Strength" (used when applying a preset)
+  - Wired to `setPresetIntensity(...)`
+- [x] Preserve manual adjustments
+  - Presets bake into sliders; user continues adjusting from there
 
 ## 6) Tests (Vitest)
 - [ ] Unit tests for composition helpers:

@@ -10,6 +10,7 @@ import { useToneCurveStore } from "./toneCurveStore";
 import { useWhiteBalanceStore } from "./whiteBalanceStore";
 import { useGeometryOpticsStore } from "./geometryOpticsStore";
 import { useHealingStore } from "./healingStore";
+import { usePresetStore } from "./presetStore";
 
 const HISTORY_COMMIT_DEBOUNCE_MS = 250;
 
@@ -38,6 +39,7 @@ export function subscribeToEdits(onChange: (edits: ImageEditorEdits) => void): U
     useLightStore.subscribe(scheduleEmit),
     useColorStore.subscribe(scheduleEmit),
     useToneCurveStore.subscribe(scheduleEmit),
+    usePresetStore.subscribe(scheduleEmit),
     useSharpeningStore.subscribe(scheduleEmit),
     useDenoiseStore.subscribe(scheduleEmit),
     useGeometryOpticsStore.subscribe(scheduleEmit),
