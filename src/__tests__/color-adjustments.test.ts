@@ -10,6 +10,23 @@ function defaults(): ColorAdjustments {
   return {
     vibrance: 0,
     saturation: 0,
+    mixerHsl: {
+      red: { hue: 0, saturation: 0, luminance: 0 },
+      orange: { hue: 0, saturation: 0, luminance: 0 },
+      yellow: { hue: 0, saturation: 0, luminance: 0 },
+      green: { hue: 0, saturation: 0, luminance: 0 },
+      aqua: { hue: 0, saturation: 0, luminance: 0 },
+      blue: { hue: 0, saturation: 0, luminance: 0 },
+      purple: { hue: 0, saturation: 0, luminance: 0 },
+      magenta: { hue: 0, saturation: 0, luminance: 0 },
+    },
+    pointColor: {
+      hue: null,
+      range: 50,
+      hueShift: 0,
+      saturationShift: 0,
+      luminanceShift: 0,
+    },
   };
 }
 
@@ -25,8 +42,12 @@ describe("color adjustments math", () => {
 
   test("hasNonNeutralColorAdjustments detects neutral vs non-neutral", () => {
     expect(hasNonNeutralColorAdjustments(defaults())).toBe(false);
-    expect(hasNonNeutralColorAdjustments({ vibrance: 1, saturation: 0 })).toBe(true);
-    expect(hasNonNeutralColorAdjustments({ vibrance: 0, saturation: -1 })).toBe(true);
+    expect(hasNonNeutralColorAdjustments({ ...defaults(), vibrance: 1, saturation: 0 })).toBe(
+      true,
+    );
+    expect(hasNonNeutralColorAdjustments({ ...defaults(), vibrance: 0, saturation: -1 })).toBe(
+      true,
+    );
   });
 
   test("saturation increases color intensity", () => {
@@ -49,6 +70,7 @@ describe("color adjustments math", () => {
     const output = new Uint8ClampedArray(input.length);
 
     applyColorAdjustmentsToRgbaBytes(input, output, {
+      ...defaults(),
       vibrance: 50,
       saturation: 0,
     });
