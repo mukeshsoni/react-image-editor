@@ -1,20 +1,22 @@
 /* eslint-disable react-refresh/only-export-components */
-import { ColorPanel } from "@/editor/ColorPanel";
+import { ColorMixerPanel } from "@/editor/ColorMixerPanel";
 import { useColorStore } from "@/store/colorStore";
 
 import type { PanelContext } from "./context";
 import type { PanelDefinition } from "./types";
 
-function ColorPanelFromContext({ isImageLoaded, formatSignedInt, Slider }: PanelContext) {
+function ColorMixerPanelFromContext({
+  isImageLoaded,
+  setIsPickingPointColor,
+  formatSignedInt,
+  Slider,
+}: PanelContext) {
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
-  const resetColorAdjustments = useColorStore((state) => state.resetColorAdjustments);
-  const setColorAdjustment = useColorStore((state) => state.setColorAdjustment);
   return (
-    <ColorPanel
+    <ColorMixerPanel
       isImageLoaded={isImageLoaded}
       colorAdjustments={colorAdjustments}
-      resetColorAdjustments={resetColorAdjustments}
-      setColorAdjustment={setColorAdjustment}
+      setIsPickingPointColor={setIsPickingPointColor}
       formatSignedInt={formatSignedInt}
       Slider={Slider}
     />
@@ -22,11 +24,11 @@ function ColorPanelFromContext({ isImageLoaded, formatSignedInt, Slider }: Panel
 }
 
 const panel = {
-  id: "color",
-  order: 30,
-  title: "Color",
-  groupId: "basic",
-  Component: ColorPanelFromContext,
+  id: "color-mixer",
+  order: 35,
+  title: "Color Mixer",
+  groupId: "advanced",
+  Component: ColorMixerPanelFromContext,
 } satisfies PanelDefinition<PanelContext>;
 
 export default panel;

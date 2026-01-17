@@ -11,6 +11,7 @@ describe("panel registry", () => {
       "white-balance",
       "light",
       "color",
+      "color-mixer",
       "details",
       "tone-curve",
     ]);

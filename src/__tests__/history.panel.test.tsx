@@ -38,7 +38,25 @@ const hoisted = vi.hoisted(() => {
         color: {
           vibrance: 0,
           saturation: 0,
+          mixerHsl: {
+            red: { hue: 0, saturation: 0, luminance: 0 },
+            orange: { hue: 0, saturation: 0, luminance: 0 },
+            yellow: { hue: 0, saturation: 0, luminance: 0 },
+            green: { hue: 0, saturation: 0, luminance: 0 },
+            aqua: { hue: 0, saturation: 0, luminance: 0 },
+            blue: { hue: 0, saturation: 0, luminance: 0 },
+            purple: { hue: 0, saturation: 0, luminance: 0 },
+            magenta: { hue: 0, saturation: 0, luminance: 0 },
+          },
+          pointColor: {
+            hue: null,
+            range: 50,
+            hueShift: 0,
+            saturationShift: 0,
+            luminanceShift: 0,
+          },
         },
+        preset: { activePresetId: "none", intensity: 100 },
         toneCurve: {
           mode: "point",
           activeChannel: "rgb",
@@ -249,10 +267,32 @@ vi.mock("../store/colorStore", async () => {
       colorAdjustments: {
         vibrance: 0,
         saturation: 0,
+        mixerHsl: {
+          red: { hue: 0, saturation: 0, luminance: 0 },
+          orange: { hue: 0, saturation: 0, luminance: 0 },
+          yellow: { hue: 0, saturation: 0, luminance: 0 },
+          green: { hue: 0, saturation: 0, luminance: 0 },
+          aqua: { hue: 0, saturation: 0, luminance: 0 },
+          blue: { hue: 0, saturation: 0, luminance: 0 },
+          purple: { hue: 0, saturation: 0, luminance: 0 },
+          magenta: { hue: 0, saturation: 0, luminance: 0 },
+        },
+        pointColor: {
+          hue: null,
+          range: 50,
+          hueShift: 0,
+          saturationShift: 0,
+          luminanceShift: 0,
+        },
       },
       setColorAdjustment: vi.fn(),
       resetColorAdjustments: vi.fn(),
       resetColorAdjustment: vi.fn(),
+      setMixerBandAdjustment: vi.fn(),
+      resetMixerBand: vi.fn(),
+      resetMixer: vi.fn(),
+      setPointColor: vi.fn(),
+      resetPointColor: vi.fn(),
     }),
   };
 });

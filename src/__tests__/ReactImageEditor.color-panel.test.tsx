@@ -276,10 +276,6 @@ describe("ReactImageEditor Color panel", () => {
 
     const section = screen.getByTestId("color-section");
 
-    // Default tab is Basic
-    expect(within(section).getByTestId("color-tab-basic")).toBeTruthy();
-    expect(within(section).getByTestId("color-tab-mixer")).toBeTruthy();
-    expect(within(section).getByTestId("color-tab-point-color")).toBeTruthy();
 
     expect(within(section).getByLabelText("Vibrance")).toBeTruthy();
     expect(within(section).getByLabelText("Saturation")).toBeTruthy();
