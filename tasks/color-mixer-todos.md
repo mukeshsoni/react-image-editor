@@ -17,13 +17,13 @@ Source PRD: `prds/color-mixer-prd.md`
 - [x] Ensure presets composition uses effective adjustments (already used by `EditorCanvas`)
 
 ## 2) Mixer (HSL) Pixel Math
-- [ ] Implement band model (red/orange/yellow/green/aqua/blue/purple/magenta)
-- [ ] Implement hue-distance weighting per band (soft overlap)
-- [ ] Apply weighted Hue shift (wrap 0..1)
-- [ ] Apply weighted Saturation adjustment (clamp 0..1)
-- [ ] Apply weighted Luminance adjustment (clamp 0..1)
-- [ ] Preserve alpha channel
-- [ ] Ensure neutral mixer produces identical output
+- [x] Implement band model (red/orange/yellow/green/aqua/blue/purple/magenta)
+- [x] Implement hue-distance weighting per band (soft overlap)
+- [x] Apply weighted Hue shift (wrap 0..1)
+- [x] Apply weighted Saturation adjustment (clamp 0..1)
+- [x] Apply weighted Luminance adjustment (clamp 0..1)
+- [x] Preserve alpha channel
+- [x] Ensure neutral mixer produces identical output
 
 ## 3) Point Color Pixel Math
 - [ ] Define point color center hue and range semantics
