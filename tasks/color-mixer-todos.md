@@ -26,11 +26,11 @@ Source PRD: `prds/color-mixer-prd.md`
 - [x] Ensure neutral mixer produces identical output
 
 ## 3) Point Color Pixel Math
-- [ ] Define point color center hue and range semantics
-- [ ] Implement hue-distance weighting based on Range
-- [ ] Apply weighted Hue/Sat/Lum shifts
-- [ ] Preserve alpha channel
-- [ ] Ensure neutral point color produces identical output
+- [x] Define point color center hue and range semantics
+- [x] Implement hue-distance weighting based on Range
+- [x] Apply weighted Hue/Sat/Lum shifts
+- [x] Preserve alpha channel
+- [x] Ensure neutral point color produces identical output
 
 ## 4) Eyedropper Flow (Point Color)
 - [ ] Add UI state for “pick point color” mode
