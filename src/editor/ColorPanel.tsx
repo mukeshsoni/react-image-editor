@@ -19,6 +19,7 @@ type Props = {
   colorAdjustments: ColorAdjustments;
   resetColorAdjustments: () => void;
   setColorAdjustment: (name: "vibrance" | "saturation", value: number) => void;
+  setIsPickingPointColor: (updater: (current: boolean) => boolean) => void;
   formatSignedInt: (value: number) => string;
   Slider: (props: SliderProps) => import("react").ReactNode;
 };
@@ -28,6 +29,7 @@ export function ColorPanel({
   colorAdjustments,
   resetColorAdjustments,
   setColorAdjustment,
+  setIsPickingPointColor,
   formatSignedInt,
   Slider,
 }: Props) {
@@ -48,6 +50,17 @@ export function ColorPanel({
       </div>
 
       <div className="mt-3 flex flex-col gap-3">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-xs"
+          onClick={() => setIsPickingPointColor((current) => !current)}
+          disabled={!isImageLoaded}
+        >
+          Pick Point Color
+        </Button>
+
         <Slider
           label="Vibrance"
           name="vibrance"

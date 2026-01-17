@@ -34,6 +34,7 @@ import { useHistoryLabelStore } from "@/store/historyLabelStore";
 
 import type { ExportFormat } from "./export-download";
 import { getMousePosInCanvas } from "./dom-helpers";
+import { rgbToHsl } from "./lib/color-adjustments";
 import { estimateWhiteBalanceFromRgb, sampleAverageRgb } from "./lib/white-balance";
 import {
   calculateInitialImageStartOffset,
@@ -46,6 +47,7 @@ import { getImageEditorEdits, subscribeToEdits, useHistoryStore } from "./store"
 import { useResetAll } from "./store/editorActions";
 import { type Bounds, useCropStore } from "./store/cropStore";
 import { selectCanRedo, selectCanUndo } from "./store/historyStore";
+import { useColorStore } from "./store/colorStore";
 import { useDenoiseStore } from "./store/denoiseStore";
 import { useHealingStore } from "./store/healingStore";
 import { useSharpeningStore } from "./store/sharpeningStore";
@@ -66,6 +68,7 @@ function formatSignedInt(value: number) {
 
 
 const WHITE_BALANCE_PICKER_RADIUS = 2;
+const POINT_COLOR_PICKER_RADIUS = 2;
 
 type LightSliderProps = {
   label: string;
@@ -218,6 +221,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
   const [exportError, setExportError] = useState<string | null>(null);
 
   const [isPickingWhiteBalance, setIsPickingWhiteBalance] = useState(false);
+  const [isPickingPointColor, setIsPickingPointColor] = useState(false);
 
   const [isAutoStraightening, setIsAutoStraightening] = useState(false);
   const [guidedUprightEnabled, setGuidedUprightEnabled] = useState(false);
@@ -227,20 +231,21 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
 
   useEffect(() => {
-    if (!isPickingWhiteBalance) return;
+    if (!isPickingWhiteBalance && !isPickingPointColor) return;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
 
       event.preventDefault();
       setIsPickingWhiteBalance(false);
+      setIsPickingPointColor(false);
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isPickingWhiteBalance]);
+  }, [isPickingPointColor, isPickingWhiteBalance]);
 
   useEffect(() => {
     if (!healingModeEnabled) {
@@ -993,19 +998,26 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
         >
             <div className="flex flex-col flex-1 p-0">
               <div className="flex-1 border-2 relative">
-                {isPickingWhiteBalance ? (
-                  <div className="absolute left-2 top-2 z-10 rounded-md bg-white/90 px-2 py-1 text-xs text-gray-700 shadow">
-                    Click image to pick white balance (Esc to cancel)
-                  </div>
-                ) : null}
+                 {isPickingWhiteBalance ? (
+                   <div className="absolute left-2 top-2 z-10 rounded-md bg-white/90 px-2 py-1 text-xs text-gray-700 shadow">
+                     Click image to pick white balance (Esc to cancel)
+                   </div>
+                 ) : null}
 
-               <EditorCanvas
-                 canvasRef={canvasRef}
-                 imageRef={imageRef}
-                 zoomLevel={zoomLevel}
-                 offset={offset}
-                 rotation={rotation}
-                 listeners={
+                 {isPickingPointColor ? (
+                   <div className="absolute left-2 top-10 z-10 rounded-md bg-white/90 px-2 py-1 text-xs text-gray-700 shadow">
+                     Click image to pick point color (Esc to cancel)
+                   </div>
+                 ) : null}
+
+                  <EditorCanvas
+                   canvasRef={canvasRef}
+                   imageRef={imageRef}
+                   zoomLevel={zoomLevel}
+                   offset={offset}
+                   rotation={rotation}
+                   isPickingPointColor={isPickingPointColor}
+                   listeners={
                    healingModeEnabled
                      ? {
                          ...listeners,
@@ -1239,58 +1251,106 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                       : undefined
                   }
 
+                 onPickWhiteBalance={(event) => {
+                   if (!isPickingWhiteBalance) {
+                     return;
+                   }
+
+                   if (!canvasRef.current) return;
+
+                   // Cancel pick mode after a click attempt.
+                   setIsPickingWhiteBalance(false);
+
+                   // Read a small region from the preview canvas. This can fail if the
+                   // canvas is tainted (CORS).
+                   const ctx = canvasRef.current.getContext("2d", {
+                     willReadFrequently: true,
+                   });
+                   if (!ctx) return;
+
+                   try {
+                     const rect = canvasRef.current.getBoundingClientRect();
+                     const x = Math.round(event.clientX - rect.left);
+                     const y = Math.round(event.clientY - rect.top);
+
+                     const radius = WHITE_BALANCE_PICKER_RADIUS;
+                     const size = radius * 2 + 1;
+
+                     const sx = Math.max(0, x - radius);
+                     const sy = Math.max(0, y - radius);
+                     const sw = Math.min(size, Math.max(1, canvasRef.current.width - sx));
+                     const sh = Math.min(size, Math.max(1, canvasRef.current.height - sy));
+
+                     const imageData = ctx.getImageData(sx, sy, sw, sh);
+                     const avg = sampleAverageRgb(
+                       imageData.data,
+                       sw,
+                       sh,
+                       radius,
+                       radius,
+                       radius,
+                     );
+                     const estimated = estimateWhiteBalanceFromRgb(avg);
+
+                     setWhiteBalance({
+                       preset: "custom",
+                       temperatureKelvin: Math.round(estimated.temperatureKelvin),
+                       tint: Math.round(estimated.tint),
+                     });
+                   } catch {
+                     setExportError("Cannot pick colors from this image (CORS)");
+                   }
+                 }}
+
                  isPickingWhiteBalance={isPickingWhiteBalance}
 
-                onPickWhiteBalance={(event) => {
-                  if (!isPickingWhiteBalance) {
-                    return;
-                  }
+                 onPickPointColor={(event) => {
+                   if (!isPickingPointColor) {
+                     return;
+                   }
 
-                  if (!canvasRef.current) return;
+                   if (!canvasRef.current) return;
 
-                  // Cancel pick mode after a click attempt.
-                  setIsPickingWhiteBalance(false);
+                   // Cancel pick mode after a click attempt.
+                   setIsPickingPointColor(false);
 
-                  // Read a small region from the preview canvas. This can fail if the
-                  // canvas is tainted (CORS).
-                  const ctx = canvasRef.current.getContext("2d", {
-                    willReadFrequently: true,
-                  });
-                  if (!ctx) return;
+                   const ctx = canvasRef.current.getContext("2d", {
+                     willReadFrequently: true,
+                   });
+                   if (!ctx) return;
 
-                  try {
-                    const rect = canvasRef.current.getBoundingClientRect();
-                    const x = Math.round(event.clientX - rect.left);
-                    const y = Math.round(event.clientY - rect.top);
+                   try {
+                     const rect = canvasRef.current.getBoundingClientRect();
+                     const x = Math.round(event.clientX - rect.left);
+                     const y = Math.round(event.clientY - rect.top);
 
-                    const radius = WHITE_BALANCE_PICKER_RADIUS;
-                    const size = radius * 2 + 1;
+                     const radius = POINT_COLOR_PICKER_RADIUS;
+                     const size = radius * 2 + 1;
 
-                    const sx = Math.max(0, x - radius);
-                    const sy = Math.max(0, y - radius);
-                    const sw = Math.min(size, Math.max(1, canvasRef.current.width - sx));
-                    const sh = Math.min(size, Math.max(1, canvasRef.current.height - sy));
+                     const sx = Math.max(0, x - radius);
+                     const sy = Math.max(0, y - radius);
+                     const sw = Math.min(size, Math.max(1, canvasRef.current.width - sx));
+                     const sh = Math.min(size, Math.max(1, canvasRef.current.height - sy));
 
-                    const imageData = ctx.getImageData(sx, sy, sw, sh);
-                    const avg = sampleAverageRgb(
-                      imageData.data,
-                      sw,
-                      sh,
-                      radius,
-                      radius,
-                      radius,
-                    );
-                    const estimated = estimateWhiteBalanceFromRgb(avg);
+                     const imageData = ctx.getImageData(sx, sy, sw, sh);
+                     const avg = sampleAverageRgb(
+                       imageData.data,
+                       sw,
+                       sh,
+                       radius,
+                       radius,
+                       radius,
+                     );
 
-                    setWhiteBalance({
-                      preset: "custom",
-                      temperatureKelvin: Math.round(estimated.temperatureKelvin),
-                      tint: Math.round(estimated.tint),
-                    });
-                  } catch {
-                    // Likely a tainted canvas; silently ignore for now.
-                  }
-                }}
+                     const hsl = rgbToHsl(avg.r / 255, avg.g / 255, avg.b / 255);
+
+                     useColorStore.getState().setPointColor({
+                       hue: hsl.h,
+                     });
+                   } catch {
+                     setExportError("Cannot pick colors from this image (CORS)");
+                   }
+                 }}
                />
 
                 {healingModeEnabled && healingCursor ? (
@@ -1597,14 +1657,15 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                   {getPanelRegistry()
                     .filter((panel) => panel.groupId === "basic")
                     .map((panel) => (
-                      <panel.Component
-                        key={panel.id}
-                        isImageLoaded={isImageLoaded}
-                        Slider={LightSlider}
-                        formatSigned={formatSigned}
-                        formatSignedInt={formatSignedInt}
-                        setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                      />
+                        <panel.Component
+                          key={panel.id}
+                          isImageLoaded={isImageLoaded}
+                          Slider={LightSlider}
+                          formatSigned={formatSigned}
+                          formatSignedInt={formatSignedInt}
+                          setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                          setIsPickingPointColor={setIsPickingPointColor}
+                        />
                     ))}
 
                 </div>
@@ -1851,14 +1912,15 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
                  .filter((panel) => panel.groupId !== "basic")
                  .map((panel) => (
-                   <panel.Component
-                     key={panel.id}
-                     isImageLoaded={isImageLoaded}
-                     Slider={LightSlider}
-                     formatSigned={formatSigned}
-                     formatSignedInt={formatSignedInt}
-                     setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                   />
+                       <panel.Component
+                         key={panel.id}
+                         isImageLoaded={isImageLoaded}
+                         Slider={LightSlider}
+                         formatSigned={formatSigned}
+                         formatSignedInt={formatSignedInt}
+                         setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                         setIsPickingPointColor={setIsPickingPointColor}
+                       />
                  ))}
 
 

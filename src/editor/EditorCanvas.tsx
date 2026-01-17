@@ -190,6 +190,8 @@ type Props = {
   cursor?: string;
   isPickingWhiteBalance: boolean;
   onPickWhiteBalance: import("react").MouseEventHandler<HTMLCanvasElement>;
+  isPickingPointColor: boolean;
+  onPickPointColor: import("react").MouseEventHandler<HTMLCanvasElement>;
 };
 
 export function EditorCanvas({
@@ -202,6 +204,8 @@ export function EditorCanvas({
   cursor,
   isPickingWhiteBalance,
   onPickWhiteBalance,
+  isPickingPointColor,
+  onPickPointColor,
 }: Props) {
   const cropCommitted = useCropStore((state) => state.cropCommitted);
   const cropCommit = useCropStore((state) => state.cropCommit);
@@ -293,8 +297,13 @@ export function EditorCanvas({
     <canvas
       ref={canvasRef}
       {...listeners}
-      onClick={onPickWhiteBalance}
-      style={{ cursor: isPickingWhiteBalance ? "crosshair" : cursor }}
+      onClick={(event) => {
+        onPickWhiteBalance(event);
+        onPickPointColor(event);
+      }}
+      style={{
+        cursor: isPickingWhiteBalance || isPickingPointColor ? "crosshair" : cursor,
+      }}
     />
   );
 }

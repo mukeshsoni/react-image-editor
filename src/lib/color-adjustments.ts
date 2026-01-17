@@ -138,7 +138,7 @@ export function applyColorAdjustmentsToRgbaBytes(
   }
 }
 
-type Hsl = { h: number; s: number; l: number };
+export type Hsl = { h: number; s: number; l: number };
 
 const MIXER_BAND_CENTERS: Record<(typeof COLOR_MIXER_BANDS)[number], number> = {
   // Hue centers in normalized hue space (0..1), roughly matching Lightroom ordering.
@@ -159,7 +159,7 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-function rgbToHsl(r: number, g: number, b: number): Hsl {
+export function rgbToHsl(r: number, g: number, b: number): Hsl {
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const delta = max - min;

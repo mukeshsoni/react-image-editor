@@ -7,6 +7,7 @@ import type { PanelDefinition } from "./types";
 
 function ColorPanelFromContext({
   isImageLoaded,
+  setIsPickingPointColor,
   formatSignedInt,
   Slider,
 }: PanelContext) {
@@ -19,6 +20,7 @@ function ColorPanelFromContext({
       colorAdjustments={colorAdjustments}
       resetColorAdjustments={resetColorAdjustments}
       setColorAdjustment={setColorAdjustment}
+      setIsPickingPointColor={setIsPickingPointColor}
       formatSignedInt={formatSignedInt}
       Slider={Slider}
     />
