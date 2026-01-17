@@ -33,12 +33,12 @@ Source PRD: `prds/color-mixer-prd.md`
 - [x] Ensure neutral point color produces identical output
 
 ## 4) Eyedropper Flow (Point Color)
-- [ ] Add UI state for “pick point color” mode
-- [ ] On canvas click, sample average RGB in small radius
-- [ ] Convert sampled RGB → HSL hue; store as point center
-- [ ] Exit pick mode after successful pick
-- [ ] Escape cancels pick mode
-- [ ] Graceful handling for tainted canvas / no image (disable + error)
+- [x] Add UI state for “pick point color” mode
+- [x] On canvas click, sample average RGB in small radius
+- [x] Convert sampled RGB → HSL hue; store as point center
+- [x] Exit pick mode after successful pick
+- [x] Escape cancels pick mode
+- [x] Graceful handling for tainted canvas / no image (disable + error)
 
 ## 5) UI: Color Panel Tabs + Controls
 - [ ] Update `src/editor/ColorPanel.tsx`:
