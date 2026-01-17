@@ -12,6 +12,11 @@ import { createMockToneCurve } from "./test-helpers/mockToneCurve";
 
 const mockSetColorAdjustment = vi.fn();
 const mockResetColorAdjustments = vi.fn();
+const mockSetMixerBandAdjustment = vi.fn();
+const mockResetMixerBand = vi.fn();
+const mockResetMixer = vi.fn();
+const mockSetPointColor = vi.fn();
+const mockResetPointColor = vi.fn();
 
 const mockStore = {
   resetAll: vi.fn(),
@@ -86,6 +91,11 @@ const mockStore = {
   setColorAdjustment: mockSetColorAdjustment,
   resetColorAdjustments: mockResetColorAdjustments,
   resetColorAdjustment: vi.fn(),
+  setMixerBandAdjustment: mockSetMixerBandAdjustment,
+  resetMixerBand: mockResetMixerBand,
+  resetMixer: mockResetMixer,
+  setPointColor: mockSetPointColor,
+  resetPointColor: mockResetPointColor,
 
   toneCurve: createMockToneCurve(),
   setToneCurveMode: vi.fn(),
@@ -148,6 +158,11 @@ vi.mock("../store/colorStore", async () => {
       setColorAdjustment: mockStore.setColorAdjustment,
       resetColorAdjustments: mockStore.resetColorAdjustments,
       resetColorAdjustment: mockStore.resetColorAdjustment,
+      setMixerBandAdjustment: mockStore.setMixerBandAdjustment,
+      resetMixerBand: mockStore.resetMixerBand,
+      resetMixer: mockStore.resetMixer,
+      setPointColor: mockStore.setPointColor,
+      resetPointColor: mockStore.resetPointColor,
     }),
   };
 });
@@ -260,6 +275,12 @@ describe("ReactImageEditor Color panel", () => {
     });
 
     const section = screen.getByTestId("color-section");
+
+    // Default tab is Basic
+    expect(within(section).getByTestId("color-tab-basic")).toBeTruthy();
+    expect(within(section).getByTestId("color-tab-mixer")).toBeTruthy();
+    expect(within(section).getByTestId("color-tab-point-color")).toBeTruthy();
+
     expect(within(section).getByLabelText("Vibrance")).toBeTruthy();
     expect(within(section).getByLabelText("Saturation")).toBeTruthy();
   });
@@ -283,6 +304,7 @@ describe("ReactImageEditor Color panel", () => {
     const resetButton = within(section).getByRole("button", { name: "Reset" });
     fireEvent.click(resetButton);
 
+    // Default tab is Basic.
     expect(mockResetColorAdjustments).toHaveBeenCalled();
   });
 });
