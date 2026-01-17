@@ -74,7 +74,7 @@ export function applyColorAdjustmentsToRgbaBytes(
     if (mixerWeightScale > 0) {
       // Apply per-band weighted H/S/L deltas.
       for (const band of COLOR_MIXER_BANDS) {
-        const center = getBandCenterHue(band);
+        const center = MIXER_BAND_CENTERS[band];
         const distance = circularHueDistance(h, center);
         const w = smoothStep01(1 - distance / bandHalfWidth) * mixerWeightScale;
         if (w <= 0) continue;
@@ -91,6 +91,31 @@ export function applyColorAdjustmentsToRgbaBytes(
 
         // Luminance: add/subtract in [0..1] domain.
         l = clamp01(l + (delta.luminance / 100) * 0.5 * w);
+      }
+    }
+
+    // Point Color (single picked hue)
+    const point = adjustments.pointColor;
+    const hasPointHue = point.hue != null;
+    const hasPointDelta =
+      point.hueShift !== 0 || point.saturationShift !== 0 || point.luminanceShift !== 0;
+    if (hasPointHue && hasPointDelta) {
+      const halfWidth = lerp(
+        POINT_COLOR_RANGE_MIN_HALF_WIDTH,
+        POINT_COLOR_RANGE_MAX_HALF_WIDTH,
+        clamp01(point.range / 100),
+      );
+
+      const distance = circularHueDistance(h, point.hue ?? 0);
+      // Keep some influence even on low-sat pixels (so blues still respond).
+      const w = smoothStep01(1 - distance / halfWidth) * (0.25 + 0.75 * s);
+
+      if (w > 0) {
+        const hueShiftNormalized = (point.hueShift / 100) * (30 / 360);
+        h = wrap01(h + hueShiftNormalized * w);
+
+        s = clamp01(s * (1 + (point.saturationShift / 100) * w));
+        l = clamp01(l + (point.luminanceShift / 100) * 0.5 * w);
       }
     }
 
@@ -115,24 +140,23 @@ export function applyColorAdjustmentsToRgbaBytes(
 
 type Hsl = { h: number; s: number; l: number };
 
-type MixerBandCenter = {
-  centerHue: number;
+const MIXER_BAND_CENTERS: Record<(typeof COLOR_MIXER_BANDS)[number], number> = {
+  // Hue centers in normalized hue space (0..1), roughly matching Lightroom ordering.
+  red: 0 / 360,
+  orange: 30 / 360,
+  yellow: 60 / 360,
+  green: 120 / 360,
+  aqua: 180 / 360,
+  blue: 240 / 360,
+  purple: 270 / 360,
+  magenta: 300 / 360,
 };
 
-function getBandCenterHue(band: (typeof COLOR_MIXER_BANDS)[number]): number {
-  // Hue centers in normalized hue space (0..1), roughly matching Lightroom ordering.
-  const centers: Record<(typeof COLOR_MIXER_BANDS)[number], MixerBandCenter> = {
-    red: { centerHue: 0 / 360 },
-    orange: { centerHue: 30 / 360 },
-    yellow: { centerHue: 60 / 360 },
-    green: { centerHue: 120 / 360 },
-    aqua: { centerHue: 180 / 360 },
-    blue: { centerHue: 240 / 360 },
-    purple: { centerHue: 270 / 360 },
-    magenta: { centerHue: 300 / 360 },
-  };
+const POINT_COLOR_RANGE_MIN_HALF_WIDTH = 5 / 360;
+const POINT_COLOR_RANGE_MAX_HALF_WIDTH = 60 / 360;
 
-  return centers[band].centerHue;
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
 }
 
 function rgbToHsl(r: number, g: number, b: number): Hsl {

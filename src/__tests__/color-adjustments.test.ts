@@ -65,6 +65,79 @@ describe("color adjustments math", () => {
     expect(output[3]).toBe(255);
   });
 
+  test("point color range controls selectivity", () => {
+    const input = new Uint8ClampedArray([
+      // red-ish
+      220,
+      30,
+      30,
+      255,
+      // orange-ish
+      220,
+      120,
+      30,
+      255,
+    ]);
+
+    const narrow = new Uint8ClampedArray(input.length);
+    const broad = new Uint8ClampedArray(input.length);
+
+    const base = defaults();
+
+    applyColorAdjustmentsToRgbaBytes(input, narrow, {
+      ...base,
+      pointColor: {
+        ...base.pointColor,
+        hue: 0,
+        range: 0,
+        saturationShift: -100,
+      },
+    });
+
+    applyColorAdjustmentsToRgbaBytes(input, broad, {
+      ...base,
+      pointColor: {
+        ...base.pointColor,
+        hue: 0,
+        range: 100,
+        saturationShift: -100,
+      },
+    });
+
+    // Broad range should affect the non-target pixel more than narrow range.
+    const narrowBlueDelta =
+      Math.abs((narrow[4] ?? 0) - (input[4] ?? 0)) +
+      Math.abs((narrow[5] ?? 0) - (input[5] ?? 0)) +
+      Math.abs((narrow[6] ?? 0) - (input[6] ?? 0));
+
+    const broadBlueDelta =
+      Math.abs((broad[4] ?? 0) - (input[4] ?? 0)) +
+      Math.abs((broad[5] ?? 0) - (input[5] ?? 0)) +
+      Math.abs((broad[6] ?? 0) - (input[6] ?? 0));
+
+    expect(broadBlueDelta).toBeGreaterThan(narrowBlueDelta);
+
+    // Target pixel should be affected in both cases.
+    const narrowRedDelta =
+      Math.abs((narrow[0] ?? 0) - (input[0] ?? 0)) +
+      Math.abs((narrow[1] ?? 0) - (input[1] ?? 0)) +
+      Math.abs((narrow[2] ?? 0) - (input[2] ?? 0));
+
+    const broadRedDelta =
+      Math.abs((broad[0] ?? 0) - (input[0] ?? 0)) +
+      Math.abs((broad[1] ?? 0) - (input[1] ?? 0)) +
+      Math.abs((broad[2] ?? 0) - (input[2] ?? 0));
+
+    expect(narrowRedDelta).toBeGreaterThan(0);
+    expect(broadRedDelta).toBeGreaterThan(0);
+
+    // Alpha preserved
+    expect(narrow[3]).toBe(255);
+    expect(narrow[7]).toBe(255);
+    expect(broad[3]).toBe(255);
+    expect(broad[7]).toBe(255);
+  });
+
   test("preserves alpha when applying adjustments", () => {
     const input = new Uint8ClampedArray([50, 60, 70, 123]);
     const output = new Uint8ClampedArray(input.length);
