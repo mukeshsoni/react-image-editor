@@ -41,21 +41,21 @@ Source PRD: `prds/color-mixer-prd.md`
 - [x] Graceful handling for tainted canvas / no image (disable + error)
 
 ## 5) UI: Color Panel Tabs + Controls
-- [ ] Update `src/editor/ColorPanel.tsx`:
-  - [ ] Tabs: Basic / Mixer / Point Color
-  - [ ] Keep Basic (Vibrance/Saturation) unchanged
-- [ ] Mixer tab:
-  - [ ] Color chip row to select band
-  - [ ] 3 sliders for selected band: Hue / Saturation / Luminance
-  - [ ] Reset selected band
-  - [ ] Reset mixer
-- [ ] Point Color tab:
-  - [ ] Eyedropper button (enter pick mode)
-  - [ ] 3 sliders: Hue Shift / Sat Shift / Lum Shift
-  - [ ] Range slider
-  - [ ] Reset point color
+- [x] Update `src/editor/ColorPanel.tsx`:
+  - [x] Tabs: Basic / Mixer / Point Color
+  - [x] Keep Basic (Vibrance/Saturation) unchanged
+- [x] Mixer tab:
+  - [x] Color chip row to select band
+  - [x] 3 sliders for selected band: Hue / Saturation / Luminance
+  - [x] Reset selected band
+  - [x] Reset mixer
+- [x] Point Color tab:
+  - [x] Eyedropper button (enter pick mode)
+  - [x] 3 sliders: Hue Shift / Sat Shift / Lum Shift
+  - [x] Range slider
+  - [x] Reset point color
   - [ ] (Optional) Visualize Range toggle
-- [ ] Add `data-testid` hooks for stable tests
+- [x] Add `data-testid` hooks for stable tests
 
 ## 6) Pipeline + Export + History
 - [ ] Update `hasNonNeutralColorAdjustments` to include mixer/point color
