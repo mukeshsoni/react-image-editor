@@ -58,16 +58,16 @@ Source PRD: `prds/color-mixer-prd.md`
 - [x] Add `data-testid` hooks for stable tests
 
 ## 6) Pipeline + Export + History
-- [ ] Update `hasNonNeutralColorAdjustments` to include mixer/point color
-- [ ] Update `applyColorAdjustmentsToRgbaBytes` to apply:
-  - [ ] Mixer (HSL)
-  - [ ] Point Color
-  - [ ] Existing vibrance/saturation (keep)
-- [ ] Ensure `color` pixel processor enables/disables correctly
-- [ ] Ensure export pipeline uses the same effective adjustments
-- [ ] Extend `src/store/historyRecording.ts` labels/deltas:
-  - [ ] Mixer band/channel labels (e.g. `Mixer Red Hue`)
-  - [ ] Point color labels (e.g. `Point Color Range`)
+- [x] Update `hasNonNeutralColorAdjustments` to include mixer/point color
+- [x] Update `applyColorAdjustmentsToRgbaBytes` to apply:
+  - [x] Mixer (HSL)
+  - [x] Point Color
+  - [x] Existing vibrance/saturation (keep)
+- [x] Ensure `color` pixel processor enables/disables correctly
+- [x] Ensure export pipeline uses the same effective adjustments
+- [x] Extend `src/store/historyRecording.ts` labels/deltas:
+  - [x] Mixer band/channel labels (e.g. `Mixer Red Hue`)
+  - [x] Point color labels (e.g. `Point Color Range`)
 
 ## 7) Tests (Vitest)
 - [ ] Unit tests for Mixer math:

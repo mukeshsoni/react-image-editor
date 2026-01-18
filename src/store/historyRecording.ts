@@ -1,3 +1,5 @@
+import { COLOR_MIXER_BANDS } from "./cropStore";
+
 import type { ImageEditorEdits } from "./edits";
 import type { EditorSerializableState } from "./historyStore";
 
@@ -30,6 +32,11 @@ function formatSignedInteger(delta: number): string {
   const rounded = Math.round(delta);
   if (rounded === 0) return "0";
   return rounded > 0 ? `+${rounded}` : `${rounded}`;
+}
+
+function capitalize(value: string): string {
+  if (value.length === 0) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function formatSignedTenths(delta: number): string {
@@ -211,19 +218,81 @@ export function getHistoryDisplayForEditsChange(
   }
 
   if (!areJsonEqual(previous.color, next.color)) {
-    if (previous.color.vibrance !== next.color.vibrance) {
+    const prevColor = previous.color;
+    const nextColor = next.color;
+
+    if (prevColor.vibrance !== nextColor.vibrance) {
       return {
         label: "Vibrance",
-        delta: formatSignedInteger(next.color.vibrance - previous.color.vibrance),
+        delta: formatSignedInteger(nextColor.vibrance - prevColor.vibrance),
       };
     }
 
-    if (previous.color.saturation !== next.color.saturation) {
+    if (prevColor.saturation !== nextColor.saturation) {
       return {
         label: "Saturation",
-        delta: formatSignedInteger(
-          next.color.saturation - previous.color.saturation,
-        ),
+        delta: formatSignedInteger(nextColor.saturation - prevColor.saturation),
+      };
+    }
+
+    for (const band of COLOR_MIXER_BANDS) {
+      const prevBand = prevColor.mixerHsl[band];
+      const nextBand = nextColor.mixerHsl[band];
+
+      if (prevBand.hue !== nextBand.hue) {
+        return {
+          label: `Mixer ${capitalize(band)} Hue`,
+          delta: formatSignedInteger(nextBand.hue - prevBand.hue),
+        };
+      }
+
+      if (prevBand.saturation !== nextBand.saturation) {
+        return {
+          label: `Mixer ${capitalize(band)} Saturation`,
+          delta: formatSignedInteger(nextBand.saturation - prevBand.saturation),
+        };
+      }
+
+      if (prevBand.luminance !== nextBand.luminance) {
+        return {
+          label: `Mixer ${capitalize(band)} Luminance`,
+          delta: formatSignedInteger(nextBand.luminance - prevBand.luminance),
+        };
+      }
+    }
+
+    const prevPoint = prevColor.pointColor;
+    const nextPoint = nextColor.pointColor;
+
+    if (prevPoint.hue !== nextPoint.hue) {
+      return { label: nextPoint.hue == null ? "Point Color Clear" : "Point Color Pick" };
+    }
+
+    if (prevPoint.hueShift !== nextPoint.hueShift) {
+      return {
+        label: "Point Color Hue Shift",
+        delta: formatSignedInteger(nextPoint.hueShift - prevPoint.hueShift),
+      };
+    }
+
+    if (prevPoint.saturationShift !== nextPoint.saturationShift) {
+      return {
+        label: "Point Color Sat Shift",
+        delta: formatSignedInteger(nextPoint.saturationShift - prevPoint.saturationShift),
+      };
+    }
+
+    if (prevPoint.luminanceShift !== nextPoint.luminanceShift) {
+      return {
+        label: "Point Color Lum Shift",
+        delta: formatSignedInteger(nextPoint.luminanceShift - prevPoint.luminanceShift),
+      };
+    }
+
+    if (prevPoint.range !== nextPoint.range) {
+      return {
+        label: "Point Color Range",
+        delta: formatSignedInteger(nextPoint.range - prevPoint.range),
       };
     }
 
