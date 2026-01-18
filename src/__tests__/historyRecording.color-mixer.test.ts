@@ -84,129 +84,112 @@ function makeBaseEdits(): ImageEditorEdits {
   };
 }
 
-describe("historyRecording healing labels", () => {
-  test("labels spot removal when a spot is added", () => {
+describe("historyRecording color mixer labels", () => {
+  test("labels mixer band hue", () => {
     const prev = makeBaseEdits();
     const next: ImageEditorEdits = {
       ...prev,
-      healing: {
-        ...prev.healing,
-        ops: [
-          {
-            id: "spot1",
-            type: "spot",
-            mode: "spot",
-            center: { x: 10, y: 10 },
-            radius: 5,
-            feather: 50,
-            opacity: 255,
-            source: { x: 20, y: 10 },
-          },
-        ],
+      color: {
+        ...prev.color,
+        mixerHsl: {
+          ...prev.color.mixerHsl,
+          red: { ...prev.color.mixerHsl.red, hue: 10 },
+        },
       },
     };
 
     expect(getHistoryDisplayForEditsChange(prev, next)).toEqual({
-      label: "Spot Removal",
+      label: "Mixer Red Hue",
+      delta: "+10",
     });
   });
 
-  test("labels spot sample when a spot source changes", () => {
+  test("labels mixer band saturation", () => {
     const prev = makeBaseEdits();
-    const baseSpot = {
-      id: "spot1",
-      type: "spot" as const,
-      mode: "spot" as const,
-      center: { x: 10, y: 10 },
-      radius: 5,
-      feather: 50,
-      opacity: 255,
-      source: { x: 20, y: 10 },
-    };
-
     const next: ImageEditorEdits = {
       ...prev,
-      healing: {
-        ...prev.healing,
-        ops: [{ ...baseSpot, source: { x: 30, y: 10 } }],
+      color: {
+        ...prev.color,
+        mixerHsl: {
+          ...prev.color.mixerHsl,
+          blue: { ...prev.color.mixerHsl.blue, saturation: -20 },
+        },
       },
     };
 
-    expect(getHistoryDisplayForEditsChange(
-      { ...prev, healing: { ...prev.healing, ops: [baseSpot] } },
-      next,
-    )).toEqual({
-      label: "Spot Sample",
+    expect(getHistoryDisplayForEditsChange(prev, next)).toEqual({
+      label: "Mixer Blue Saturation",
+      delta: "-20",
     });
   });
 
-  test("labels delete spot when a spot is removed", () => {
+  test("labels point color pick and clear", () => {
     const prev = makeBaseEdits();
-    const withOps: ImageEditorEdits = {
+
+    const picked: ImageEditorEdits = {
       ...prev,
-      healing: {
-        ...prev.healing,
-        ops: [
-          {
-            id: "spot1",
-            type: "spot",
-            mode: "spot",
-            center: { x: 10, y: 10 },
-            radius: 5,
-            feather: 50,
-            opacity: 255,
-            source: { x: 20, y: 10 },
-          },
-        ],
+      color: {
+        ...prev.color,
+        pointColor: {
+          ...prev.color.pointColor,
+          hue: 0.2,
+        },
       },
     };
 
-    expect(getHistoryDisplayForEditsChange(withOps, prev)).toEqual({
-      label: "Delete Spot",
+    expect(getHistoryDisplayForEditsChange(prev, picked)).toEqual({
+      label: "Point Color Pick",
     });
-  });
-
-  test("labels clear healing when multiple ops are cleared", () => {
-    const prev = makeBaseEdits();
-    const withOps: ImageEditorEdits = {
-      ...prev,
-      healing: {
-        ...prev.healing,
-        ops: [
-          {
-            id: "spot1",
-            type: "spot",
-            mode: "spot",
-            center: { x: 10, y: 10 },
-            radius: 5,
-            feather: 50,
-            opacity: 255,
-            source: { x: 20, y: 10 },
-          },
-          {
-            id: "spot2",
-            type: "spot",
-            mode: "spot",
-            center: { x: 50, y: 50 },
-            radius: 5,
-            feather: 50,
-            opacity: 255,
-            source: { x: 60, y: 50 },
-          },
-        ],
-      },
-    };
 
     const cleared: ImageEditorEdits = {
-      ...withOps,
-      healing: {
-        ...withOps.healing,
-        ops: [],
+      ...picked,
+      color: {
+        ...picked.color,
+        pointColor: {
+          ...picked.color.pointColor,
+          hue: null,
+        },
       },
     };
 
-    expect(getHistoryDisplayForEditsChange(withOps, cleared)).toEqual({
-      label: "Clear Healing",
+    expect(getHistoryDisplayForEditsChange(picked, cleared)).toEqual({
+      label: "Point Color Clear",
+    });
+  });
+
+  test("labels point color range", () => {
+    const prev = makeBaseEdits();
+    const next: ImageEditorEdits = {
+      ...prev,
+      color: {
+        ...prev.color,
+        pointColor: {
+          ...prev.color.pointColor,
+          hue: 0,
+          range: 60,
+        },
+      },
+    };
+
+    // Hue change gets priority.
+    expect(getHistoryDisplayForEditsChange(prev, next)).toEqual({
+      label: "Point Color Pick",
+    });
+
+    const rangeOnly: ImageEditorEdits = {
+      ...next,
+      color: {
+        ...next.color,
+        pointColor: {
+          ...next.color.pointColor,
+          range: 80,
+        },
+      },
+    };
+
+    expect(getHistoryDisplayForEditsChange(next, rangeOnly)).toEqual({
+      label: "Point Color Range",
+      delta: "+20",
     });
   });
 });

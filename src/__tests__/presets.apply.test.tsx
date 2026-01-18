@@ -90,6 +90,7 @@ describe("Presets panel", () => {
         formatSigned={() => ""}
         formatSignedInt={() => ""}
         setIsPickingWhiteBalance={() => {}}
+        setIsPickingPointColor={() => {}}
       />,
     );
 

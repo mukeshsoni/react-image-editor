@@ -1,7 +1,33 @@
 import type { ColorAdjustments } from "../store/cropStore";
+import { COLOR_MIXER_BANDS } from "../store/cropStore";
 
 export function hasNonNeutralColorAdjustments(settings: ColorAdjustments): boolean {
-  return settings.vibrance !== 0 || settings.saturation !== 0;
+  if (settings.vibrance !== 0 || settings.saturation !== 0) return true;
+
+  for (const band of COLOR_MIXER_BANDS) {
+    const adjustments = settings.mixerHsl[band];
+    if (
+      adjustments.hue !== 0 ||
+      adjustments.saturation !== 0 ||
+      adjustments.luminance !== 0
+    ) {
+      return true;
+    }
+  }
+
+  const point = settings.pointColor;
+  const hasPointSelected = point.hue != null;
+  if (hasPointSelected) {
+    if (
+      point.hueShift !== 0 ||
+      point.saturationShift !== 0 ||
+      point.luminanceShift !== 0
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -24,6 +50,8 @@ export function applyColorAdjustmentsToRgbaBytes(
   const saturationScale = 1 + adjustments.saturation / 100;
   const vibranceAmount = adjustments.vibrance / 100;
 
+  const bandHalfWidth = 30 / 360; // soft overlap to neighbors
+
   for (let i = 0; i < input.length; i += 4) {
     const r0 = input[i] ?? 0;
     const g0 = input[i + 1] ?? 0;
@@ -34,10 +62,65 @@ export function applyColorAdjustmentsToRgbaBytes(
     const g = g0 / 255;
     const b = b0 / 255;
 
-    const hsl = rgbToHsl(r, g, b);
+    const base = rgbToHsl(r, g, b);
+
+    // Mixer adjustments are designed to be minimal on gray pixels.
+    const mixerWeightScale = base.s;
+
+    let h = base.h;
+    let s = base.s;
+    let l = base.l;
+
+    if (mixerWeightScale > 0) {
+      // Apply per-band weighted H/S/L deltas.
+      for (const band of COLOR_MIXER_BANDS) {
+        const center = MIXER_BAND_CENTERS[band];
+        const distance = circularHueDistance(h, center);
+        const w = smoothStep01(1 - distance / bandHalfWidth) * mixerWeightScale;
+        if (w <= 0) continue;
+
+        const delta = adjustments.mixerHsl[band];
+
+        // Hue shift: map -100..100 to approx -30..30 degrees.
+        const hueShiftNormalized = (delta.hue / 100) * (30 / 360);
+        h = wrap01(h + hueShiftNormalized * w);
+
+        // Saturation: scale relative to current saturation.
+        // Positive increases, negative decreases.
+        s = clamp01(s * (1 + (delta.saturation / 100) * w));
+
+        // Luminance: add/subtract in [0..1] domain.
+        l = clamp01(l + (delta.luminance / 100) * 0.5 * w);
+      }
+    }
+
+    // Point Color (single picked hue)
+    const point = adjustments.pointColor;
+    const hasPointHue = point.hue != null;
+    const hasPointDelta =
+      point.hueShift !== 0 || point.saturationShift !== 0 || point.luminanceShift !== 0;
+    if (hasPointHue && hasPointDelta) {
+      const halfWidth = lerp(
+        POINT_COLOR_RANGE_MIN_HALF_WIDTH,
+        POINT_COLOR_RANGE_MAX_HALF_WIDTH,
+        clamp01(point.range / 100),
+      );
+
+      const distance = circularHueDistance(h, point.hue ?? 0);
+      // Keep some influence even on low-sat pixels (so blues still respond).
+      const w = smoothStep01(1 - distance / halfWidth) * (0.25 + 0.75 * s);
+
+      if (w > 0) {
+        const hueShiftNormalized = (point.hueShift / 100) * (30 / 360);
+        h = wrap01(h + hueShiftNormalized * w);
+
+        s = clamp01(s * (1 + (point.saturationShift / 100) * w));
+        l = clamp01(l + (point.luminanceShift / 100) * 0.5 * w);
+      }
+    }
 
     // Saturation: uniform scale.
-    let s = clamp01(hsl.s * saturationScale);
+    s = clamp01(s * saturationScale);
 
     // Vibrance: boost (or reduce) low-saturation colors more than high-saturation.
     // This is a lightweight approximation intended for v1.
@@ -46,7 +129,7 @@ export function applyColorAdjustmentsToRgbaBytes(
       s = clamp01(s + vibranceAmount * weight * 0.8);
     }
 
-    const rgb = hslToRgb({ h: hsl.h, s, l: hsl.l });
+    const rgb = hslToRgb({ h, s, l });
 
     output[i] = floatToByte(rgb.r);
     output[i + 1] = floatToByte(rgb.g);
@@ -55,9 +138,28 @@ export function applyColorAdjustmentsToRgbaBytes(
   }
 }
 
-type Hsl = { h: number; s: number; l: number };
+export type Hsl = { h: number; s: number; l: number };
 
-function rgbToHsl(r: number, g: number, b: number): Hsl {
+const MIXER_BAND_CENTERS: Record<(typeof COLOR_MIXER_BANDS)[number], number> = {
+  // Hue centers in normalized hue space (0..1), roughly matching Lightroom ordering.
+  red: 0 / 360,
+  orange: 30 / 360,
+  yellow: 60 / 360,
+  green: 120 / 360,
+  aqua: 180 / 360,
+  blue: 240 / 360,
+  purple: 270 / 360,
+  magenta: 300 / 360,
+};
+
+const POINT_COLOR_RANGE_MIN_HALF_WIDTH = 5 / 360;
+const POINT_COLOR_RANGE_MAX_HALF_WIDTH = 60 / 360;
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+export function rgbToHsl(r: number, g: number, b: number): Hsl {
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const delta = max - min;
@@ -119,6 +221,22 @@ function hueToRgb(p: number, q: number, t0: number): number {
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
+}
+
+function wrap01(value: number): number {
+  // Preserve [0..1) semantics for hue.
+  const v = value % 1;
+  return v < 0 ? v + 1 : v;
+}
+
+function circularHueDistance(a: number, b: number): number {
+  const d = Math.abs(a - b) % 1;
+  return Math.min(d, 1 - d);
+}
+
+function smoothStep01(t: number): number {
+  const x = clamp01(t);
+  return x * x * (3 - 2 * x);
 }
 
 function floatToByte(value: number): number {

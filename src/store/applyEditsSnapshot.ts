@@ -34,8 +34,35 @@ export function applyEditsSnapshot(edits: ImageEditorEdits) {
   }
 
   const colorStore = useColorStore.getState();
-  for (const [key, value] of Object.entries(edits.color)) {
-    colorStore.setColorAdjustment(key as keyof typeof edits.color, value);
+  colorStore.resetColorAdjustments();
+  colorStore.setColorAdjustment("vibrance", edits.color.vibrance);
+  colorStore.setColorAdjustment("saturation", edits.color.saturation);
+
+  // Apply structured color adjustments.
+  // In tests, store mocks may not implement the new actions yet.
+  if (
+    "resetMixer" in colorStore &&
+    typeof colorStore.resetMixer === "function" &&
+    "setMixerBandAdjustment" in colorStore &&
+    typeof colorStore.setMixerBandAdjustment === "function"
+  ) {
+    colorStore.resetMixer();
+    for (const [band, delta] of Object.entries(edits.color.mixerHsl)) {
+      const typedBand = band as keyof typeof edits.color.mixerHsl;
+      colorStore.setMixerBandAdjustment(typedBand, "hue", delta.hue);
+      colorStore.setMixerBandAdjustment(typedBand, "saturation", delta.saturation);
+      colorStore.setMixerBandAdjustment(typedBand, "luminance", delta.luminance);
+    }
+  }
+
+  if (
+    "resetPointColor" in colorStore &&
+    typeof colorStore.resetPointColor === "function" &&
+    "setPointColor" in colorStore &&
+    typeof colorStore.setPointColor === "function"
+  ) {
+    colorStore.resetPointColor();
+    colorStore.setPointColor(edits.color.pointColor);
   }
 
   useToneCurveStore.getState().setToneCurveMode(edits.toneCurve.mode);

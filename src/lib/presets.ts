@@ -123,7 +123,7 @@ const LIGHT_LIMITS: Record<keyof LightAdjustments, { min: number; max: number }>
   blacks: { min: -100, max: 100 },
 };
 
-const COLOR_LIMITS: Record<keyof ColorAdjustments, { min: number; max: number }> = {
+const COLOR_LIMITS: Record<"vibrance" | "saturation", { min: number; max: number }> = {
   vibrance: { min: -100, max: 100 },
   saturation: { min: -100, max: 100 },
 };
@@ -134,7 +134,7 @@ const WHITE_BALANCE_LIMITS = {
 } as const;
 
 const LIGHT_KEYS = Object.keys(LIGHT_LIMITS) as Array<keyof LightAdjustments>;
-const COLOR_KEYS = Object.keys(COLOR_LIMITS) as Array<keyof ColorAdjustments>;
+const COLOR_KEYS = Object.keys(COLOR_LIMITS) as Array<keyof typeof COLOR_LIMITS>;
 
 export function scalePresetAdjustments(deltas: PresetDeltas, intensity: number): PresetDeltas {
   const clampedIntensity = clamp(intensity, 0, 100);
@@ -142,7 +142,16 @@ export function scalePresetAdjustments(deltas: PresetDeltas, intensity: number):
 
   return {
     light: scaleNumericRecord(deltas.light, factor),
-    color: scaleNumericRecord(deltas.color, factor),
+    color: deltas.color
+      ? {
+          vibrance:
+            deltas.color.vibrance != null ? deltas.color.vibrance * factor : undefined,
+          saturation:
+            deltas.color.saturation != null
+              ? deltas.color.saturation * factor
+              : undefined,
+        }
+      : undefined,
     whiteBalance: deltas.whiteBalance
       ? {
           temperatureKelvin:

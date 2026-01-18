@@ -12,6 +12,11 @@ import { createMockToneCurve } from "./test-helpers/mockToneCurve";
 
 const mockSetColorAdjustment = vi.fn();
 const mockResetColorAdjustments = vi.fn();
+const mockSetMixerBandAdjustment = vi.fn();
+const mockResetMixerBand = vi.fn();
+const mockResetMixer = vi.fn();
+const mockSetPointColor = vi.fn();
+const mockResetPointColor = vi.fn();
 
 const mockStore = {
   resetAll: vi.fn(),
@@ -65,10 +70,32 @@ const mockStore = {
   colorAdjustments: {
     vibrance: 0,
     saturation: 0,
+    mixerHsl: {
+      red: { hue: 0, saturation: 0, luminance: 0 },
+      orange: { hue: 0, saturation: 0, luminance: 0 },
+      yellow: { hue: 0, saturation: 0, luminance: 0 },
+      green: { hue: 0, saturation: 0, luminance: 0 },
+      aqua: { hue: 0, saturation: 0, luminance: 0 },
+      blue: { hue: 0, saturation: 0, luminance: 0 },
+      purple: { hue: 0, saturation: 0, luminance: 0 },
+      magenta: { hue: 0, saturation: 0, luminance: 0 },
+    },
+    pointColor: {
+      hue: null,
+      range: 50,
+      hueShift: 0,
+      saturationShift: 0,
+      luminanceShift: 0,
+    },
   },
   setColorAdjustment: mockSetColorAdjustment,
   resetColorAdjustments: mockResetColorAdjustments,
   resetColorAdjustment: vi.fn(),
+  setMixerBandAdjustment: mockSetMixerBandAdjustment,
+  resetMixerBand: mockResetMixerBand,
+  resetMixer: mockResetMixer,
+  setPointColor: mockSetPointColor,
+  resetPointColor: mockResetPointColor,
 
   toneCurve: createMockToneCurve(),
   setToneCurveMode: vi.fn(),
@@ -131,6 +158,11 @@ vi.mock("../store/colorStore", async () => {
       setColorAdjustment: mockStore.setColorAdjustment,
       resetColorAdjustments: mockStore.resetColorAdjustments,
       resetColorAdjustment: mockStore.resetColorAdjustment,
+      setMixerBandAdjustment: mockStore.setMixerBandAdjustment,
+      resetMixerBand: mockStore.resetMixerBand,
+      resetMixer: mockStore.resetMixer,
+      setPointColor: mockStore.setPointColor,
+      resetPointColor: mockStore.resetPointColor,
     }),
   };
 });
@@ -243,6 +275,8 @@ describe("ReactImageEditor Color panel", () => {
     });
 
     const section = screen.getByTestId("color-section");
+
+
     expect(within(section).getByLabelText("Vibrance")).toBeTruthy();
     expect(within(section).getByLabelText("Saturation")).toBeTruthy();
   });
@@ -266,6 +300,7 @@ describe("ReactImageEditor Color panel", () => {
     const resetButton = within(section).getByRole("button", { name: "Reset" });
     fireEvent.click(resetButton);
 
+    // Default tab is Basic.
     expect(mockResetColorAdjustments).toHaveBeenCalled();
   });
 });

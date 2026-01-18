@@ -51,17 +51,82 @@ export const DEFAULT_LIGHT_ADJUSTMENTS: LightAdjustments = {
   blacks: 0,
 };
 
+export const COLOR_MIXER_BANDS = [
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "aqua",
+  "blue",
+  "purple",
+  "magenta",
+] as const;
+
+export type ColorMixerBand = (typeof COLOR_MIXER_BANDS)[number];
+
+export type MixerHslBandAdjustments = {
+  hue: number;
+  saturation: number;
+  luminance: number;
+};
+
+export type MixerHslAdjustments = Record<ColorMixerBand, MixerHslBandAdjustments>;
+
+export type PointColorAdjustments = {
+  /**
+   * Selected hue center in normalized hue space (0..1). `null` means no point selected.
+   */
+  hue: number | null;
+  range: number; // 0..100
+  hueShift: number;
+  saturationShift: number;
+  luminanceShift: number;
+};
+
 export type ColorAdjustments = {
   vibrance: number;
   saturation: number;
+  mixerHsl: MixerHslAdjustments;
+  pointColor: PointColorAdjustments;
 };
 
-export type ColorAdjustmentName = keyof ColorAdjustments;
+export type ColorAdjustmentName = "vibrance" | "saturation";
 
-export const DEFAULT_COLOR_ADJUSTMENTS: ColorAdjustments = {
-  vibrance: 0,
-  saturation: 0,
-};
+export function createDefaultMixerHslAdjustments(): MixerHslAdjustments {
+  const neutralBand: MixerHslBandAdjustments = { hue: 0, saturation: 0, luminance: 0 };
+
+  return {
+    red: { ...neutralBand },
+    orange: { ...neutralBand },
+    yellow: { ...neutralBand },
+    green: { ...neutralBand },
+    aqua: { ...neutralBand },
+    blue: { ...neutralBand },
+    purple: { ...neutralBand },
+    magenta: { ...neutralBand },
+  };
+}
+
+export function createDefaultPointColorAdjustments(): PointColorAdjustments {
+  return {
+    hue: null,
+    range: 50,
+    hueShift: 0,
+    saturationShift: 0,
+    luminanceShift: 0,
+  };
+}
+
+export function createDefaultColorAdjustments(): ColorAdjustments {
+  return {
+    vibrance: 0,
+    saturation: 0,
+    mixerHsl: createDefaultMixerHslAdjustments(),
+    pointColor: createDefaultPointColorAdjustments(),
+  };
+}
+
+export const DEFAULT_COLOR_ADJUSTMENTS: ColorAdjustments = createDefaultColorAdjustments();
 
 export type SharpeningSettings = {
   amount: number;

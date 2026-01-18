@@ -76,6 +76,7 @@ describe("details.panel", () => {
         formatSigned={() => ""}
         formatSignedInt={() => ""}
         setIsPickingWhiteBalance={() => {}}
+        setIsPickingPointColor={() => {}}
       />,
     );
 
@@ -96,6 +97,7 @@ describe("details.panel", () => {
         formatSigned={() => ""}
         formatSignedInt={() => ""}
         setIsPickingWhiteBalance={() => {}}
+        setIsPickingPointColor={() => {}}
       />,
     );
 
@@ -122,6 +124,7 @@ describe("details.panel", () => {
         formatSigned={() => ""}
         formatSignedInt={() => ""}
         setIsPickingWhiteBalance={() => {}}
+        setIsPickingPointColor={() => {}}
       />,
     );
 

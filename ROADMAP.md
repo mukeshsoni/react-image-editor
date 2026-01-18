@@ -2,13 +2,13 @@
 
 ## Next (High Priority)
 
-### Add Image Export/Download
+### Add Image Export/Download [done]
 - Currently users can crop but cannot save the result
 - Add "Download" button to export edited image as PNG/JPEG
 - Store edited image data and trigger download
 - **Impact**: Completes the editor workflow
 
-### Fix handleWheel Performance Issue
+### Fix handleWheel Performance Issue 
 - `use-canvas-zoom-pan.ts` line 378: Function recreated on every zoomLevel/offset change
 - Memoize with `useCallback` and optimize dependencies
 - Code comment: "This is atrocious"
@@ -20,7 +20,7 @@
 - Code TODO in `use-canvas-zoom-pan.ts` line 552
 - **Impact**: Better UX consistency
 
-### Undo/Redo Functionality
+### Undo/Redo Functionality [done]
 - Add a left panel (Lightroom-style) with a **History** accordion listing all edits
 - Track operation history (zoom, pan, crop, and future adjustments) and limit to last N operations (e.g., 50)
 - Add **Undo** and **Redo** buttons on the right side of the right panel header
@@ -41,7 +41,7 @@
 - Allow non-destructive editing of RAW files
 - **Impact**: Essential for professional photographers
 
-### Basic Tone & Color Adjustments
+### Basic Tone & Color Adjustments [done]
 - **Exposure**: Brighten/darken image
 - **Contrast**: Increase/decrease tonal separation
 - **Highlights**: Recover blown-out highlights
@@ -61,27 +61,27 @@
 - Color wheel for intuitive color adjustments
 - Preset white balance (Daylight, Cloudy, Tungsten, etc.)
 
-### Curves & Levels
+### Curves & Levels [done]
 - Tone curve editor for precise tonal control
 - Separate RGB and Luminance curves
 - Levels histogram display
 - Auto-levels button
 - Point-based curve manipulation
 
-### Straighten & Perspective Correction
+### Straighten & Perspective Correction [done]
 - Rotation slider for straightening horizons
 - Perspective grid overlay
 - Perspective correction tool
 - Auto-straighten with edge detection
 - PRD: `prds/geometry-and-optics-prd.md`
 
-### Geometry & Optics
+### Geometry & Optics [done]
 - Upright/auto-straighten + guided perspective (draw lines to correct)
 - Lens distortion + chromatic aberration correction (manual; optional profile-based later)
 - Vignette, grain, dehaze, haze removal
 - PRD: `prds/geometry-and-optics-prd.md`
 
-### Healing & Spot Removal
+### Healing & Spot Removal [done]
 - Spot removal/clone tool
 - Healing brush for seamless removal
 - Content-aware fill for object removal

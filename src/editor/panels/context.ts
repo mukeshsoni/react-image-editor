@@ -21,4 +21,5 @@ export type PanelContext = {
   formatSignedInt: (value: number) => string;
 
   setIsPickingWhiteBalance: (updater: (current: boolean) => boolean) => void;
+  setIsPickingPointColor: (updater: (current: boolean) => boolean) => void;
 };

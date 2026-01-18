@@ -71,10 +71,11 @@ function PresetsPanelFromContext({ isImageLoaded }: PanelContext) {
       }
     }
 
-    for (const [key, value] of Object.entries(effective.color)) {
-      const typedKey = key as keyof typeof effective.color;
-      if (colorAdjustments[typedKey] !== value) {
-        setColorAdjustment(typedKey, value);
+    const colorKeys = ["vibrance", "saturation"] as const;
+    for (const key of colorKeys) {
+      const value = effective.color[key];
+      if (colorAdjustments[key] !== value) {
+        setColorAdjustment(key, value);
       }
     }
 
