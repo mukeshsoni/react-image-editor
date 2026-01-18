@@ -65,6 +65,73 @@ describe("color adjustments math", () => {
     expect(output[3]).toBe(255);
   });
 
+  test("mixer adjustments affect red pixels more than blue", () => {
+    const input = new Uint8ClampedArray([
+      // red-ish
+      220,
+      30,
+      30,
+      200,
+      // blue-ish
+      30,
+      30,
+      220,
+      150,
+    ]);
+
+    const output = new Uint8ClampedArray(input.length);
+
+    const base = defaults();
+
+    applyColorAdjustmentsToRgbaBytes(input, output, {
+      ...base,
+      mixerHsl: {
+        ...base.mixerHsl,
+        red: {
+          ...base.mixerHsl.red,
+          saturation: -100,
+        },
+      },
+    });
+
+    const redDelta =
+      Math.abs((output[0] ?? 0) - (input[0] ?? 0)) +
+      Math.abs((output[1] ?? 0) - (input[1] ?? 0)) +
+      Math.abs((output[2] ?? 0) - (input[2] ?? 0));
+
+    const blueDelta =
+      Math.abs((output[4] ?? 0) - (input[4] ?? 0)) +
+      Math.abs((output[5] ?? 0) - (input[5] ?? 0)) +
+      Math.abs((output[6] ?? 0) - (input[6] ?? 0));
+
+    expect(redDelta).toBeGreaterThan(0);
+    expect(redDelta).toBeGreaterThan(blueDelta);
+
+    // Alpha preserved
+    expect(output[3]).toBe(200);
+    expect(output[7]).toBe(150);
+  });
+
+  test("point color has no effect when no hue is selected", () => {
+    const input = new Uint8ClampedArray([220, 30, 30, 123]);
+    const output = new Uint8ClampedArray(input.length);
+
+    const base = defaults();
+
+    applyColorAdjustmentsToRgbaBytes(input, output, {
+      ...base,
+      pointColor: {
+        ...base.pointColor,
+        hue: null,
+        hueShift: 100,
+        saturationShift: -100,
+        luminanceShift: 100,
+      },
+    });
+
+    expect(Array.from(output)).toEqual(Array.from(input));
+  });
+
   test("point color range controls selectivity", () => {
     const input = new Uint8ClampedArray([
       // red-ish
