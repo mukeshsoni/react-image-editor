@@ -70,18 +70,18 @@ Source PRD: `prds/color-mixer-prd.md`
   - [x] Point color labels (e.g. `Point Color Range`)
 
 ## 7) Tests (Vitest)
-- [ ] Unit tests for Mixer math:
-  - [ ] Neutral preserves pixels
-  - [ ] Red band affects red-ish pixel more than blue-ish
-  - [ ] Alpha preserved
-- [ ] Unit tests for Point Color math:
-  - [ ] Narrow range affects fewer hues than broad range
-  - [ ] Alpha preserved
-- [ ] Component tests:
-  - [ ] Tabs render
-  - [ ] Band selection changes visible sliders
-  - [ ] Slider change dispatches store updates
-  - [ ] Eyedropper flow updates point color (mock `getImageData`)
+- [x] Unit tests for Mixer math:
+  - [x] Neutral preserves pixels
+  - [x] Red band affects red-ish pixel more than blue-ish
+  - [x] Alpha preserved
+- [x] Unit tests for Point Color math:
+  - [x] Narrow range affects fewer hues than broad range
+  - [x] Alpha preserved
+- [x] Component tests:
+  - [x] Tabs render
+  - [x] Band selection changes visible sliders
+  - [x] Slider change dispatches store updates
+  - [x] Eyedropper flow updates point color (mock `getImageData`)
 
 ## 8) Manual QA checklist
 - [ ] Mixer sliders feel responsive on a large image
