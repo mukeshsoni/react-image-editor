@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
 
 if (typeof globalThis.ImageData === "undefined") {
   Object.defineProperty(globalThis, "ImageData", {
@@ -24,6 +24,14 @@ if (typeof globalThis.ImageData === "undefined") {
     },
   });
 }
+
+afterEach(() => {
+  try {
+    globalThis.localStorage?.clear?.();
+  } catch {
+    // ignore
+  }
+});
 
 // Some tests expect deterministic RAF.
 vi.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb) => {

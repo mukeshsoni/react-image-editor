@@ -11,6 +11,7 @@ import { getPanelGroupElement } from "react-resizable-panels";
 import { DebouncedRange } from "@/components/DebouncedRange";
 import { Button } from "@/components/ui/button";
 import { useThemeMode } from "@/hooks/useThemeMode";
+import { useLocalStorageBoolean } from "@/hooks/useLocalStorageBoolean";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -219,7 +220,40 @@ export function ReactImageEditor({
 }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
-  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(true);
+
+  const [isHistoryPaneOpen, setIsHistoryPaneOpen] = useState(true);
+
+  const [isHistoryAccordionOpen, setIsHistoryAccordionOpen] =
+    useLocalStorageBoolean({
+      key: "react-image-editor:accordion:history",
+      defaultValue: false,
+    });
+
+  const [isBasicPanelOpen, setIsBasicPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:basic",
+    defaultValue: false,
+  });
+
+  const [isTransformPanelOpen, setIsTransformPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:transform",
+    defaultValue: false,
+  });
+
+  const [isLensCorrectionsPanelOpen, setIsLensCorrectionsPanelOpen] =
+    useLocalStorageBoolean({
+      key: "react-image-editor:accordion:lens-corrections",
+      defaultValue: false,
+    });
+
+  const [isOpticsPanelOpen, setIsOpticsPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:optics",
+    defaultValue: false,
+  });
+
+  const [isHealingPanelOpen, setIsHealingPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:healing",
+    defaultValue: false,
+  });
   const healingMode = useHealingStore((state) => state.healingMode);
   const healingBrush = useHealingStore((state) => state.healingBrush);
   const cloneSource = useHealingStore((state) => state.cloneSource);
@@ -990,14 +1024,17 @@ export function ReactImageEditor({
         direction="horizontal"
         className="flex flex-1 min-h-0 overflow-hidden"
       >
-        {isHistoryPanelOpen ? (
+        {isHistoryPaneOpen ? (
           <>
             <ResizablePanel defaultSize={10} className="min-h-0">
               <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
                 <details
                   className="rounded-md border bg-card"
                   data-testid="history-accordion"
-                  open
+                  open={isHistoryAccordionOpen}
+                  onToggle={(event) => {
+                    setIsHistoryAccordionOpen((event.target as HTMLDetailsElement).open);
+                  }}
                 >
                   <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                     <span className="flex items-center gap-2">
@@ -1076,7 +1113,7 @@ export function ReactImageEditor({
 
         <ResizablePanel
           className="flex flex-col min-h-0 overflow-hidden"
-          defaultSize={isHistoryPanelOpen ? 57 : 75}
+          defaultSize={isHistoryPaneOpen ? 57 : 75}
           onResize={handleImagePanelResize}
         >
           <div className="flex flex-col flex-1 p-0">
@@ -1087,12 +1124,12 @@ export function ReactImageEditor({
                 variant="outline"
                 className="absolute left-2 top-2 z-20 size-8"
                 onClick={() => {
-                  setIsHistoryPanelOpen((prev) => !prev);
+                  setIsHistoryPaneOpen((prev: boolean) => !prev);
                 }}
-                title={isHistoryPanelOpen ? "Hide history" : "Show history"}
-                aria-label={isHistoryPanelOpen ? "Hide history" : "Show history"}
+                title={isHistoryPaneOpen ? "Hide history" : "Show history"}
+                aria-label={isHistoryPaneOpen ? "Hide history" : "Show history"}
               >
-                {isHistoryPanelOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                {isHistoryPaneOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
               </Button>
               {isPickingWhiteBalance ? (
                 <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
@@ -1746,7 +1783,13 @@ export function ReactImageEditor({
               </div>
 
               {healingModeEnabled ? (
-                <details className="rounded-md border bg-card" open>
+                <details
+                  className="rounded-md border bg-card"
+                  open={isHealingPanelOpen}
+                  onToggle={(event) => {
+                    setIsHealingPanelOpen((event.target as HTMLDetailsElement).open);
+                  }}
+                >
                   <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <span>Healing</span>
@@ -1760,7 +1803,13 @@ export function ReactImageEditor({
                 </details>
               ) : null}
 
-              <details className="rounded-md border bg-card" open>
+              <details
+                className="rounded-md border bg-card"
+                open={isBasicPanelOpen}
+                onToggle={(event) => {
+                  setIsBasicPanelOpen((event.target as HTMLDetailsElement).open);
+                }}
+              >
                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span>Basic</span>
@@ -1837,7 +1886,13 @@ export function ReactImageEditor({
                 </div>
               </details>
 
-              <details className="rounded-md border bg-card" open>
+              <details
+                className="rounded-md border bg-card"
+                open={isTransformPanelOpen}
+                onToggle={(event) => {
+                  setIsTransformPanelOpen((event.target as HTMLDetailsElement).open);
+                }}
+              >
                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span>Transform</span>
@@ -2081,7 +2136,13 @@ export function ReactImageEditor({
                 </div>
               </details>
 
-              <details className="rounded-md border bg-card" open>
+              <details
+                className="rounded-md border bg-card"
+                open={isLensCorrectionsPanelOpen}
+                onToggle={(event) => {
+                  setIsLensCorrectionsPanelOpen((event.target as HTMLDetailsElement).open);
+                }}
+              >
                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span>Lens Corrections</span>
@@ -2097,7 +2158,13 @@ export function ReactImageEditor({
                 </div>
               </details>
 
-              <details className="rounded-md border bg-card" open>
+              <details
+                className="rounded-md border bg-card"
+                open={isOpticsPanelOpen}
+                onToggle={(event) => {
+                  setIsOpticsPanelOpen((event.target as HTMLDetailsElement).open);
+                }}
+              >
                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span>Optics</span>

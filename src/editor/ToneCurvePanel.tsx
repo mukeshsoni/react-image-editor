@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { useLocalStorageBoolean } from "@/hooks/useLocalStorageBoolean";
+
 import { Button } from "@/components/ui/button";
 import { ToneCurveEditor } from "@/components/ToneCurveEditor";
 import type {
@@ -50,8 +52,21 @@ export function ToneCurvePanel({
   const toggleClass = "h-7 rounded-md border px-2 text-xs bg-background text-foreground hover:bg-accent";
   const toggleActiveClass = "bg-primary text-primary-foreground";
 
+  const [isToneCurveAccordionOpen, setIsToneCurveAccordionOpen] =
+    useLocalStorageBoolean({
+      key: "react-image-editor:accordion:tone-curve",
+      defaultValue: false,
+    });
+
   return (
-    <details className="rounded-md border bg-card" data-testid="tone-curve-accordion">
+    <details
+      className="rounded-md border bg-card"
+      data-testid="tone-curve-accordion"
+      open={isToneCurveAccordionOpen}
+      onToggle={(event) => {
+        setIsToneCurveAccordionOpen((event.target as HTMLDetailsElement).open);
+      }}
+    >
       <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
         <span className="flex items-center gap-2">
           <span>Tone Curve</span>
