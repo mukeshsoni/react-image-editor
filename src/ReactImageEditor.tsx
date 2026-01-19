@@ -5,6 +5,7 @@ import { getPanelGroupElement } from "react-resizable-panels";
 
 import { DebouncedRange } from "@/components/DebouncedRange";
 import { Button } from "@/components/ui/button";
+import { useThemeMode } from "@/hooks/useThemeMode";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -142,10 +143,10 @@ function LightSlider({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <label className="text-xs text-gray-700" htmlFor={name}>
+        <label className="text-xs text-foreground" htmlFor={name}>
           {label}
         </label>
-        <span className="text-xs tabular-nums text-gray-700 w-[52px] text-right">
+        <span className="text-xs tabular-nums text-foreground w-[52px] text-right">
           {format(draftValue)}
         </span>
       </div>
@@ -184,9 +185,16 @@ function LightSlider({
 type Props = {
   imageSrc: string;
   onEditsChange?: (edits: import("@/store").ImageEditorEdits) => void;
+  themeMode?: import("@/lib/theme").ThemeMode;
+  themeScope?: "global" | "local";
 };
 
-export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
+export function ReactImageEditor({
+  imageSrc,
+  onEditsChange,
+  themeMode = "dark",
+  themeScope = "local",
+}: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
   const healingMode = useHealingStore((state) => state.healingMode);
@@ -905,17 +913,28 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
     };
   }, [cropSettings.constrainCrop, offset.x, offset.y, rotation, zoomLevel]);
 
+  const { resolvedTheme } = useThemeMode({
+    defaultMode: themeMode,
+    persist: false,
+  });
+
+  const localThemeClass =
+    themeScope === "local" && resolvedTheme === "dark" ? "dark" : "";
+
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden">
+    <div
+      data-testid="react-image-editor"
+      className={`w-full h-full flex flex-col overflow-hidden ${localThemeClass}`}
+    >
       <ResizablePanelGroup
         id="container-panel"
         direction="horizontal"
         className="flex flex-1 min-h-0 overflow-hidden"
       >
         <ResizablePanel defaultSize={18} className="min-h-0">
-          <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
+          <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
             <details
-              className="rounded-md border bg-white"
+              className="rounded-md border bg-card"
               data-testid="history-accordion"
               open
             >
@@ -923,7 +942,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 <span className="flex items-center gap-2">
                   <span>History</span>
                 </span>
-                <span className="text-xs text-gray-500">▾</span>
+                    <span className="text-xs text-muted-foreground">▾</span>
               </summary>
 
               <div className="px-3 pb-3">
@@ -931,7 +950,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                   {historyEntries.length === 0 ? (
                     <div
                       data-testid="history-entry-placeholder"
-                      className="text-xs text-gray-600"
+                        className="text-xs text-muted-foreground"
                     >
                       History entries will appear here
                     </div>
@@ -970,8 +989,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                         }}
                         className={
                           idx === historyIndex
-                            ? "flex items-center gap-2 rounded-sm bg-gray-900 px-2 py-1 text-left text-xs text-white"
-                            : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-gray-800 hover:bg-gray-200"
+                            ? "flex items-center gap-2 rounded-sm bg-primary px-2 py-1 text-left text-xs text-primary-foreground"
+                            : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-foreground hover:bg-accent"
                         }
                       >
                         <span className="flex-1 truncate">{entry.label}</span>
@@ -989,7 +1008,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
           </div>
         </ResizablePanel>
 
-        <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
+        <ResizableHandle className="w-[2px] bg-border mx-2" />
 
         <ResizablePanel
           className="flex flex-col min-h-0 overflow-hidden"
@@ -999,13 +1018,13 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
             <div className="flex flex-col flex-1 p-0">
               <div className="flex-1 border-2 relative">
                  {isPickingWhiteBalance ? (
-                   <div className="absolute left-2 top-2 z-10 rounded-md bg-white/90 px-2 py-1 text-xs text-gray-700 shadow">
+                   <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
                      Click image to pick white balance (Esc to cancel)
                    </div>
                  ) : null}
 
                  {isPickingPointColor ? (
-                   <div className="absolute left-2 top-10 z-10 rounded-md bg-white/90 px-2 py-1 text-xs text-gray-700 shadow">
+                   <div className="absolute left-2 top-10 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
                      Click image to pick point color (Esc to cancel)
                    </div>
                  ) : null}
@@ -1361,7 +1380,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                     }}
                   >
                     <div
-                      className="rounded-full border border-white shadow-[0_0_0_1px_rgba(0,0,0,0.65)]"
+                       className="rounded-full border border-border bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.65)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.25)]"
                       style={{
                         width: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
                         height: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
@@ -1378,8 +1397,8 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                         key={pin.id}
                         className={
                           pin.id === selectedSpotId
-                            ? "absolute rounded-full bg-white shadow-[0_0_0_2px_rgba(0,0,0,0.75)]"
-                            : "absolute rounded-full bg-white/70 shadow-[0_0_0_2px_rgba(0,0,0,0.55)]"
+                             ? "absolute rounded-full bg-background shadow-[0_0_0_2px_rgba(0,0,0,0.75)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
+                             : "absolute rounded-full bg-background/70 shadow-[0_0_0_2px_rgba(0,0,0,0.55)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.2)]"
                         }
                         style={{
                           left: pin.centerCanvas.x,
@@ -1402,20 +1421,22 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                             y1={selectedSpotPin.centerCanvas.y}
                             x2={selectedSpotPin.sourceCanvas.x}
                             y2={selectedSpotPin.sourceCanvas.y}
-                            stroke="rgba(0,0,0,0.55)"
+                            stroke="currentColor"
                             strokeWidth={3}
+                            className="text-foreground/70"
                           />
                           <line
                             x1={selectedSpotPin.centerCanvas.x}
                             y1={selectedSpotPin.centerCanvas.y}
                             x2={selectedSpotPin.sourceCanvas.x}
                             y2={selectedSpotPin.sourceCanvas.y}
-                            stroke="rgba(255,255,255,0.9)"
+                            stroke="currentColor"
                             strokeWidth={1.5}
+                            className="text-background/90"
                           />
                         </svg>
                         <div
-                          className="absolute rounded-full bg-white shadow-[0_0_0_2px_rgba(0,0,0,0.75)]"
+                          className="absolute rounded-full bg-background shadow-[0_0_0_2px_rgba(0,0,0,0.75)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
                           style={{
                             left: selectedSpotPin.sourceCanvas.x,
                             top: selectedSpotPin.sourceCanvas.y,
@@ -1472,10 +1493,10 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
             </div>
           </div>
         </ResizablePanel>
-        <ResizableHandle className="w-[2px] bg-gray-300 mx-2" />
+        <ResizableHandle className="w-[2px] bg-border mx-2" />
           <ResizablePanel defaultSize={25} className="min-h-0">
             <div className="flex h-full min-h-0 flex-col">
-              <div className="w-full bg-gray-100 py-1 px-2 flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto">
+               <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="ml-auto flex items-center gap-1">
                    <Button
@@ -1600,12 +1621,12 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 </div>
 
                  {healingModeEnabled ? (
-                   <details className="rounded-md border bg-white" open>
+                   <details className="rounded-md border bg-card" open>
                      <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                        <span className="flex items-center gap-2">
                          <span>Healing</span>
                        </span>
-                       <span className="text-xs text-gray-500">▾</span>
+                <span className="text-xs text-muted-foreground">▾</span>
                      </summary>
                      <HealingToolPanel
                        enabled={healingModeEnabled}
@@ -1614,12 +1635,12 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                    </details>
                  ) : null}
 
-                 <details className="rounded-md border bg-white" open>
+                 <details className="rounded-md border bg-card" open>
                  <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                    <span className="flex items-center gap-2">
                      <span>Basic</span>
                    </span>
-                   <span className="text-xs text-gray-500">▾</span>
+                       <span className="text-xs text-muted-foreground">▾</span>
                  </summary>
  
                  <div className="px-3 pb-3">
@@ -1640,16 +1661,16 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
                   <div className="border-t pt-3">
                     <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium text-gray-700">Profile</div>
-                      <div className="text-xs text-gray-500">▾</div>
+                       <div className="text-xs font-medium text-foreground">Profile</div>
+                       <div className="text-xs text-muted-foreground">▾</div>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
-                      <div className="text-xs text-gray-600">Profile:</div>
+                       <div className="text-xs text-muted-foreground">Profile:</div>
                       <input
                         type="text"
                         disabled
                         value=""
-                        className="w-[140px] rounded-sm border bg-gray-50 px-2 py-1 text-xs text-gray-500"
+                         className="w-[140px] rounded-sm border bg-muted px-2 py-1 text-xs text-muted-foreground"
                         aria-label="Profile"
                       />
                     </div>
@@ -1671,18 +1692,18 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 </div>
               </details>
 
-              <details className="rounded-md border bg-white" open>
+              <details className="rounded-md border bg-card" open>
                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span>Transform</span>
                   </span>
-                  <span className="text-xs text-gray-500">▾</span>
+                      <span className="text-xs text-muted-foreground">▾</span>
                 </summary>
 
                 <div className="px-3 pb-3">
                   <div className="border-t pt-3">
                     <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium text-gray-700">Straighten</div>
+                       <div className="text-xs font-medium text-foreground">Straighten</div>
                     </div>
 
                     <div className="mt-2 flex flex-col gap-2">
@@ -1744,7 +1765,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                           value={(cropSettings.rotation ?? 0).toFixed(1)}
                           onChange={(e) => setRotation(Number(e.target.value))}
                           disabled={!isImageLoaded}
-                          className="w-[84px] rounded-sm border bg-white px-2 py-1 text-xs text-gray-700"
+                           className="w-[84px] rounded-sm border bg-background px-2 py-1 text-xs text-foreground"
                         />
                       </div>
                     </div>
@@ -1752,7 +1773,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
                   <div className="border-t pt-3 mt-3">
                     <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium text-gray-700">Perspective</div>
+                       <div className="text-xs font-medium text-foreground">Perspective</div>
                       <Button
                         type="button"
                         size="sm"
@@ -1852,7 +1873,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
                   <div className="border-t pt-3 mt-3">
                     <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium text-gray-700">Guided Upright</div>
+                       <div className="text-xs font-medium text-foreground">Guided Upright</div>
                     </div>
 
                     <div className="mt-2 flex items-center justify-between gap-2">
@@ -1881,12 +1902,12 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                 </div>
               </details>
 
-               <details className="rounded-md border bg-white" open>
+               <details className="rounded-md border bg-card" open>
                  <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                    <span className="flex items-center gap-2">
                      <span>Lens Corrections</span>
                    </span>
-                   <span className="text-xs text-gray-500">▾</span>
+                       <span className="text-xs text-muted-foreground">▾</span>
                  </summary>
 
                  <div className="px-3 pb-3">
@@ -1894,12 +1915,12 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
                  </div>
                </details>
 
-               <details className="rounded-md border bg-white" open>
+               <details className="rounded-md border bg-card" open>
                  <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                    <span className="flex items-center gap-2">
                      <span>Optics</span>
                    </span>
-                   <span className="text-xs text-gray-500">▾</span>
+                       <span className="text-xs text-muted-foreground">▾</span>
                  </summary>
 
                  <div className="px-3 pb-3">
@@ -1927,7 +1948,7 @@ export function ReactImageEditor({ imageSrc, onEditsChange }: Props) {
 
 
               </div>
-              <div className="sticky bottom-0 mt-auto border-t bg-gray-100 px-2 py-2">
+               <div className="sticky bottom-0 mt-auto border-t bg-muted px-2 py-2">
                 <div className="flex justify-end">
                   <Button
                     type="button"

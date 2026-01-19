@@ -24,7 +24,7 @@ export function GeometryOpticsPanel({ isImageLoaded, section }: Props & { sectio
     return (
       <>
         <div className="flex items-center justify-between gap-2">
-          <div className="text-xs font-medium text-gray-700">Lens Corrections</div>
+          <div className="text-xs font-medium text-foreground">Lens Corrections</div>
           <Button
             type="button"
             size="sm"
@@ -80,7 +80,7 @@ export function GeometryOpticsPanel({ isImageLoaded, section }: Props & { sectio
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <div className="text-xs font-medium text-gray-700">Optics</div>
+        <div className="text-xs font-medium text-foreground">Optics</div>
         <Button
           type="button"
           size="sm"

@@ -86,11 +86,11 @@ function PresetsPanelFromContext({ isImageLoaded }: PanelContext) {
   return (
     <div className="mt-4 border-t pt-3" data-testid="presets-section">
       <div className="flex items-center justify-between">
-        <div className="text-xs font-medium text-gray-700">Presets</div>
+        <div className="text-xs font-medium text-foreground">Presets</div>
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <label className="text-xs text-gray-700" htmlFor="preset-intensity">
+        <label className="text-xs text-foreground" htmlFor="preset-intensity">
           Strength
         </label>
 
@@ -107,7 +107,7 @@ function PresetsPanelFromContext({ isImageLoaded }: PanelContext) {
             onValueChange={setPresetIntensity}
             data-testid="preset-intensity"
           />
-          <span className="w-[40px] text-right text-xs tabular-nums text-gray-700">
+          <span className="w-[40px] text-right text-xs tabular-nums text-foreground">
             {preset.intensity}
           </span>
         </div>
@@ -127,23 +127,23 @@ function PresetsPanelFromContext({ isImageLoaded }: PanelContext) {
       <div className="mt-3 grid grid-cols-3 gap-2">
         {BUILT_IN_PRESETS.map((item) => {
           return (
-            <button
-              key={item.id}
-              type="button"
-              disabled={!isImageLoaded}
-              onClick={() => applyPreset(item.id as PresetId)}
-              className={cn(
-                "h-8 rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70",
-                "border-gray-200 hover:border-gray-900",
-              )}
-            >
+              <button
+                key={item.id}
+                type="button"
+                disabled={!isImageLoaded}
+                onClick={() => applyPreset(item.id as PresetId)}
+                className={cn(
+                  "h-8 rounded-md border bg-background px-2 text-xs text-foreground disabled:opacity-70",
+                  "border-border hover:bg-accent",
+                )}
+              >
               {item.name}
             </button>
           );
         })}
       </div>
 
-      <div className="mt-2 text-xs text-gray-600">Click a preset to apply it.</div>
+      <div className="mt-2 text-xs text-muted-foreground">Click a preset to apply it.</div>
     </div>
   );
 }

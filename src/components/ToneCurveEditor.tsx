@@ -1,6 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
+type ToneCurveThemeColors = {
+  background: string;
+  grid: string;
+  identity: string;
+  curve: string;
+  pointFill: string;
+  pointStroke: string;
+};
+
+function getToneCurveThemeColors(element: HTMLElement): ToneCurveThemeColors {
+  const styles = getComputedStyle(element);
+
+  const getVar = (name: string, fallback: string) => {
+    const value = styles.getPropertyValue(name).trim();
+    return value || fallback;
+  };
+
+  return {
+    background: getVar("--tone-curve-bg", "#ffffff"),
+    grid: getVar("--tone-curve-grid", "#e5e7eb"),
+    identity: getVar("--tone-curve-identity", "#9ca3af"),
+    curve: getVar("--tone-curve-curve", "#111827"),
+    pointFill: getVar("--tone-curve-point-fill", "#ffffff"),
+    pointStroke: getVar("--tone-curve-point-stroke", "#111827"),
+  };
+}
+
 import { validateToneCurvePoints } from "@/lib/tone-curve";
 
 import type { CurvePoint } from "../store/cropStore";
@@ -95,14 +122,16 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
       return;
     }
 
+    const themeColors = getToneCurveThemeColors(canvas.parentElement ?? canvas);
+
     ctx.clearRect(0, 0, SIZE, SIZE);
 
     // background
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = themeColors.background;
     ctx.fillRect(0, 0, SIZE, SIZE);
 
     // grid
-    ctx.strokeStyle = "#e5e7eb";
+    ctx.strokeStyle = themeColors.grid;
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i += 1) {
       const t = i / 4;
@@ -121,14 +150,14 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
     }
 
     // identity
-    ctx.strokeStyle = "#9ca3af";
+    ctx.strokeStyle = themeColors.identity;
     ctx.beginPath();
     ctx.moveTo(PADDING, SIZE - PADDING);
     ctx.lineTo(SIZE - PADDING, PADDING);
     ctx.stroke();
 
     // curve
-    ctx.strokeStyle = "#111827";
+    ctx.strokeStyle = themeColors.curve;
     ctx.lineWidth = 2;
     ctx.beginPath();
     validatedPoints.forEach((point, idx) => {
@@ -144,9 +173,9 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
       ctx.beginPath();
       ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
       const isActive = activeIndex === idx;
-      ctx.fillStyle = isActive ? "#111827" : "#ffffff";
+      ctx.fillStyle = isActive ? themeColors.pointStroke : themeColors.pointFill;
       ctx.fill();
-      ctx.strokeStyle = "#111827";
+      ctx.strokeStyle = themeColors.pointStroke;
       ctx.lineWidth = 1;
       ctx.stroke();
     });
@@ -255,7 +284,7 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="flex flex-col gap-1">
-        <div className="text-xs text-gray-600">Curve</div>
+        <div className="text-xs text-muted-foreground">Curve</div>
         <canvas
           ref={canvasRef}
           width={SIZE}
@@ -268,7 +297,7 @@ export function ToneCurveEditor({ points, onChangePoints, disabled }: Props) {
           onPointerUp={handlePointerUp}
           onKeyDown={handleKeyDown}
         />
-        <div className="text-[10px] text-gray-500">
+        <div className="text-[10px] text-muted-foreground">
           Click to add point, drag to move, Del to remove
         </div>
       </div>

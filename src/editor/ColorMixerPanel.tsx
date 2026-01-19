@@ -55,17 +55,17 @@ export function ColorMixerPanel({
   );
 
   return (
-    <details className="rounded-md border bg-white" data-testid="color-mixer-accordion">
+    <details className="rounded-md border bg-card" data-testid="color-mixer-accordion">
       <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
         <span className="flex items-center gap-2">
           <span>Color Mixer</span>
         </span>
-        <span className="text-xs text-gray-500">▾</span>
+        <span className="text-xs text-muted-foreground">▾</span>
       </summary>
 
       <div className="px-3 pb-3">
         <div className="flex items-center justify-between py-2">
-          <div className="text-xs font-medium text-gray-700">Color Mixer</div>
+          <div className="text-xs font-medium text-foreground">Color Mixer</div>
           <Button
             type="button"
             size="sm"
@@ -131,7 +131,7 @@ export function ColorMixerPanel({
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="text-xs font-medium text-gray-700 capitalize">{activeMixerBand}</div>
+              <div className="text-xs font-medium text-foreground capitalize">{activeMixerBand}</div>
               <Button
                 type="button"
                 size="sm"
@@ -206,7 +206,7 @@ export function ColorMixerPanel({
             data-testid="color-mixer-tab-panel-point-color"
           >
             <div className="flex items-center justify-between">
-              <div className="text-xs font-medium text-gray-700">Point Color</div>
+              <div className="text-xs font-medium text-foreground">Point Color</div>
               <Button
                 type="button"
                 size="sm"

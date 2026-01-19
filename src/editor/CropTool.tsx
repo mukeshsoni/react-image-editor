@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 
+import { Button } from "@/components/ui/button";
 import { CropOptions, Cropper } from "@/Cropper";
 import { buildCropCommitFromCanvasRect } from "@/editor/cropCommitted";
 import { useCropStore } from "@/store/cropStore";
@@ -20,26 +21,14 @@ export function CropToolButtons({
 }: CropToolButtonsProps) {
   return (
     <>
-      <button
-        type="button"
-        className={
-          cropMode
-            ? "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium bg-gray-900 text-white h-9 px-3"
-            : "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
-        }
-        onClick={() => setCropMode(!cropMode)}
-      >
+      <Button type="button" variant={cropMode ? "default" : "outline"} onClick={() => setCropMode(!cropMode)}>
         Crop
-      </button>
+      </Button>
 
       {hasAppliedCrop ? (
-        <button
-          type="button"
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
-          onClick={onResetCrop}
-        >
+        <Button type="button" variant="outline" onClick={onResetCrop}>
           Reset Crop
-        </button>
+        </Button>
       ) : null}
     </>
   );

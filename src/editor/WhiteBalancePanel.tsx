@@ -1,5 +1,13 @@
 import type { ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { WhiteBalanceSettings } from "@/store/cropStore";
 
 type Props = {
@@ -41,24 +49,28 @@ export function WhiteBalancePanel({
   return (
     <div className="mt-4 border-t pt-3" data-testid="wb-section">
       <div className="flex items-center justify-between">
-        <div className="text-xs font-medium text-gray-700">White Balance</div>
+        <div className="text-xs font-medium text-foreground">White Balance</div>
 
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-7 px-2 text-xs disabled:opacity-70"
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-xs"
           onClick={() => resetWhiteBalance()}
           disabled={!isImageLoaded}
         >
           Reset
-        </button>
+        </Button>
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-2">
-        <div className="text-xs text-gray-600">Preset:</div>
+        <div className="text-xs text-muted-foreground">Preset:</div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
-            className="h-8 rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70"
+            size="sm"
+            variant="outline"
+            className="h-8 px-2 text-xs"
             data-testid="wb-eyedropper"
             aria-label="Pick white balance from image"
             disabled={!isImageLoaded}
@@ -67,21 +79,24 @@ export function WhiteBalancePanel({
             }}
           >
             Pick
-          </button>
+          </Button>
 
-          <select
+          <Select
             value={whiteBalance.preset}
-            onChange={(e) => onPresetChange(e.target.value)}
+            onValueChange={(value) => onPresetChange(value)}
             disabled={!isImageLoaded}
-            aria-label="White Balance"
-            className="h-8 w-[140px] rounded-md border bg-white px-2 text-xs text-gray-700 disabled:opacity-70"
           >
-            {presets.map((preset) => (
-              <option key={preset.value} value={preset.value}>
-                {preset.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className="w-[140px]" aria-label="White Balance">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {presets.map((preset) => (
+                <SelectItem key={preset.value} value={preset.value}>
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

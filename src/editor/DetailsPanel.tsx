@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+
 import type { DenoiseSettings, SharpeningSettings } from "@/store/cropStore";
 
 type SliderProps = {
@@ -41,7 +42,7 @@ export function DetailsPanel({
   return (
     <div className="mt-4 border-t pt-3" data-testid="details-section">
       <div className="flex items-center justify-between">
-        <div className="text-xs font-medium text-gray-700">Sharpening</div>
+        <div className="text-xs font-medium text-foreground">Sharpening</div>
         <Button
           type="button"
           size="sm"
@@ -106,7 +107,7 @@ export function DetailsPanel({
       </div>
 
       <div className="mt-6 flex items-center justify-between">
-        <div className="text-xs font-medium text-gray-700">Noise Reduction</div>
+        <div className="text-xs font-medium text-foreground">Noise Reduction</div>
         <Button
           type="button"
           size="sm"
