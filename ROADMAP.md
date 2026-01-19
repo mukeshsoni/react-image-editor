@@ -20,6 +20,8 @@
 - Code TODO in `use-canvas-zoom-pan.ts` line 552
 - **Impact**: Better UX consistency
 
+### Dark mode
+
 ### Undo/Redo Functionality [done]
 - Add a left panel (Lightroom-style) with a **History** accordion listing all edits
 - Track operation history (zoom, pan, crop, and future adjustments) and limit to last N operations (e.g., 50)
@@ -117,7 +119,7 @@
 - Adjustment brush (paint adjustments locally)
 - Masking capability for selective edits
 
-### Color & Tone Tools
+### Color & Tone Tools [done]
 - Curves (RGB + per-channel), point curve + region curve
 - HSL/Color Mixer + targeted adjustment tool (drag on image to shift hues)
 - Color Grading wheels (shadows/midtones/highlights) + blending/balance
