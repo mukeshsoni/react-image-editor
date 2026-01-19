@@ -133,4 +133,61 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    input[type="range"] {
+        --range-progress: 0%;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 10px;
+        background: transparent;
+        accent-color: var(--primary);
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+        height: 3px;
+        border-radius: 9999px;
+        background: linear-gradient(
+          to right,
+          var(--primary) 0%,
+          var(--primary) var(--range-progress),
+          var(--border) var(--range-progress),
+          var(--border) 100%
+        );
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 10px;
+        width: 10px;
+        margin-top: -3.5px;
+        border-radius: 9999px;
+        background: var(--background);
+        border: 2px solid var(--primary);
+    }
+
+    input[type="range"]::-moz-range-track {
+        height: 3px;
+        border-radius: 9999px;
+        background: var(--border);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        height: 10px;
+        width: 10px;
+        border-radius: 9999px;
+        background: var(--background);
+        border: 2px solid var(--primary);
+    }
+
+    input[type="range"]::-moz-range-progress {
+        height: 3px;
+        border-radius: 9999px;
+        background: var(--primary);
+    }
+
+    input[type="range"]:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
 }

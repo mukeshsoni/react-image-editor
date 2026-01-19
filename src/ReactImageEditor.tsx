@@ -153,6 +153,14 @@ function LightSlider({
     };
   }, [onValueChange]);
 
+  const progress = useMemo(() => {
+    const range = max - min;
+    if (range <= 0) return 0;
+
+    const percent = ((draftValue - min) / range) * 100;
+    return Math.max(0, Math.min(100, percent));
+  }, [draftValue, max, min]);
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
@@ -188,6 +196,7 @@ function LightSlider({
         disabled={disabled}
         aria-label={label}
         className="w-full"
+        style={{ "--range-progress": `${progress}%` } as unknown as import("react").CSSProperties}
       />
     </div>
   );
