@@ -36,7 +36,7 @@ export function LightPanel({
   return (
     <div className="mt-4 border-t pt-3" data-testid="tone-section">
       <div className="flex items-center justify-between">
-        <div className="text-xs font-medium text-gray-700">Tone</div>
+        <div className="text-xs font-medium text-foreground">Tone</div>
         <Button
           type="button"
           size="sm"

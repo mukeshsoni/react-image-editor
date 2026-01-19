@@ -16,12 +16,12 @@ function DetailsPanelFromContext({ isImageLoaded, Slider }: PanelContext) {
   const resetDenoise = useDenoiseStore((state) => state.resetDenoise);
 
   return (
-    <details className="rounded-md border bg-white" data-testid="details-accordion">
+    <details className="rounded-md border bg-card" data-testid="details-accordion">
       <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
         <span className="flex items-center gap-2">
           <span>Details</span>
         </span>
-        <span className="text-xs text-gray-500">▾</span>
+        <span className="text-xs text-muted-foreground">▾</span>
       </summary>
 
       <div className="px-3 pb-3">

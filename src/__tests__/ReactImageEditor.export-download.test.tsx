@@ -3,9 +3,17 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 vi.mock("@/components/ui/select", () => {
   return {
-    Select: ({ value, onValueChange }: { value: string; onValueChange: (value: string) => void }) => (
+    Select: ({
+      value,
+      onValueChange,
+      "data-testid": dataTestId,
+    }: {
+      value: string;
+      onValueChange: (value: string) => void;
+      "data-testid"?: string;
+    }) => (
       <select
-        data-testid="export-format"
+        data-testid={dataTestId}
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
       >

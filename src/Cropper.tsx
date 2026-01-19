@@ -138,12 +138,12 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
       onMouseLeave={handleMouseUp}
     >
       {/* Semi-transparent overlay */}
-      <div className="absolute bg-black bg-opacity-50" />
+      <div className="absolute inset-0 bg-black/50" />
 
       {/* Clear crop region */}
       <div
         data-testid="crop-region"
-        className="absolute border-2 border-gray-600"
+        className="absolute border-2 border-primary/80"
         style={{
           left: cropRect.x,
           top: cropRect.y,
@@ -180,7 +180,7 @@ function DragHandle({
   return (
     <div
       data-testid={`crop-handle-${position}`}
-      className="absolute bg-white border border-gray-800"
+      className="absolute bg-background border border-border"
       style={{
         width: HANDLE_SIZE,
         height: HANDLE_SIZE,
@@ -525,7 +525,7 @@ export function CropOptions({
             max={45}
             step={1}
             onValueChange={setRotation}
-            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer"
           />
         </div>
         <div className="flex justify-between">

@@ -160,14 +160,11 @@ export function ExportTool({
       </Button>
 
       <Select
+        data-testid="export-format"
         value={exportFormat}
         onValueChange={(value) => setExportFormat(value as ExportFormat)}
       >
-        <SelectTrigger
-          size="sm"
-          className="w-[110px]"
-          data-testid="export-format"
-        >
+        <SelectTrigger size="sm" className="w-[110px]">
           <SelectValue placeholder="Format" />
         </SelectTrigger>
         <SelectContent>
@@ -178,7 +175,7 @@ export function ExportTool({
 
       {exportFormat === "jpeg" ? (
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-700" htmlFor="jpeg-quality">
+          <label className="text-xs text-foreground" htmlFor="jpeg-quality">
             Quality
           </label>
           <DebouncedRange
@@ -192,14 +189,14 @@ export function ExportTool({
             onValueChange={setJpegQuality}
             data-testid="jpeg-quality"
           />
-          <span className="text-xs tabular-nums text-gray-700 w-[40px] text-right">
+          <span className="text-xs tabular-nums text-foreground w-[40px] text-right">
             {jpegQuality}
           </span>
         </div>
       ) : null}
 
       {cropMode ? (
-        <div className="text-xs text-gray-700">Apply crop to download</div>
+        <div className="text-xs text-muted-foreground">Apply crop to download</div>
       ) : null}
 
       {exportError ? (

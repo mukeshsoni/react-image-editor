@@ -5,8 +5,11 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function Select({
+  "data-testid": _dataTestId,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Root>) {
+}: React.ComponentProps<typeof SelectPrimitive.Root> & {
+  "data-testid"?: string
+}) {
   return <SelectPrimitive.Root data-slot="select" {...props} />
 }
 

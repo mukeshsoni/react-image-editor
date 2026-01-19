@@ -17,20 +17,16 @@ type HealingToolButtonsProps = {
 
 export function HealingToolButtons({ enabled, disabled, onToggle }: HealingToolButtonsProps) {
   return (
-    <button
+    <Button
       type="button"
       disabled={disabled}
-      className={
-        enabled
-          ? "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium bg-gray-900 text-white h-9 px-3"
-          : "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
-      }
+      variant={enabled ? "default" : "outline"}
       onClick={onToggle}
       aria-pressed={enabled}
       aria-label="Healing tool"
     >
       Healing
-    </button>
+    </Button>
   );
 }
 
@@ -57,7 +53,7 @@ export function HealingToolPanel({ enabled, isImageLoaded }: Props) {
     <div className="px-3 pb-3" data-testid="healing-panel">
       <div className="border-t pt-3">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-medium text-gray-700">Healing</div>
+          <div className="text-xs font-medium text-foreground">Healing</div>
           <Button
             type="button"
             size="sm"
@@ -73,7 +69,7 @@ export function HealingToolPanel({ enabled, isImageLoaded }: Props) {
 
         <div className="mt-3 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
-            <label className="text-xs text-gray-700" htmlFor="healing-mode">
+            <label className="text-xs text-foreground" htmlFor="healing-mode">
               Mode
             </label>
             <Select
@@ -99,10 +95,10 @@ export function HealingToolPanel({ enabled, isImageLoaded }: Props) {
 
           <div>
             <div className="flex items-center justify-between">
-              <label className="text-xs text-gray-700" htmlFor="healing-size">
+              <label className="text-xs text-foreground" htmlFor="healing-size">
                 Brush size
               </label>
-              <span className="text-xs tabular-nums text-gray-700 w-[52px] text-right">
+              <span className="text-xs tabular-nums text-foreground w-[52px] text-right">
                 {Math.round(brush.size)}
               </span>
             </div>
@@ -123,10 +119,10 @@ export function HealingToolPanel({ enabled, isImageLoaded }: Props) {
 
           <div>
             <div className="flex items-center justify-between">
-              <label className="text-xs text-gray-700" htmlFor="healing-feather">
+              <label className="text-xs text-foreground" htmlFor="healing-feather">
                 Feather
               </label>
-              <span className="text-xs tabular-nums text-gray-700 w-[52px] text-right">
+              <span className="text-xs tabular-nums text-foreground w-[52px] text-right">
                 {Math.round(brush.feather)}
               </span>
             </div>
@@ -146,12 +142,12 @@ export function HealingToolPanel({ enabled, isImageLoaded }: Props) {
           </div>
 
           {mode === "clone" ? (
-            <div className="text-xs text-gray-600">
+            <div className="text-xs text-muted-foreground">
               Hold Alt/Option and click to set clone source{cloneSource ? " (set)" : ""}
             </div>
           ) : null}
 
-          <div className="text-xs text-gray-600">Pan: hold Space + drag</div>
+          <div className="text-xs text-muted-foreground">Pan: hold Space + drag</div>
         </div>
       </div>
     </div>
