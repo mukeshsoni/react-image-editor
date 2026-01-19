@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { MinusIcon, PlusIcon } from "@radix-ui/react-icons";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MinusIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
 import { getPanelGroupElement } from "react-resizable-panels";
 
 import { DebouncedRange } from "@/components/DebouncedRange";
@@ -205,6 +210,7 @@ export function ReactImageEditor({
 }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
+  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(true);
   const healingMode = useHealingStore((state) => state.healingMode);
   const healingBrush = useHealingStore((state) => state.healingBrush);
   const cloneSource = useHealingStore((state) => state.cloneSource);
@@ -975,93 +981,110 @@ export function ReactImageEditor({
         direction="horizontal"
         className="flex flex-1 min-h-0 overflow-hidden"
       >
-        <ResizablePanel defaultSize={10} className="min-h-0">
-          <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
-            <details
-              className="rounded-md border bg-card"
-              data-testid="history-accordion"
-              open
-            >
-              <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <span>History</span>
-                </span>
-                <span className="text-xs text-muted-foreground">▾</span>
-              </summary>
+        {isHistoryPanelOpen ? (
+          <>
+            <ResizablePanel defaultSize={10} className="min-h-0">
+              <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
+                <details
+                  className="rounded-md border bg-card"
+                  data-testid="history-accordion"
+                  open
+                >
+                  <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span>History</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">▾</span>
+                  </summary>
 
-              <div className="px-3 pb-3">
-                <div data-testid="history-list" className="flex flex-col gap-1">
-                  {historyEntries.length === 0 ? (
-                    <div
-                      data-testid="history-entry-placeholder"
-                      className="text-xs text-muted-foreground"
-                    >
-                      History entries will appear here
-                    </div>
-                  ) : (
-                    historyEntries.map((entry, idx) => (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        data-testid={`history-entry-${idx}`}
-                        onClick={() => {
-                          isApplyingHistoryRef.current = true;
+                  <div className="px-3 pb-3">
+                    <div data-testid="history-list" className="flex flex-col gap-1">
+                      {historyEntries.length === 0 ? (
+                        <div
+                          data-testid="history-entry-placeholder"
+                          className="text-xs text-muted-foreground"
+                        >
+                          History entries will appear here
+                        </div>
+                      ) : (
+                        historyEntries.map((entry, idx) => (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            data-testid={`history-entry-${idx}`}
+                            onClick={() => {
+                              isApplyingHistoryRef.current = true;
 
-                          try {
-                            const nextEntry = historyJumpTo(idx);
-                            if (nextEntry) {
-                              applyEditsSnapshot(nextEntry.state.edits);
-                              const camera = nextEntry.state.camera;
-                              if (camera) {
-                                setCamera(camera.zoomLevel, camera.offset);
+                              try {
+                                const nextEntry = historyJumpTo(idx);
+                                if (nextEntry) {
+                                  applyEditsSnapshot(nextEntry.state.edits);
+                                  const camera = nextEntry.state.camera;
+                                  if (camera) {
+                                    setCamera(camera.zoomLevel, camera.offset);
+                                  }
+
+                                  lastCommittedEditsRef.current =
+                                    nextEntry.state.edits;
+                                  const nextCamera = nextEntry.state.camera;
+                                  if (nextCamera) {
+                                    zoomPanStateRef.current = {
+                                      zoomLevel: nextCamera.zoomLevel,
+                                      offset: nextCamera.offset,
+                                    };
+                                  }
+                                }
+                              } finally {
+                                queueMicrotask(() => {
+                                  isApplyingHistoryRef.current = false;
+                                });
                               }
-
-                              lastCommittedEditsRef.current =
-                                nextEntry.state.edits;
-                              const nextCamera = nextEntry.state.camera;
-                              if (nextCamera) {
-                                zoomPanStateRef.current = {
-                                  zoomLevel: nextCamera.zoomLevel,
-                                  offset: nextCamera.offset,
-                                };
-                              }
+                            }}
+                            className={
+                              idx === historyIndex
+                                ? "flex items-center gap-2 rounded-sm bg-primary px-2 py-1 text-left text-xs text-primary-foreground"
+                                : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-foreground hover:bg-accent"
                             }
-                          } finally {
-                            queueMicrotask(() => {
-                              isApplyingHistoryRef.current = false;
-                            });
-                          }
-                        }}
-                        className={
-                          idx === historyIndex
-                            ? "flex items-center gap-2 rounded-sm bg-primary px-2 py-1 text-left text-xs text-primary-foreground"
-                            : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-foreground hover:bg-accent"
-                        }
-                      >
-                        <span className="flex-1 truncate">{entry.label}</span>
-                        {entry.delta ? (
-                          <span className="tabular-nums text-right min-w-[3rem]">
-                            {entry.delta}
-                          </span>
-                        ) : null}
-                      </button>
-                    ))
-                  )}
-                </div>
+                          >
+                            <span className="flex-1 truncate">{entry.label}</span>
+                            {entry.delta ? (
+                              <span className="tabular-nums text-right min-w-[3rem]">
+                                {entry.delta}
+                              </span>
+                            ) : null}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </details>
               </div>
-            </details>
-          </div>
-        </ResizablePanel>
+            </ResizablePanel>
 
-        <ResizableHandle className="w-[2px] bg-border mx-2" />
+            <ResizableHandle className="w-[2px] bg-border mx-2" />
+          </>
+        ) : null}
 
         <ResizablePanel
           className="flex flex-col min-h-0 overflow-hidden"
-          defaultSize={57}
+          defaultSize={isHistoryPanelOpen ? 57 : 75}
           onResize={handleImagePanelResize}
         >
           <div className="flex flex-col flex-1 p-0">
             <div className="flex-1 border-2 relative">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="absolute left-2 top-2 z-20 size-8"
+                onClick={() => {
+                  setIsHistoryPanelOpen((prev) => !prev);
+                }}
+                title={isHistoryPanelOpen ? "Hide history" : "Show history"}
+                aria-label={isHistoryPanelOpen ? "Hide history" : "Show history"}
+              >
+                {isHistoryPanelOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+              </Button>
               {isPickingWhiteBalance ? (
                 <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
                   Click image to pick white balance (Esc to cancel)
