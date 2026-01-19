@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useLocalStorageBoolean } from "@/hooks/useLocalStorageBoolean";
 import { cn } from "@/lib/utils";
 import { useColorStore } from "@/store/colorStore";
 import { COLOR_MIXER_BANDS } from "@/store/cropStore";
@@ -54,8 +55,21 @@ export function ColorMixerPanel({
     [],
   );
 
+  const [isColorMixerAccordionOpen, setIsColorMixerAccordionOpen] =
+    useLocalStorageBoolean({
+      key: "react-image-editor:accordion:color-mixer",
+      defaultValue: false,
+    });
+
   return (
-    <details className="rounded-md border bg-card" data-testid="color-mixer-accordion">
+    <details
+      className="rounded-md border bg-card"
+      data-testid="color-mixer-accordion"
+      open={isColorMixerAccordionOpen}
+      onToggle={(event) => {
+        setIsColorMixerAccordionOpen((event.target as HTMLDetailsElement).open);
+      }}
+    >
       <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
         <span className="flex items-center gap-2">
           <span>Color Mixer</span>

@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { MinusIcon, PlusIcon } from "@radix-ui/react-icons";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MinusIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
 import { getPanelGroupElement } from "react-resizable-panels";
 
 import { DebouncedRange } from "@/components/DebouncedRange";
 import { Button } from "@/components/ui/button";
 import { useThemeMode } from "@/hooks/useThemeMode";
+import { useLocalStorageBoolean } from "@/hooks/useLocalStorageBoolean";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { CropToolButtons, CropToolOptions, CropToolOverlay } from "@/editor/CropTool";
+import {
+  CropToolButtons,
+  CropToolOptions,
+  CropToolOverlay,
+} from "@/editor/CropTool";
 import { EditorCanvas } from "@/editor/EditorCanvas";
 import { ExportTool } from "@/editor/ExportTool";
 import { HealingToolButtons, HealingToolPanel } from "@/editor/HealingTool";
@@ -36,7 +46,10 @@ import { useHistoryLabelStore } from "@/store/historyLabelStore";
 import type { ExportFormat } from "./export-download";
 import { getMousePosInCanvas } from "./dom-helpers";
 import { rgbToHsl } from "./lib/color-adjustments";
-import { estimateWhiteBalanceFromRgb, sampleAverageRgb } from "./lib/white-balance";
+import {
+  estimateWhiteBalanceFromRgb,
+  sampleAverageRgb,
+} from "./lib/white-balance";
 import {
   calculateInitialImageStartOffset,
   calculateInitialZoomLevel,
@@ -44,7 +57,11 @@ import {
 } from "./use-canvas-zoom-pan";
 
 const HISTORY_COMMIT_DEBOUNCE_MS = 250;
-import { getImageEditorEdits, subscribeToEdits, useHistoryStore } from "./store";
+import {
+  getImageEditorEdits,
+  subscribeToEdits,
+  useHistoryStore,
+} from "./store";
 import { useResetAll } from "./store/editorActions";
 import { type Bounds, useCropStore } from "./store/cropStore";
 import { selectCanRedo, selectCanUndo } from "./store/historyStore";
@@ -53,7 +70,6 @@ import { useDenoiseStore } from "./store/denoiseStore";
 import { useHealingStore } from "./store/healingStore";
 import { useSharpeningStore } from "./store/sharpeningStore";
 import { useWhiteBalanceStore } from "./store/whiteBalanceStore";
-
 
 function formatSigned(value: number, digits: number) {
   const normalized = Object.is(value, -0) ? 0 : value;
@@ -66,7 +82,6 @@ function formatSignedInt(value: number) {
   const sign = rounded > 0 ? "+" : rounded < 0 ? "-" : "+";
   return `${sign}${Math.abs(rounded)}`;
 }
-
 
 const WHITE_BALANCE_PICKER_RADIUS = 2;
 const POINT_COLOR_PICKER_RADIUS = 2;
@@ -139,6 +154,13 @@ function LightSlider({
     };
   }, [onValueChange]);
 
+  const progress = useMemo(() => {
+    const range = max - min;
+    if (range <= 0) return 0;
+
+    const percent = ((draftValue - min) / range) * 100;
+    return Math.max(0, Math.min(100, percent));
+  }, [draftValue, max, min]);
 
   return (
     <div className="flex flex-col gap-1">
@@ -175,6 +197,7 @@ function LightSlider({
         disabled={disabled}
         aria-label={label}
         className="w-full"
+        style={{ "--range-progress": `${progress}%` } as unknown as import("react").CSSProperties}
       />
     </div>
   );
@@ -197,6 +220,40 @@ export function ReactImageEditor({
 }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
+
+  const [isHistoryPaneOpen, setIsHistoryPaneOpen] = useState(true);
+
+  const [isHistoryAccordionOpen, setIsHistoryAccordionOpen] =
+    useLocalStorageBoolean({
+      key: "react-image-editor:accordion:history",
+      defaultValue: false,
+    });
+
+  const [isBasicPanelOpen, setIsBasicPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:basic",
+    defaultValue: false,
+  });
+
+  const [isTransformPanelOpen, setIsTransformPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:transform",
+    defaultValue: false,
+  });
+
+  const [isLensCorrectionsPanelOpen, setIsLensCorrectionsPanelOpen] =
+    useLocalStorageBoolean({
+      key: "react-image-editor:accordion:lens-corrections",
+      defaultValue: false,
+    });
+
+  const [isOpticsPanelOpen, setIsOpticsPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:optics",
+    defaultValue: false,
+  });
+
+  const [isHealingPanelOpen, setIsHealingPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:healing",
+    defaultValue: false,
+  });
   const healingMode = useHealingStore((state) => state.healingMode);
   const healingBrush = useHealingStore((state) => state.healingBrush);
   const cloneSource = useHealingStore((state) => state.cloneSource);
@@ -213,8 +270,13 @@ export function ReactImageEditor({
   const [isHoveringSpotSource, setIsHoveringSpotSource] = useState(false);
   const [isDraggingSpotSource, setIsDraggingSpotSource] = useState(false);
   const draggingSpotSourceIdRef = useRef<string | null>(null);
-  const draftStrokeRef = useRef<{ points: import("@/store/cropStore").Point[] } | null>(null);
-  const panRef = useRef<{ isPanning: boolean; last: { x: number; y: number } | null }>({
+  const draftStrokeRef = useRef<{
+    points: import("@/store/cropStore").Point[];
+  } | null>(null);
+  const panRef = useRef<{
+    isPanning: boolean;
+    last: { x: number; y: number } | null;
+  }>({
     isPanning: false,
     last: null,
   });
@@ -235,8 +297,9 @@ export function ReactImageEditor({
   const [guidedUprightEnabled, setGuidedUprightEnabled] = useState(false);
 
   const geometryOptics = useGeometryOpticsStore((state) => state.settings);
-  const setPerspective = useGeometryOpticsStore((state) => state.setPerspective);
-
+  const setPerspective = useGeometryOpticsStore(
+    (state) => state.setPerspective,
+  );
 
   useEffect(() => {
     if (!isPickingWhiteBalance && !isPickingPointColor) return;
@@ -294,11 +357,15 @@ export function ReactImageEditor({
   const resetRotation = useCropStore((state) => state.resetRotation);
   const setConstrainCrop = useCropStore((state) => state.setConstrainCrop);
 
-  const resetHistoryToBaseline = useHistoryStore((state) => state.resetToBaseline);
+  const resetHistoryToBaseline = useHistoryStore(
+    (state) => state.resetToBaseline,
+  );
 
   const resetAll = useResetAll();
 
-  const setWhiteBalance = useWhiteBalanceStore((state) => state.setWhiteBalance);
+  const setWhiteBalance = useWhiteBalanceStore(
+    (state) => state.setWhiteBalance,
+  );
 
   const rotation = cropSettings.rotation ?? 0;
 
@@ -315,49 +382,57 @@ export function ReactImageEditor({
   const lastCommittedEditsRef = useRef(getImageEditorEdits());
 
   const zoomPanStateRef = useRef({ zoomLevel: 1, offset: { x: 0, y: 0 } });
-  const commitCameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const commitCameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const isInitializingRef = useRef(true);
   const isApplyingHistoryRef = useRef(false);
 
-  const { zoomLevel, offset, zoomIn, zoomOut, resetZoom, setCamera, listeners } =
-    useCanvasZoomPan(canvasRef, imageRef, {
-      enableWheel: true,
-      onCameraChange: (camera) => {
-        if (isInitializingRef.current || isApplyingHistoryRef.current) {
-          zoomPanStateRef.current = camera;
+  const {
+    zoomLevel,
+    offset,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    setCamera,
+    listeners,
+  } = useCanvasZoomPan(canvasRef, imageRef, {
+    enableWheel: true,
+    onCameraChange: (camera) => {
+      if (isInitializingRef.current || isApplyingHistoryRef.current) {
+        zoomPanStateRef.current = camera;
+        return;
+      }
+
+      if (commitCameraTimeoutRef.current) {
+        clearTimeout(commitCameraTimeoutRef.current);
+      }
+
+      commitCameraTimeoutRef.current = setTimeout(() => {
+        commitCameraTimeoutRef.current = null;
+
+        const lastCamera = zoomPanStateRef.current;
+        if (
+          lastCamera.zoomLevel === camera.zoomLevel &&
+          lastCamera.offset.x === camera.offset.x &&
+          lastCamera.offset.y === camera.offset.y
+        ) {
           return;
         }
 
-        if (commitCameraTimeoutRef.current) {
-          clearTimeout(commitCameraTimeoutRef.current);
-        }
+        editsPush({
+          label: "Zoom/Pan",
+          state: createEditorSerializableState({
+            edits: lastCommittedEditsRef.current,
+            zoomLevel: camera.zoomLevel,
+            offset: camera.offset,
+          }),
+        });
 
-        commitCameraTimeoutRef.current = setTimeout(() => {
-          commitCameraTimeoutRef.current = null;
-
-          const lastCamera = zoomPanStateRef.current;
-          if (
-            lastCamera.zoomLevel === camera.zoomLevel &&
-            lastCamera.offset.x === camera.offset.x &&
-            lastCamera.offset.y === camera.offset.y
-          ) {
-            return;
-          }
-
-          editsPush({
-            label: "Zoom/Pan",
-            state: createEditorSerializableState({
-              edits: lastCommittedEditsRef.current,
-              zoomLevel: camera.zoomLevel,
-              offset: camera.offset,
-            }),
-          });
-
-          zoomPanStateRef.current = camera;
-        }, HISTORY_COMMIT_DEBOUNCE_MS);
-      },
-    });
-
+        zoomPanStateRef.current = camera;
+      }, HISTORY_COMMIT_DEBOUNCE_MS);
+    },
+  });
 
   useEffect(() => {
     return () => {
@@ -409,10 +484,17 @@ export function ReactImageEditor({
   }, [cropCommit, cropCommitted, offset, rotation, zoomLevel]);
 
   const canvasPointToImagePoint = useMemo(() => {
-    return (point: { x: number; y: number }): import("@/store/cropStore").Point | null => {
+    return (point: {
+      x: number;
+      y: number;
+    }): import("@/store/cropStore").Point | null => {
       if (!imageRef.current) return null;
 
-      const { zoomLevel: drawZoom, offset: drawOffset, rotationDegrees } = getDrawTransform();
+      const {
+        zoomLevel: drawZoom,
+        offset: drawOffset,
+        rotationDegrees,
+      } = getDrawTransform();
 
       const imageWidth = imageRef.current.width;
       const imageHeight = imageRef.current.height;
@@ -450,10 +532,16 @@ export function ReactImageEditor({
   }, [cropCommit, cropCommitted, zoomLevel]);
 
   const imagePointToCanvasPoint = useMemo(() => {
-    return (point: import("@/store/cropStore").Point): { x: number; y: number } | null => {
+    return (
+      point: import("@/store/cropStore").Point,
+    ): { x: number; y: number } | null => {
       if (!imageRef.current) return null;
 
-      const { zoomLevel: drawZoom, offset: drawOffset, rotationDegrees } = getDrawTransform();
+      const {
+        zoomLevel: drawZoom,
+        offset: drawOffset,
+        rotationDegrees,
+      } = getDrawTransform();
 
       const imageWidth = imageRef.current.width;
       const imageHeight = imageRef.current.height;
@@ -483,11 +571,12 @@ export function ReactImageEditor({
   }, [getDrawTransform]);
 
   const spotPins = useMemo(() => {
-    if (!imageRef.current) return [] as Array<{
-      id: string;
-      centerCanvas: { x: number; y: number };
-      sourceCanvas: { x: number; y: number };
-    }>;
+    if (!imageRef.current)
+      return [] as Array<{
+        id: string;
+        centerCanvas: { x: number; y: number };
+        sourceCanvas: { x: number; y: number };
+      }>;
 
     const imageWidth = imageRef.current.width;
     const imageHeight = imageRef.current.height;
@@ -711,7 +800,10 @@ export function ReactImageEditor({
       useCropStore.getState?.().clearCommittedCrop?.();
       setCropMode(false);
 
-      const initialZoomLevel = calculateInitialZoomLevel(canvasRef.current, img);
+      const initialZoomLevel = calculateInitialZoomLevel(
+        canvasRef.current,
+        img,
+      );
       const initialOffset = calculateInitialImageStartOffset(
         canvasRef.current,
         img,
@@ -778,14 +870,17 @@ export function ReactImageEditor({
         return;
       }
 
-       if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
-         const pendingLabel =
-           useHistoryLabelStore.getState().consumePendingHistoryLabel();
+      if (!areEditsEqual(lastCommittedEditsRef.current, nextEdits)) {
+        const pendingLabel = useHistoryLabelStore
+          .getState()
+          .consumePendingHistoryLabel();
 
-         const display = pendingLabel
-           ? { label: pendingLabel }
-           : getHistoryDisplayForEditsChange(lastCommittedEditsRef.current, nextEdits);
-
+        const display = pendingLabel
+          ? { label: pendingLabel }
+          : getHistoryDisplayForEditsChange(
+              lastCommittedEditsRef.current,
+              nextEdits,
+            );
 
         editsPush({
           label: display.label,
@@ -805,8 +900,6 @@ export function ReactImageEditor({
     return unsubscribe;
   }, [editsPush, onEditsChange]);
 
-
-
   function handleResetZoomClick() {
     resetZoom();
   }
@@ -818,7 +911,9 @@ export function ReactImageEditor({
     setIsAutoStraightening(true);
     try {
       // Analyze a downscaled luminance buffer from the current canvas.
-      const ctx = canvasRef.current.getContext("2d", { willReadFrequently: true });
+      const ctx = canvasRef.current.getContext("2d", {
+        willReadFrequently: true,
+      });
       if (!ctx) return;
 
       const width = Math.max(1, Math.floor(canvasRef.current.width));
@@ -866,8 +961,6 @@ export function ReactImageEditor({
       }
     }
   }
-
-
 
   const cropBounds = useMemo(() => {
     if (!imageRef.current) {
@@ -931,527 +1024,597 @@ export function ReactImageEditor({
         direction="horizontal"
         className="flex flex-1 min-h-0 overflow-hidden"
       >
-        <ResizablePanel defaultSize={18} className="min-h-0">
-          <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
-            <details
-              className="rounded-md border bg-card"
-              data-testid="history-accordion"
-              open
-            >
-              <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <span>History</span>
-                </span>
+        {isHistoryPaneOpen ? (
+          <>
+            <ResizablePanel defaultSize={10} className="min-h-0">
+              <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
+                <details
+                  className="rounded-md border bg-card"
+                  data-testid="history-accordion"
+                  open={isHistoryAccordionOpen}
+                  onToggle={(event) => {
+                    setIsHistoryAccordionOpen((event.target as HTMLDetailsElement).open);
+                  }}
+                >
+                  <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span>History</span>
+                    </span>
                     <span className="text-xs text-muted-foreground">▾</span>
-              </summary>
+                  </summary>
 
-              <div className="px-3 pb-3">
-                <div data-testid="history-list" className="flex flex-col gap-1">
-                  {historyEntries.length === 0 ? (
-                    <div
-                      data-testid="history-entry-placeholder"
-                        className="text-xs text-muted-foreground"
-                    >
-                      History entries will appear here
-                    </div>
-                  ) : (
-                    historyEntries.map((entry, idx) => (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        data-testid={`history-entry-${idx}`}
-                        onClick={() => {
-                          isApplyingHistoryRef.current = true;
+                  <div className="px-3 pb-3">
+                    <div data-testid="history-list" className="flex flex-col gap-1">
+                      {historyEntries.length === 0 ? (
+                        <div
+                          data-testid="history-entry-placeholder"
+                          className="text-xs text-muted-foreground"
+                        >
+                          History entries will appear here
+                        </div>
+                      ) : (
+                        historyEntries.map((entry, idx) => (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            data-testid={`history-entry-${idx}`}
+                            onClick={() => {
+                              isApplyingHistoryRef.current = true;
 
-                          try {
-                            const nextEntry = historyJumpTo(idx);
-                            if (nextEntry) {
-                              applyEditsSnapshot(nextEntry.state.edits);
-                              const camera = nextEntry.state.camera;
-                              if (camera) {
-                                setCamera(camera.zoomLevel, camera.offset);
+                              try {
+                                const nextEntry = historyJumpTo(idx);
+                                if (nextEntry) {
+                                  applyEditsSnapshot(nextEntry.state.edits);
+                                  const camera = nextEntry.state.camera;
+                                  if (camera) {
+                                    setCamera(camera.zoomLevel, camera.offset);
+                                  }
+
+                                  lastCommittedEditsRef.current =
+                                    nextEntry.state.edits;
+                                  const nextCamera = nextEntry.state.camera;
+                                  if (nextCamera) {
+                                    zoomPanStateRef.current = {
+                                      zoomLevel: nextCamera.zoomLevel,
+                                      offset: nextCamera.offset,
+                                    };
+                                  }
+                                }
+                              } finally {
+                                queueMicrotask(() => {
+                                  isApplyingHistoryRef.current = false;
+                                });
                               }
-
-                              lastCommittedEditsRef.current = nextEntry.state.edits;
-                              const nextCamera = nextEntry.state.camera;
-                              if (nextCamera) {
-                                zoomPanStateRef.current = {
-                                  zoomLevel: nextCamera.zoomLevel,
-                                  offset: nextCamera.offset,
-                                };
-                              }
+                            }}
+                            className={
+                              idx === historyIndex
+                                ? "flex items-center gap-2 rounded-sm bg-primary px-2 py-1 text-left text-xs text-primary-foreground"
+                                : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-foreground hover:bg-accent"
                             }
-                          } finally {
-                            queueMicrotask(() => {
-                              isApplyingHistoryRef.current = false;
-                            });
-                          }
-                        }}
-                        className={
-                          idx === historyIndex
-                            ? "flex items-center gap-2 rounded-sm bg-primary px-2 py-1 text-left text-xs text-primary-foreground"
-                            : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-foreground hover:bg-accent"
-                        }
-                      >
-                        <span className="flex-1 truncate">{entry.label}</span>
-                        {entry.delta ? (
-                          <span className="tabular-nums text-right min-w-[3rem]">
-                            {entry.delta}
-                          </span>
-                        ) : null}
-                      </button>
-                    ))
-                  )}
-                </div>
+                          >
+                            <span className="flex-1 truncate">{entry.label}</span>
+                            {entry.delta ? (
+                              <span className="tabular-nums text-right min-w-[3rem]">
+                                {entry.delta}
+                              </span>
+                            ) : null}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </details>
               </div>
-            </details>
-          </div>
-        </ResizablePanel>
+            </ResizablePanel>
 
-        <ResizableHandle className="w-[2px] bg-border mx-2" />
+            <ResizableHandle className="w-[2px] bg-border mx-2" />
+          </>
+        ) : null}
 
         <ResizablePanel
           className="flex flex-col min-h-0 overflow-hidden"
-          defaultSize={57}
+          defaultSize={isHistoryPaneOpen ? 57 : 75}
           onResize={handleImagePanelResize}
         >
-            <div className="flex flex-col flex-1 p-0">
-              <div className="flex-1 border-2 relative">
-                 {isPickingWhiteBalance ? (
-                   <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
-                     Click image to pick white balance (Esc to cancel)
-                   </div>
-                 ) : null}
+          <div className="flex flex-col flex-1 p-0">
+            <div className="flex-1 border-2 relative">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="absolute left-2 top-2 z-20 size-8"
+                onClick={() => {
+                  setIsHistoryPaneOpen((prev: boolean) => !prev);
+                }}
+                title={isHistoryPaneOpen ? "Hide history" : "Show history"}
+                aria-label={isHistoryPaneOpen ? "Hide history" : "Show history"}
+              >
+                {isHistoryPaneOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+              </Button>
+              {isPickingWhiteBalance ? (
+                <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
+                  Click image to pick white balance (Esc to cancel)
+                </div>
+              ) : null}
 
-                 {isPickingPointColor ? (
-                   <div className="absolute left-2 top-10 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
-                     Click image to pick point color (Esc to cancel)
-                   </div>
-                 ) : null}
+              {isPickingPointColor ? (
+                <div className="absolute left-2 top-10 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
+                  Click image to pick point color (Esc to cancel)
+                </div>
+              ) : null}
 
-                  <EditorCanvas
-                   canvasRef={canvasRef}
-                   imageRef={imageRef}
-                   zoomLevel={zoomLevel}
-                   offset={offset}
-                   rotation={rotation}
-                   isPickingPointColor={isPickingPointColor}
-                   listeners={
-                   healingModeEnabled
-                     ? {
-                         ...listeners,
-                         onMouseDown: undefined,
-                         onMouseMove: undefined,
-                         onMouseUp: undefined,
-                         onMouseLeave: undefined,
-                         onPointerDown: (event) => {
-                           if (!canvasRef.current) return;
-                           if (!healingModeEnabled) return;
+              <EditorCanvas
+                canvasRef={canvasRef}
+                imageRef={imageRef}
+                zoomLevel={zoomLevel}
+                offset={offset}
+                rotation={rotation}
+                isPickingPointColor={isPickingPointColor}
+                listeners={
+                  healingModeEnabled
+                    ? {
+                        ...listeners,
+                        onMouseDown: undefined,
+                        onMouseMove: undefined,
+                        onMouseUp: undefined,
+                        onMouseLeave: undefined,
+                        onPointerDown: (event) => {
+                          if (!canvasRef.current) return;
+                          if (!healingModeEnabled) return;
 
-                            const isPanGesture = spaceDownRef.current;
-                            const isPickCloneSource =
-                              healingMode === "clone" && (event.altKey || event.metaKey);
+                          const isPanGesture = spaceDownRef.current;
+                          const isPickCloneSource =
+                            healingMode === "clone" &&
+                            (event.altKey || event.metaKey);
 
-                            if (healingMode === "spot") {
-                              const canvasPos = getMousePosInCanvas(canvasRef.current, event);
+                          if (healingMode === "spot") {
+                            const canvasPos = getMousePosInCanvas(
+                              canvasRef.current,
+                              event,
+                            );
 
-                              // Select an existing spot by clicking its target pin.
+                            // Select an existing spot by clicking its target pin.
+                            const hitRadius = 10;
+                            for (const pin of spotPins) {
+                              const dx = canvasPos.x - pin.centerCanvas.x;
+                              const dy = canvasPos.y - pin.centerCanvas.y;
+                              if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+                                event.preventDefault();
+                                setSelectedSpotId(pin.id);
+                                return;
+                              }
+                            }
+
+                            // Drag the source pin for the selected spot.
+                            if (selectedSpotPin) {
+                              const dx =
+                                canvasPos.x - selectedSpotPin.sourceCanvas.x;
+                              const dy =
+                                canvasPos.y - selectedSpotPin.sourceCanvas.y;
+                              if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+                                event.preventDefault();
+                                draggingSpotSourceIdRef.current =
+                                  selectedSpotPin.id;
+                                setIsDraggingSpotSource(true);
+                                setIsHoveringSpotSource(true);
+                                (
+                                  event.currentTarget as HTMLElement
+                                ).setPointerCapture?.(event.pointerId);
+                                return;
+                              }
+                            }
+                          }
+
+                          const canvasPos = getMousePosInCanvas(
+                            canvasRef.current,
+                            event,
+                          );
+
+                          const imagePos = canvasPointToImagePoint(canvasPos);
+                          if (!imagePos) return;
+
+                          if (isPickCloneSource) {
+                            event.preventDefault();
+                            setCloneSource(imagePos);
+                            return;
+                          }
+
+                          if (isPanGesture) {
+                            panRef.current.isPanning = true;
+                            panRef.current.last = canvasPos;
+                            return;
+                          }
+
+                          if (healingMode === "clone" && !cloneSource) {
+                            return;
+                          }
+
+                          event.preventDefault();
+                          (
+                            event.currentTarget as HTMLElement
+                          ).setPointerCapture?.(event.pointerId);
+
+                          draftStrokeRef.current = { points: [imagePos] };
+                        },
+                        onPointerMove: (event) => {
+                          if (!canvasRef.current) return;
+
+                          const canvasPos = getMousePosInCanvas(
+                            canvasRef.current,
+                            event,
+                          );
+                          const imagePos = canvasPointToImagePoint(canvasPos);
+                          setHealingCursor({
+                            canvas: canvasPos,
+                            image: imagePos,
+                          });
+
+                          if (healingMode === "spot") {
+                            if (selectedSpotPin) {
                               const hitRadius = 10;
-                              for (const pin of spotPins) {
-                                const dx = canvasPos.x - pin.centerCanvas.x;
-                                const dy = canvasPos.y - pin.centerCanvas.y;
-                                if (dx * dx + dy * dy <= hitRadius * hitRadius) {
-                                  event.preventDefault();
-                                  setSelectedSpotId(pin.id);
-                                  return;
-                                }
-                              }
-
-                              // Drag the source pin for the selected spot.
-                              if (selectedSpotPin) {
-                                const dx = canvasPos.x - selectedSpotPin.sourceCanvas.x;
-                                const dy = canvasPos.y - selectedSpotPin.sourceCanvas.y;
-                                if (dx * dx + dy * dy <= hitRadius * hitRadius) {
-                                  event.preventDefault();
-                                  draggingSpotSourceIdRef.current = selectedSpotPin.id;
-                                  setIsDraggingSpotSource(true);
-                                  setIsHoveringSpotSource(true);
-                                  (event.currentTarget as HTMLElement).setPointerCapture?.(
-                                    event.pointerId,
-                                  );
-                                  return;
-                                }
-                              }
+                              const dx =
+                                canvasPos.x - selectedSpotPin.sourceCanvas.x;
+                              const dy =
+                                canvasPos.y - selectedSpotPin.sourceCanvas.y;
+                              setIsHoveringSpotSource(
+                                dx * dx + dy * dy <= hitRadius * hitRadius,
+                              );
+                            } else {
+                              setIsHoveringSpotSource(false);
                             }
+                          } else if (isHoveringSpotSource) {
+                            setIsHoveringSpotSource(false);
+                          }
 
-                           const canvasPos = getMousePosInCanvas(canvasRef.current, event);
+                          const draggingSpotId =
+                            draggingSpotSourceIdRef.current;
+                          if (
+                            healingMode === "spot" &&
+                            draggingSpotId &&
+                            imagePos
+                          ) {
+                            setSpotSource(draggingSpotId, imagePos);
+                            return;
+                          }
 
-                            const imagePos = canvasPointToImagePoint(canvasPos);
-                            if (!imagePos) return;
-
-                            if (isPickCloneSource) {
-                              event.preventDefault();
-                              setCloneSource(imagePos);
-                              return;
-                            }
-
-                            if (isPanGesture) {
-                              panRef.current.isPanning = true;
+                          if (panRef.current.isPanning) {
+                            const last = panRef.current.last;
+                            if (!last) {
                               panRef.current.last = canvasPos;
                               return;
                             }
 
-                            if (healingMode === "clone" && !cloneSource) {
-                              return;
-                            }
+                            const dx = canvasPos.x - last.x;
+                            const dy = canvasPos.y - last.y;
+                            panRef.current.last = canvasPos;
 
-                            event.preventDefault();
-                            (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+                            setCamera(zoomLevel, {
+                              x: offset.x + dx,
+                              y: offset.y + dy,
+                            });
 
-                            draftStrokeRef.current = { points: [imagePos] };
+                            return;
+                          }
 
-                         },
-                          onPointerMove: (event) => {
-                            if (!canvasRef.current) return;
+                          const draft = draftStrokeRef.current;
+                          if (!draft) return;
+                          if (!imagePos) return;
 
-                            const canvasPos = getMousePosInCanvas(canvasRef.current, event);
-                            const imagePos = canvasPointToImagePoint(canvasPos);
-                            setHealingCursor({ canvas: canvasPos, image: imagePos });
+                          const lastPoint =
+                            draft.points[draft.points.length - 1];
+                          const dx = imagePos.x - lastPoint.x;
+                          const dy = imagePos.y - lastPoint.y;
+                          const distSq = dx * dx + dy * dy;
+                          if (distSq < 1.5 * 1.5) return;
 
-                            if (healingMode === "spot") {
-                              if (selectedSpotPin) {
-                                const hitRadius = 10;
-                                const dx = canvasPos.x - selectedSpotPin.sourceCanvas.x;
-                                const dy = canvasPos.y - selectedSpotPin.sourceCanvas.y;
-                                setIsHoveringSpotSource(dx * dx + dy * dy <= hitRadius * hitRadius);
-                              } else {
-                                setIsHoveringSpotSource(false);
-                              }
-                            } else if (isHoveringSpotSource) {
-                              setIsHoveringSpotSource(false);
-                            }
+                          draft.points.push(imagePos);
+                        },
+                        onPointerUp: () => {
+                          const draggedSpotId = draggingSpotSourceIdRef.current;
+                          draggingSpotSourceIdRef.current = null;
+                          setIsDraggingSpotSource(false);
+                          panRef.current.isPanning = false;
+                          panRef.current.last = null;
 
-                            const draggingSpotId = draggingSpotSourceIdRef.current;
-                            if (healingMode === "spot" && draggingSpotId && imagePos) {
-                              setSpotSource(draggingSpotId, imagePos);
-                              return;
-                            }
+                          if (draggedSpotId) {
+                            const nextEdits = getImageEditorEdits();
+                            editsPush({
+                              label: "Spot Sample",
+                              state: createEditorSerializableState({
+                                edits: nextEdits,
+                                zoomLevel: zoomPanStateRef.current.zoomLevel,
+                                offset: zoomPanStateRef.current.offset,
+                              }),
+                            });
 
+                            lastCommittedEditsRef.current = nextEdits;
+                            onEditsChange?.(nextEdits);
+                            return;
+                          }
 
-                           if (panRef.current.isPanning) {
-                             const last = panRef.current.last;
-                             if (!last) {
-                               panRef.current.last = canvasPos;
-                               return;
-                             }
+                          const draft = draftStrokeRef.current;
 
-                             const dx = canvasPos.x - last.x;
-                             const dy = canvasPos.y - last.y;
-                             panRef.current.last = canvasPos;
+                          draftStrokeRef.current = null;
 
-                             setCamera(zoomLevel, {
-                               x: offset.x + dx,
-                               y: offset.y + dy,
-                             });
+                          if (!draft) return;
+                          if (draft.points.length === 0) return;
 
-                             return;
-                           }
+                          const id =
+                            typeof crypto !== "undefined" &&
+                            "randomUUID" in crypto
+                              ? crypto.randomUUID()
+                              : `${Date.now()}-${Math.random()}`;
 
-                           const draft = draftStrokeRef.current;
-                           if (!draft) return;
-                           if (!imagePos) return;
-
-                           const lastPoint = draft.points[draft.points.length - 1];
-                           const dx = imagePos.x - lastPoint.x;
-                           const dy = imagePos.y - lastPoint.y;
-                           const distSq = dx * dx + dy * dy;
-                           if (distSq < 1.5 * 1.5) return;
-
-                           draft.points.push(imagePos);
-                         },
-                          onPointerUp: () => {
-                            const draggedSpotId = draggingSpotSourceIdRef.current;
-                            draggingSpotSourceIdRef.current = null;
-                            setIsDraggingSpotSource(false);
-                            panRef.current.isPanning = false;
-                            panRef.current.last = null;
-
-                            if (draggedSpotId) {
-                              const nextEdits = getImageEditorEdits();
-                              editsPush({
-                                label: "Spot Sample",
-                                state: createEditorSerializableState({
-                                  edits: nextEdits,
-                                  zoomLevel: zoomPanStateRef.current.zoomLevel,
-                                  offset: zoomPanStateRef.current.offset,
-                                }),
-                              });
-
-                              lastCommittedEditsRef.current = nextEdits;
-                              onEditsChange?.(nextEdits);
-                              return;
-                            }
-
-                            const draft = draftStrokeRef.current;
-
-                           draftStrokeRef.current = null;
-
-                           if (!draft) return;
-                           if (draft.points.length === 0) return;
-
-                           const id =
-                             typeof crypto !== "undefined" && "randomUUID" in crypto
-                               ? crypto.randomUUID()
-                               : `${Date.now()}-${Math.random()}`;
-
-                            if (healingMode === "spot") {
-                              const center = draft.points[draft.points.length - 1];
-                              const radius = healingBrush.size / 2;
-                              const imageWidth = imageRef.current?.width ?? 0;
-                              const imageHeight = imageRef.current?.height ?? 0;
-                              const source = {
-                                x: Math.max(0, Math.min(imageWidth, center.x + radius * 2)),
-                                y: Math.max(0, Math.min(imageHeight, center.y)),
-                              };
-
-                              addHealingOp({
-                                id,
-                                type: "spot",
-                                mode: "spot",
-                                center,
-                                radius,
-                                feather: healingBrush.feather,
-                                opacity: 255,
-                                source,
-                              });
-                              setSelectedSpotId(id);
-                              return;
-                            }
-
+                          if (healingMode === "spot") {
+                            const center =
+                              draft.points[draft.points.length - 1];
+                            const radius = healingBrush.size / 2;
+                            const imageWidth = imageRef.current?.width ?? 0;
+                            const imageHeight = imageRef.current?.height ?? 0;
+                            const source = {
+                              x: Math.max(
+                                0,
+                                Math.min(imageWidth, center.x + radius * 2),
+                              ),
+                              y: Math.max(0, Math.min(imageHeight, center.y)),
+                            };
 
                             addHealingOp({
                               id,
-                              type: "stroke",
-                              mode: healingMode,
-                              points: draft.points,
-                              radius: healingBrush.size / 2,
+                              type: "spot",
+                              mode: "spot",
+                              center,
+                              radius,
                               feather: healingBrush.feather,
                               opacity: 255,
-                              source: healingMode === "clone" ? cloneSource ?? undefined : undefined,
+                              source,
                             });
+                            setSelectedSpotId(id);
+                            return;
+                          }
 
-                         },
-                          onPointerCancel: () => {
-                            draggingSpotSourceIdRef.current = null;
-                            setIsDraggingSpotSource(false);
-                            panRef.current.isPanning = false;
-                            panRef.current.last = null;
-                            draftStrokeRef.current = null;
-                            setHealingCursor(null);
-                          },
+                          addHealingOp({
+                            id,
+                            type: "stroke",
+                            mode: healingMode,
+                            points: draft.points,
+                            radius: healingBrush.size / 2,
+                            feather: healingBrush.feather,
+                            opacity: 255,
+                            source:
+                              healingMode === "clone"
+                                ? (cloneSource ?? undefined)
+                                : undefined,
+                          });
+                        },
+                        onPointerCancel: () => {
+                          draggingSpotSourceIdRef.current = null;
+                          setIsDraggingSpotSource(false);
+                          panRef.current.isPanning = false;
+                          panRef.current.last = null;
+                          draftStrokeRef.current = null;
+                          setHealingCursor(null);
+                        },
 
-                          onPointerLeave: () => {
-                            draggingSpotSourceIdRef.current = null;
-                            setIsDraggingSpotSource(false);
-                            setIsHoveringSpotSource(false);
-                            setHealingCursor(null);
-                          },
-
-                       }
-                     : listeners
-                 }
-                  cursor={
-                    healingModeEnabled
-                      ? healingMode === "spot" && selectedSpotPin && (isHoveringSpotSource || isDraggingSpotSource)
-                        ? isDraggingSpotSource
-                          ? "grabbing"
-                          : "pointer"
-                        : "none"
-                      : undefined
+                        onPointerLeave: () => {
+                          draggingSpotSourceIdRef.current = null;
+                          setIsDraggingSpotSource(false);
+                          setIsHoveringSpotSource(false);
+                          setHealingCursor(null);
+                        },
+                      }
+                    : listeners
+                }
+                cursor={
+                  healingModeEnabled
+                    ? healingMode === "spot" &&
+                      selectedSpotPin &&
+                      (isHoveringSpotSource || isDraggingSpotSource)
+                      ? isDraggingSpotSource
+                        ? "grabbing"
+                        : "pointer"
+                      : "none"
+                    : undefined
+                }
+                onPickWhiteBalance={(event) => {
+                  if (!isPickingWhiteBalance) {
+                    return;
                   }
 
-                 onPickWhiteBalance={(event) => {
-                   if (!isPickingWhiteBalance) {
-                     return;
-                   }
+                  if (!canvasRef.current) return;
 
-                   if (!canvasRef.current) return;
+                  // Cancel pick mode after a click attempt.
+                  setIsPickingWhiteBalance(false);
 
-                   // Cancel pick mode after a click attempt.
-                   setIsPickingWhiteBalance(false);
+                  // Read a small region from the preview canvas. This can fail if the
+                  // canvas is tainted (CORS).
+                  const ctx = canvasRef.current.getContext("2d", {
+                    willReadFrequently: true,
+                  });
+                  if (!ctx) return;
 
-                   // Read a small region from the preview canvas. This can fail if the
-                   // canvas is tainted (CORS).
-                   const ctx = canvasRef.current.getContext("2d", {
-                     willReadFrequently: true,
-                   });
-                   if (!ctx) return;
+                  try {
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const x = Math.round(event.clientX - rect.left);
+                    const y = Math.round(event.clientY - rect.top);
 
-                   try {
-                     const rect = canvasRef.current.getBoundingClientRect();
-                     const x = Math.round(event.clientX - rect.left);
-                     const y = Math.round(event.clientY - rect.top);
+                    const radius = WHITE_BALANCE_PICKER_RADIUS;
+                    const size = radius * 2 + 1;
 
-                     const radius = WHITE_BALANCE_PICKER_RADIUS;
-                     const size = radius * 2 + 1;
+                    const sx = Math.max(0, x - radius);
+                    const sy = Math.max(0, y - radius);
+                    const sw = Math.min(
+                      size,
+                      Math.max(1, canvasRef.current.width - sx),
+                    );
+                    const sh = Math.min(
+                      size,
+                      Math.max(1, canvasRef.current.height - sy),
+                    );
 
-                     const sx = Math.max(0, x - radius);
-                     const sy = Math.max(0, y - radius);
-                     const sw = Math.min(size, Math.max(1, canvasRef.current.width - sx));
-                     const sh = Math.min(size, Math.max(1, canvasRef.current.height - sy));
+                    const imageData = ctx.getImageData(sx, sy, sw, sh);
+                    const avg = sampleAverageRgb(
+                      imageData.data,
+                      sw,
+                      sh,
+                      radius,
+                      radius,
+                      radius,
+                    );
+                    const estimated = estimateWhiteBalanceFromRgb(avg);
 
-                     const imageData = ctx.getImageData(sx, sy, sw, sh);
-                     const avg = sampleAverageRgb(
-                       imageData.data,
-                       sw,
-                       sh,
-                       radius,
-                       radius,
-                       radius,
-                     );
-                     const estimated = estimateWhiteBalanceFromRgb(avg);
+                    setWhiteBalance({
+                      preset: "custom",
+                      temperatureKelvin: Math.round(
+                        estimated.temperatureKelvin,
+                      ),
+                      tint: Math.round(estimated.tint),
+                    });
+                  } catch {
+                    setExportError("Cannot pick colors from this image (CORS)");
+                  }
+                }}
+                isPickingWhiteBalance={isPickingWhiteBalance}
+                onPickPointColor={(event) => {
+                  if (!isPickingPointColor) {
+                    return;
+                  }
 
-                     setWhiteBalance({
-                       preset: "custom",
-                       temperatureKelvin: Math.round(estimated.temperatureKelvin),
-                       tint: Math.round(estimated.tint),
-                     });
-                   } catch {
-                     setExportError("Cannot pick colors from this image (CORS)");
-                   }
-                 }}
+                  if (!canvasRef.current) return;
 
-                 isPickingWhiteBalance={isPickingWhiteBalance}
+                  // Cancel pick mode after a click attempt.
+                  setIsPickingPointColor(false);
 
-                 onPickPointColor={(event) => {
-                   if (!isPickingPointColor) {
-                     return;
-                   }
+                  const ctx = canvasRef.current.getContext("2d", {
+                    willReadFrequently: true,
+                  });
+                  if (!ctx) return;
 
-                   if (!canvasRef.current) return;
+                  try {
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const x = Math.round(event.clientX - rect.left);
+                    const y = Math.round(event.clientY - rect.top);
 
-                   // Cancel pick mode after a click attempt.
-                   setIsPickingPointColor(false);
+                    const radius = POINT_COLOR_PICKER_RADIUS;
+                    const size = radius * 2 + 1;
 
-                   const ctx = canvasRef.current.getContext("2d", {
-                     willReadFrequently: true,
-                   });
-                   if (!ctx) return;
+                    const sx = Math.max(0, x - radius);
+                    const sy = Math.max(0, y - radius);
+                    const sw = Math.min(
+                      size,
+                      Math.max(1, canvasRef.current.width - sx),
+                    );
+                    const sh = Math.min(
+                      size,
+                      Math.max(1, canvasRef.current.height - sy),
+                    );
 
-                   try {
-                     const rect = canvasRef.current.getBoundingClientRect();
-                     const x = Math.round(event.clientX - rect.left);
-                     const y = Math.round(event.clientY - rect.top);
+                    const imageData = ctx.getImageData(sx, sy, sw, sh);
+                    const avg = sampleAverageRgb(
+                      imageData.data,
+                      sw,
+                      sh,
+                      radius,
+                      radius,
+                      radius,
+                    );
 
-                     const radius = POINT_COLOR_PICKER_RADIUS;
-                     const size = radius * 2 + 1;
+                    const hsl = rgbToHsl(avg.r / 255, avg.g / 255, avg.b / 255);
 
-                     const sx = Math.max(0, x - radius);
-                     const sy = Math.max(0, y - radius);
-                     const sw = Math.min(size, Math.max(1, canvasRef.current.width - sx));
-                     const sh = Math.min(size, Math.max(1, canvasRef.current.height - sy));
+                    useColorStore.getState().setPointColor({
+                      hue: hsl.h,
+                    });
+                  } catch {
+                    setExportError("Cannot pick colors from this image (CORS)");
+                  }
+                }}
+              />
 
-                     const imageData = ctx.getImageData(sx, sy, sw, sh);
-                     const avg = sampleAverageRgb(
-                       imageData.data,
-                       sw,
-                       sh,
-                       radius,
-                       radius,
-                       radius,
-                     );
-
-                     const hsl = rgbToHsl(avg.r / 255, avg.g / 255, avg.b / 255);
-
-                     useColorStore.getState().setPointColor({
-                       hue: hsl.h,
-                     });
-                   } catch {
-                     setExportError("Cannot pick colors from this image (CORS)");
-                   }
-                 }}
-               />
-
-                {healingModeEnabled && healingCursor ? (
+              {healingModeEnabled && healingCursor ? (
+                <div
+                  className="pointer-events-none absolute left-0 top-0 z-10"
+                  style={{
+                    transform: `translate(${healingCursor.canvas.x}px, ${healingCursor.canvas.y}px)`,
+                  }}
+                >
                   <div
-                    className="pointer-events-none absolute left-0 top-0 z-10"
+                    className="rounded-full border border-border bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.65)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.25)]"
                     style={{
-                      transform: `translate(${healingCursor.canvas.x}px, ${healingCursor.canvas.y}px)`,
+                      width: Math.max(
+                        1,
+                        healingBrush.size * drawZoomLevelForCursor,
+                      ),
+                      height: Math.max(
+                        1,
+                        healingBrush.size * drawZoomLevelForCursor,
+                      ),
+                      transform: "translate(-50%, -50%)",
                     }}
-                  >
+                  />
+                </div>
+              ) : null}
+
+              {healingModeEnabled && healingMode === "spot" ? (
+                <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-full">
+                  {spotPins.map((pin) => (
                     <div
-                       className="rounded-full border border-border bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.65)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.25)]"
+                      key={pin.id}
+                      className={
+                        pin.id === selectedSpotId
+                          ? "absolute rounded-full bg-background shadow-[0_0_0_2px_rgba(0,0,0,0.75)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
+                          : "absolute rounded-full bg-background/70 shadow-[0_0_0_2px_rgba(0,0,0,0.55)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.2)]"
+                      }
                       style={{
-                        width: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
-                        height: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
+                        left: pin.centerCanvas.x,
+                        top: pin.centerCanvas.y,
+                        width: 10,
+                        height: 10,
                         transform: "translate(-50%, -50%)",
                       }}
                     />
-                  </div>
-                ) : null}
+                  ))}
 
-                {healingModeEnabled && healingMode === "spot" ? (
-                  <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-full">
-                    {spotPins.map((pin) => (
+                  {selectedSpotPin ? (
+                    <>
+                      <svg
+                        className="absolute left-0 top-0 h-full w-full"
+                        aria-hidden="true"
+                      >
+                        <line
+                          x1={selectedSpotPin.centerCanvas.x}
+                          y1={selectedSpotPin.centerCanvas.y}
+                          x2={selectedSpotPin.sourceCanvas.x}
+                          y2={selectedSpotPin.sourceCanvas.y}
+                          stroke="currentColor"
+                          strokeWidth={3}
+                          className="text-foreground/70"
+                        />
+                        <line
+                          x1={selectedSpotPin.centerCanvas.x}
+                          y1={selectedSpotPin.centerCanvas.y}
+                          x2={selectedSpotPin.sourceCanvas.x}
+                          y2={selectedSpotPin.sourceCanvas.y}
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          className="text-background/90"
+                        />
+                      </svg>
                       <div
-                        key={pin.id}
-                        className={
-                          pin.id === selectedSpotId
-                             ? "absolute rounded-full bg-background shadow-[0_0_0_2px_rgba(0,0,0,0.75)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
-                             : "absolute rounded-full bg-background/70 shadow-[0_0_0_2px_rgba(0,0,0,0.55)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.2)]"
-                        }
+                        className="absolute rounded-full bg-background shadow-[0_0_0_2px_rgba(0,0,0,0.75)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
                         style={{
-                          left: pin.centerCanvas.x,
-                          top: pin.centerCanvas.y,
+                          left: selectedSpotPin.sourceCanvas.x,
+                          top: selectedSpotPin.sourceCanvas.y,
                           width: 10,
                           height: 10,
                           transform: "translate(-50%, -50%)",
                         }}
                       />
-                    ))}
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
 
-                    {selectedSpotPin ? (
-                      <>
-                        <svg
-                          className="absolute left-0 top-0 h-full w-full"
-                          aria-hidden="true"
-                        >
-                          <line
-                            x1={selectedSpotPin.centerCanvas.x}
-                            y1={selectedSpotPin.centerCanvas.y}
-                            x2={selectedSpotPin.sourceCanvas.x}
-                            y2={selectedSpotPin.sourceCanvas.y}
-                            stroke="currentColor"
-                            strokeWidth={3}
-                            className="text-foreground/70"
-                          />
-                          <line
-                            x1={selectedSpotPin.centerCanvas.x}
-                            y1={selectedSpotPin.centerCanvas.y}
-                            x2={selectedSpotPin.sourceCanvas.x}
-                            y2={selectedSpotPin.sourceCanvas.y}
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                            className="text-background/90"
-                          />
-                        </svg>
-                        <div
-                          className="absolute rounded-full bg-background shadow-[0_0_0_2px_rgba(0,0,0,0.75)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
-                          style={{
-                            left: selectedSpotPin.sourceCanvas.x,
-                            top: selectedSpotPin.sourceCanvas.y,
-                            width: 10,
-                            height: 10,
-                            transform: "translate(-50%, -50%)",
-                          }}
-                        />
-                      </>
-                    ) : null}
-                  </div>
-                ) : null}
-
-               <CropToolOverlay
-
+              <CropToolOverlay
                 cropMode={cropMode}
                 imageRef={imageRef}
                 cropBounds={cropBounds}
@@ -1494,166 +1657,194 @@ export function ReactImageEditor({
           </div>
         </ResizablePanel>
         <ResizableHandle className="w-[2px] bg-border mx-2" />
-          <ResizablePanel defaultSize={25} className="min-h-0">
-            <div className="flex h-full min-h-0 flex-col">
-               <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="ml-auto flex items-center gap-1">
-                   <Button
-                     type="button"
-                     size="icon"
-                     variant="outline"
-                     title="Undo (⌘Z)"
-                     aria-label="Undo (⌘Z)"
-                     disabled={!canUndo}
-                     onClick={() => {
-                       const nextEntry = historyUndo();
-                       if (!nextEntry) return;
+        <ResizablePanel defaultSize={12} className="min-h-0">
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    title="Undo (⌘Z)"
+                    aria-label="Undo (⌘Z)"
+                    disabled={!canUndo}
+                    onClick={() => {
+                      const nextEntry = historyUndo();
+                      if (!nextEntry) return;
 
-                       isApplyingHistoryRef.current = true;
-                       try {
-                         applyEditsSnapshot(nextEntry.state.edits);
-                         const camera = nextEntry.state.camera;
-                         if (camera) {
-                           setCamera(camera.zoomLevel, camera.offset);
-                         }
+                      isApplyingHistoryRef.current = true;
+                      try {
+                        applyEditsSnapshot(nextEntry.state.edits);
+                        const camera = nextEntry.state.camera;
+                        if (camera) {
+                          setCamera(camera.zoomLevel, camera.offset);
+                        }
 
-                         lastCommittedEditsRef.current = nextEntry.state.edits;
-                         if (camera) {
-                           zoomPanStateRef.current = {
-                             zoomLevel: camera.zoomLevel,
-                             offset: camera.offset,
-                           };
-                         }
-                       } finally {
-                         queueMicrotask(() => {
-                           isApplyingHistoryRef.current = false;
-                         });
-                       }
-                     }}
-                   >
-                     ↶
-                   </Button>
-                   <Button
-                     type="button"
-                     size="icon"
-                     variant="outline"
-                     title="Redo (⇧⌘Z)"
-                     aria-label="Redo (⇧⌘Z)"
-                     disabled={!canRedo}
-                     onClick={() => {
-                       const nextEntry = historyRedo();
-                       if (!nextEntry) return;
-
-                       isApplyingHistoryRef.current = true;
-                       try {
-                         applyEditsSnapshot(nextEntry.state.edits);
-                         const camera = nextEntry.state.camera;
-                         if (camera) {
-                           setCamera(camera.zoomLevel, camera.offset);
-                         }
-
-                         lastCommittedEditsRef.current = nextEntry.state.edits;
-                         if (camera) {
-                           zoomPanStateRef.current = {
-                             zoomLevel: camera.zoomLevel,
-                             offset: camera.offset,
-                           };
-                         }
-                       } finally {
-                         queueMicrotask(() => {
-                           isApplyingHistoryRef.current = false;
-                         });
-                       }
-                     }}
-                   >
-                     ↷
-                   </Button>
-                 </div>
-
-                   <HealingToolButtons
-                     enabled={healingModeEnabled}
-                     disabled={!isImageLoaded}
-                     onToggle={() => {
-                       setHealingModeEnabled((prev) => {
-                         const next = !prev;
-                         if (next) {
-                           setCropMode(false);
-                         }
-                         return next;
-                       });
-                     }}
-                   />
-
-                   <CropToolButtons
-                     cropMode={cropMode}
-                     setCropMode={(next) => {
-                       setCropMode(next);
-                       if (next) {
-                         setHealingModeEnabled(false);
-                       }
-                     }}
-                     hasAppliedCrop={cropCommitted}
-                     onResetCrop={() => {
-
-                      if (!originalImageRef.current) return;
-                      imageRef.current = originalImageRef.current;
-                      useCropStore.getState?.().clearCommittedCrop?.();
-                      resetRotation();
-                      resetZoom();
+                        lastCommittedEditsRef.current = nextEntry.state.edits;
+                        if (camera) {
+                          zoomPanStateRef.current = {
+                            zoomLevel: camera.zoomLevel,
+                            offset: camera.offset,
+                          };
+                        }
+                      } finally {
+                        queueMicrotask(() => {
+                          isApplyingHistoryRef.current = false;
+                        });
+                      }
                     }}
-                  />
+                  >
+                    ↶
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    title="Redo (⇧⌘Z)"
+                    aria-label="Redo (⇧⌘Z)"
+                    disabled={!canRedo}
+                    onClick={() => {
+                      const nextEntry = historyRedo();
+                      if (!nextEntry) return;
 
-                  <ExportTool
-                    imageRef={imageRef}
-                    isImageLoaded={isImageLoaded}
-                    cropMode={cropMode}
-                    rotation={rotation}
-                    exportFormat={exportFormat}
-                    setExportFormat={setExportFormat}
-                    jpegQuality={jpegQuality}
-                    setJpegQuality={setJpegQuality}
-                    isDownloading={isDownloading}
-                    setIsDownloading={setIsDownloading}
-                    exportError={exportError}
-                    setExportError={setExportError}
-                  />
+                      isApplyingHistoryRef.current = true;
+                      try {
+                        applyEditsSnapshot(nextEntry.state.edits);
+                        const camera = nextEntry.state.camera;
+                        if (camera) {
+                          setCamera(camera.zoomLevel, camera.offset);
+                        }
+
+                        lastCommittedEditsRef.current = nextEntry.state.edits;
+                        if (camera) {
+                          zoomPanStateRef.current = {
+                            zoomLevel: camera.zoomLevel,
+                            offset: camera.offset,
+                          };
+                        }
+                      } finally {
+                        queueMicrotask(() => {
+                          isApplyingHistoryRef.current = false;
+                        });
+                      }
+                    }}
+                  >
+                    ↷
+                  </Button>
                 </div>
 
-                 {healingModeEnabled ? (
-                   <details className="rounded-md border bg-card" open>
-                     <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-                       <span className="flex items-center gap-2">
-                         <span>Healing</span>
-                       </span>
-                <span className="text-xs text-muted-foreground">▾</span>
-                     </summary>
-                     <HealingToolPanel
-                       enabled={healingModeEnabled}
-                       isImageLoaded={isImageLoaded}
-                     />
-                   </details>
-                 ) : null}
+                <HealingToolButtons
+                  enabled={healingModeEnabled}
+                  disabled={!isImageLoaded}
+                  onToggle={() => {
+                    setHealingModeEnabled((prev) => {
+                      const next = !prev;
+                      if (next) {
+                        setCropMode(false);
+                      }
+                      return next;
+                    });
+                  }}
+                />
 
-                 <details className="rounded-md border bg-card" open>
-                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-                   <span className="flex items-center gap-2">
-                     <span>Basic</span>
-                   </span>
-                       <span className="text-xs text-muted-foreground">▾</span>
-                 </summary>
- 
-                 <div className="px-3 pb-3">
+                <CropToolButtons
+                  cropMode={cropMode}
+                  setCropMode={(next) => {
+                    setCropMode(next);
+                    if (next) {
+                      setHealingModeEnabled(false);
+                    }
+                  }}
+                  hasAppliedCrop={cropCommitted}
+                  onResetCrop={() => {
+                    if (!originalImageRef.current) return;
+                    imageRef.current = originalImageRef.current;
+                    useCropStore.getState?.().clearCommittedCrop?.();
+                    resetRotation();
+                    resetZoom();
+                  }}
+                />
 
+                <ExportTool
+                  imageRef={imageRef}
+                  isImageLoaded={isImageLoaded}
+                  cropMode={cropMode}
+                  rotation={rotation}
+                  exportFormat={exportFormat}
+                  setExportFormat={setExportFormat}
+                  jpegQuality={jpegQuality}
+                  setJpegQuality={setJpegQuality}
+                  isDownloading={isDownloading}
+                  setIsDownloading={setIsDownloading}
+                  exportError={exportError}
+                  setExportError={setExportError}
+                />
+              </div>
+
+              {healingModeEnabled ? (
+                <details
+                  className="rounded-md border bg-card"
+                  open={isHealingPanelOpen}
+                  onToggle={(event) => {
+                    setIsHealingPanelOpen((event.target as HTMLDetailsElement).open);
+                  }}
+                >
+                  <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span>Healing</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">▾</span>
+                  </summary>
+                  <HealingToolPanel
+                    enabled={healingModeEnabled}
+                    isImageLoaded={isImageLoaded}
+                  />
+                </details>
+              ) : null}
+
+              <details
+                className="rounded-md border bg-card"
+                open={isBasicPanelOpen}
+                onToggle={(event) => {
+                  setIsBasicPanelOpen((event.target as HTMLDetailsElement).open);
+                }}
+              >
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Basic</span>
+                  </span>
+                  <span className="text-xs text-muted-foreground">▾</span>
+                </summary>
+
+                <div className="px-3 pb-3">
                   <div className="flex items-center justify-between py-2">
                     <div className="flex gap-2">
-                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        disabled={!isImageLoaded}
+                      >
                         Auto
                       </Button>
-                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        disabled={!isImageLoaded}
+                      >
                         B&W
                       </Button>
-                      <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={!isImageLoaded}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        disabled={!isImageLoaded}
+                      >
                         HDR
                       </Button>
                     </div>
@@ -1661,16 +1852,20 @@ export function ReactImageEditor({
 
                   <div className="border-t pt-3">
                     <div className="flex items-center justify-between">
-                       <div className="text-xs font-medium text-foreground">Profile</div>
-                       <div className="text-xs text-muted-foreground">▾</div>
+                      <div className="text-xs font-medium text-foreground">
+                        Profile
+                      </div>
+                      <div className="text-xs text-muted-foreground">▾</div>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
-                       <div className="text-xs text-muted-foreground">Profile:</div>
+                      <div className="text-xs text-muted-foreground">
+                        Profile:
+                      </div>
                       <input
                         type="text"
                         disabled
                         value=""
-                         className="w-[140px] rounded-sm border bg-muted px-2 py-1 text-xs text-muted-foreground"
+                        className="w-[140px] rounded-sm border bg-muted px-2 py-1 text-xs text-muted-foreground"
                         aria-label="Profile"
                       />
                     </div>
@@ -1678,32 +1873,39 @@ export function ReactImageEditor({
                   {getPanelRegistry()
                     .filter((panel) => panel.groupId === "basic")
                     .map((panel) => (
-                        <panel.Component
-                          key={panel.id}
-                          isImageLoaded={isImageLoaded}
-                          Slider={LightSlider}
-                          formatSigned={formatSigned}
-                          formatSignedInt={formatSignedInt}
-                          setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                          setIsPickingPointColor={setIsPickingPointColor}
-                        />
+                      <panel.Component
+                        key={panel.id}
+                        isImageLoaded={isImageLoaded}
+                        Slider={LightSlider}
+                        formatSigned={formatSigned}
+                        formatSignedInt={formatSignedInt}
+                        setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                        setIsPickingPointColor={setIsPickingPointColor}
+                      />
                     ))}
-
                 </div>
               </details>
 
-              <details className="rounded-md border bg-card" open>
+              <details
+                className="rounded-md border bg-card"
+                open={isTransformPanelOpen}
+                onToggle={(event) => {
+                  setIsTransformPanelOpen((event.target as HTMLDetailsElement).open);
+                }}
+              >
                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span>Transform</span>
                   </span>
-                      <span className="text-xs text-muted-foreground">▾</span>
+                  <span className="text-xs text-muted-foreground">▾</span>
                 </summary>
 
                 <div className="px-3 pb-3">
                   <div className="border-t pt-3">
                     <div className="flex items-center justify-between">
-                       <div className="text-xs font-medium text-foreground">Straighten</div>
+                      <div className="text-xs font-medium text-foreground">
+                        Straighten
+                      </div>
                     </div>
 
                     <div className="mt-2 flex flex-col gap-2">
@@ -1748,12 +1950,17 @@ export function ReactImageEditor({
                           onClick={handleAutoStraighten}
                           disabled={!isImageLoaded || isAutoStraightening}
                         >
-                          {isAutoStraightening ? "Straightening…" : "Auto Straighten"}
+                          {isAutoStraightening
+                            ? "Straightening…"
+                            : "Auto Straighten"}
                         </Button>
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-xs" htmlFor="transform-rotate-input">
+                        <label
+                          className="text-xs"
+                          htmlFor="transform-rotate-input"
+                        >
                           Angle
                         </label>
                         <input
@@ -1765,7 +1972,7 @@ export function ReactImageEditor({
                           value={(cropSettings.rotation ?? 0).toFixed(1)}
                           onChange={(e) => setRotation(Number(e.target.value))}
                           disabled={!isImageLoaded}
-                           className="w-[84px] rounded-sm border bg-background px-2 py-1 text-xs text-foreground"
+                          className="w-[84px] rounded-sm border bg-background px-2 py-1 text-xs text-foreground"
                         />
                       </div>
                     </div>
@@ -1773,13 +1980,21 @@ export function ReactImageEditor({
 
                   <div className="border-t pt-3 mt-3">
                     <div className="flex items-center justify-between">
-                       <div className="text-xs font-medium text-foreground">Perspective</div>
+                      <div className="text-xs font-medium text-foreground">
+                        Perspective
+                      </div>
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
                         className="h-7 px-2 text-xs"
-                        onClick={() => setPerspective({ vertical: 0, horizontal: 0, aspect: 0 })}
+                        onClick={() =>
+                          setPerspective({
+                            vertical: 0,
+                            horizontal: 0,
+                            aspect: 0,
+                          })
+                        }
                         disabled={!isImageLoaded}
                       >
                         Reset
@@ -1789,50 +2004,62 @@ export function ReactImageEditor({
                     <div className="mt-2 flex flex-col gap-3">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-xs" htmlFor="transform-vertical">
+                          <label
+                            className="text-xs"
+                            htmlFor="transform-vertical"
+                          >
                             Vertical
                           </label>
                           <span className="text-xs font-medium tabular-nums">
-                            {formatSignedInt(geometryOptics.perspective.vertical)}
+                            {formatSignedInt(
+                              geometryOptics.perspective.vertical,
+                            )}
                           </span>
                         </div>
-                          <DebouncedRange
-                            id="transform-vertical"
-                            label="Vertical"
-                            value={geometryOptics.perspective.vertical}
-                            defaultValue={0}
-                            min={-100}
-                            max={100}
-                            step={1}
-                            onValueChange={(value) => setPerspective({ vertical: value })}
-                            className="w-full"
-                            disabled={!isImageLoaded}
-                          />
-
+                        <DebouncedRange
+                          id="transform-vertical"
+                          label="Vertical"
+                          value={geometryOptics.perspective.vertical}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          onValueChange={(value) =>
+                            setPerspective({ vertical: value })
+                          }
+                          className="w-full"
+                          disabled={!isImageLoaded}
+                        />
                       </div>
 
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-xs" htmlFor="transform-horizontal">
+                          <label
+                            className="text-xs"
+                            htmlFor="transform-horizontal"
+                          >
                             Horizontal
                           </label>
                           <span className="text-xs font-medium tabular-nums">
-                            {formatSignedInt(geometryOptics.perspective.horizontal)}
+                            {formatSignedInt(
+                              geometryOptics.perspective.horizontal,
+                            )}
                           </span>
                         </div>
-                          <DebouncedRange
-                            id="transform-horizontal"
-                            label="Horizontal"
-                            value={geometryOptics.perspective.horizontal}
-                            defaultValue={0}
-                            min={-100}
-                            max={100}
-                            step={1}
-                            onValueChange={(value) => setPerspective({ horizontal: value })}
-                            className="w-full"
-                            disabled={!isImageLoaded}
-                          />
-
+                        <DebouncedRange
+                          id="transform-horizontal"
+                          label="Horizontal"
+                          value={geometryOptics.perspective.horizontal}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          onValueChange={(value) =>
+                            setPerspective({ horizontal: value })
+                          }
+                          className="w-full"
+                          disabled={!isImageLoaded}
+                        />
                       </div>
 
                       <div className="flex flex-col gap-1">
@@ -1841,22 +2068,25 @@ export function ReactImageEditor({
                             Aspect
                           </label>
                           <span className="text-xs font-medium tabular-nums">
-                            {formatSignedInt(geometryOptics.perspective.aspect ?? 0)}
+                            {formatSignedInt(
+                              geometryOptics.perspective.aspect ?? 0,
+                            )}
                           </span>
                         </div>
-                          <DebouncedRange
-                            id="transform-aspect"
-                            label="Aspect"
-                            value={geometryOptics.perspective.aspect ?? 0}
-                            defaultValue={0}
-                            min={-100}
-                            max={100}
-                            step={1}
-                            onValueChange={(value) => setPerspective({ aspect: value })}
-                            className="w-full"
-                            disabled={!isImageLoaded}
-                          />
-
+                        <DebouncedRange
+                          id="transform-aspect"
+                          label="Aspect"
+                          value={geometryOptics.perspective.aspect ?? 0}
+                          defaultValue={0}
+                          min={-100}
+                          max={100}
+                          step={1}
+                          onValueChange={(value) =>
+                            setPerspective({ aspect: value })
+                          }
+                          className="w-full"
+                          disabled={!isImageLoaded}
+                        />
                       </div>
 
                       <label className="flex items-center gap-2 text-xs">
@@ -1873,7 +2103,9 @@ export function ReactImageEditor({
 
                   <div className="border-t pt-3 mt-3">
                     <div className="flex items-center justify-between">
-                       <div className="text-xs font-medium text-foreground">Guided Upright</div>
+                      <div className="text-xs font-medium text-foreground">
+                        Guided Upright
+                      </div>
                     </div>
 
                     <div className="mt-2 flex items-center justify-between gap-2">
@@ -1881,7 +2113,9 @@ export function ReactImageEditor({
                         <input
                           type="checkbox"
                           checked={guidedUprightEnabled}
-                          onChange={(e) => setGuidedUprightEnabled(e.target.checked)}
+                          onChange={(e) =>
+                            setGuidedUprightEnabled(e.target.checked)
+                          }
                           disabled={!isImageLoaded}
                         />
                         Guided
@@ -1902,92 +2136,104 @@ export function ReactImageEditor({
                 </div>
               </details>
 
-               <details className="rounded-md border bg-card" open>
-                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-                   <span className="flex items-center gap-2">
-                     <span>Lens Corrections</span>
-                   </span>
-                       <span className="text-xs text-muted-foreground">▾</span>
-                 </summary>
+              <details
+                className="rounded-md border bg-card"
+                open={isLensCorrectionsPanelOpen}
+                onToggle={(event) => {
+                  setIsLensCorrectionsPanelOpen((event.target as HTMLDetailsElement).open);
+                }}
+              >
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Lens Corrections</span>
+                  </span>
+                  <span className="text-xs text-muted-foreground">▾</span>
+                </summary>
 
-                 <div className="px-3 pb-3">
-                   <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="lens" />
-                 </div>
-               </details>
-
-               <details className="rounded-md border bg-card" open>
-                 <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-                   <span className="flex items-center gap-2">
-                     <span>Optics</span>
-                   </span>
-                       <span className="text-xs text-muted-foreground">▾</span>
-                 </summary>
-
-                 <div className="px-3 pb-3">
-                   <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="optics" />
-                 </div>
-               </details>
-
-  
-                {getPanelRegistry()
-
-                 .filter((panel) => panel.groupId !== "basic")
-                 .map((panel) => (
-                       <panel.Component
-                         key={panel.id}
-                         isImageLoaded={isImageLoaded}
-                         Slider={LightSlider}
-                         formatSigned={formatSigned}
-                         formatSignedInt={formatSignedInt}
-                         setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                         setIsPickingPointColor={setIsPickingPointColor}
-                       />
-                 ))}
-
-
-
-
-              </div>
-               <div className="sticky bottom-0 mt-auto border-t bg-muted px-2 py-2">
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={historyIndex <= 0}
-                    onClick={() => {
-                      const baseline = historyJumpTo(0);
-                      if (!baseline) return;
-
-                      isApplyingHistoryRef.current = true;
-                      try {
-                        applyEditsSnapshot(baseline.state.edits);
-                        const camera = baseline.state.camera;
-                        if (camera) {
-                          setCamera(camera.zoomLevel, camera.offset);
-                        }
-
-                        lastCommittedEditsRef.current = baseline.state.edits;
-                        if (camera) {
-                          zoomPanStateRef.current = {
-                            zoomLevel: camera.zoomLevel,
-                            offset: camera.offset,
-                          };
-                        }
-                      } finally {
-                        queueMicrotask(() => {
-                          isApplyingHistoryRef.current = false;
-                        });
-                      }
-                    }}
-                  >
-                    Reset
-                  </Button>
+                <div className="px-3 pb-3">
+                  <GeometryOpticsPanel
+                    isImageLoaded={isImageLoaded}
+                    section="lens"
+                  />
                 </div>
+              </details>
+
+              <details
+                className="rounded-md border bg-card"
+                open={isOpticsPanelOpen}
+                onToggle={(event) => {
+                  setIsOpticsPanelOpen((event.target as HTMLDetailsElement).open);
+                }}
+              >
+                <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span>Optics</span>
+                  </span>
+                  <span className="text-xs text-muted-foreground">▾</span>
+                </summary>
+
+                <div className="px-3 pb-3">
+                  <GeometryOpticsPanel
+                    isImageLoaded={isImageLoaded}
+                    section="optics"
+                  />
+                </div>
+              </details>
+
+              {getPanelRegistry()
+                .filter((panel) => panel.groupId !== "basic")
+                .map((panel) => (
+                  <panel.Component
+                    key={panel.id}
+                    isImageLoaded={isImageLoaded}
+                    Slider={LightSlider}
+                    formatSigned={formatSigned}
+                    formatSignedInt={formatSignedInt}
+                    setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                    setIsPickingPointColor={setIsPickingPointColor}
+                  />
+                ))}
+            </div>
+            <div className="sticky bottom-0 mt-auto border-t bg-muted px-2 py-2">
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={historyIndex <= 0}
+                  onClick={() => {
+                    const baseline = historyJumpTo(0);
+                    if (!baseline) return;
+
+                    isApplyingHistoryRef.current = true;
+                    try {
+                      applyEditsSnapshot(baseline.state.edits);
+                      const camera = baseline.state.camera;
+                      if (camera) {
+                        setCamera(camera.zoomLevel, camera.offset);
+                      }
+
+                      lastCommittedEditsRef.current = baseline.state.edits;
+                      if (camera) {
+                        zoomPanStateRef.current = {
+                          zoomLevel: camera.zoomLevel,
+                          offset: camera.offset,
+                        };
+                      }
+                    } finally {
+                      queueMicrotask(() => {
+                        isApplyingHistoryRef.current = false;
+                      });
+                    }
+                  }}
+                >
+                  Reset
+                </Button>
               </div>
             </div>
+          </div>
 
-            <CropToolOptions
+          <CropToolOptions
             cropMode={cropMode}
             imageRef={imageRef}
             zoomLevel={zoomLevel}

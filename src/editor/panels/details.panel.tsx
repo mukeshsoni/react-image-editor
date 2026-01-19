@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { useLocalStorageBoolean } from "@/hooks/useLocalStorageBoolean";
 import { DetailsPanel } from "@/editor/DetailsPanel";
 import { useDenoiseStore } from "@/store/denoiseStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
@@ -15,8 +16,21 @@ function DetailsPanelFromContext({ isImageLoaded, Slider }: PanelContext) {
   const setDenoise = useDenoiseStore((state) => state.setDenoise);
   const resetDenoise = useDenoiseStore((state) => state.resetDenoise);
 
+  const [isDetailsAccordionOpen, setIsDetailsAccordionOpen] =
+    useLocalStorageBoolean({
+      key: "react-image-editor:accordion:details",
+      defaultValue: false,
+    });
+
   return (
-    <details className="rounded-md border bg-card" data-testid="details-accordion">
+    <details
+      className="rounded-md border bg-card"
+      data-testid="details-accordion"
+      open={isDetailsAccordionOpen}
+      onToggle={(event) => {
+        setIsDetailsAccordionOpen((event.target as HTMLDetailsElement).open);
+      }}
+    >
       <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
         <span className="flex items-center gap-2">
           <span>Details</span>
