@@ -196,7 +196,7 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   );
 }
 
-const HANDLE_SIZE = 10;
+const HANDLE_SIZE = 18;
 
 // Helper functions
 function DragHandle({
@@ -211,7 +211,7 @@ function DragHandle({
     <div
       data-testid={`crop-handle-${position}`}
       aria-hidden="true"
-      className="absolute bg-background border border-border"
+      className="absolute bg-background border border-border rounded-sm"
       style={{
         width: HANDLE_SIZE,
         height: HANDLE_SIZE,
