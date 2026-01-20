@@ -1,6 +1,6 @@
 import {
   Fragment,
-  type MouseEvent,
+  type PointerEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -58,8 +58,12 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   // We check where in the box is the user clicked down on
   // If it's on a handle, we set the active handle and start resizing
   // If it's on the box, we start moving
-  const handleMouseDown = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
+  const [activePointerId, setActivePointerId] = useState<number | null>(null);
+
+  const handlePointerDown = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+
       const rect = event.currentTarget.getBoundingClientRect();
       // clientX and clientY for the event will give us coordinates with respect to the whole viewport
       // We need coordinates within our box
@@ -69,37 +73,61 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
       setIsDragging(true);
       setDragStart({ x, y });
 
+      const hitPoint = { x, y };
+
       for (const handle of handles) {
         const handleRect = getHandleRect(handle, cropRect);
-        if (isPointInRect({ x, y }, handleRect)) {
+        if (isPointInRect(hitPoint, handleRect)) {
           setDragType("resize");
           setActiveHandle(handle);
+          setActivePointerId(event.pointerId);
+          event.currentTarget.setPointerCapture(event.pointerId);
+          event.preventDefault();
           return;
         }
       }
 
       // Check if clicking inside crop area
-      if (isPointInRect({ x, y }, cropRect)) {
+      if (isPointInRect(hitPoint, cropRect)) {
         setDragType("move");
         setActiveHandle(null);
+        setActivePointerId(event.pointerId);
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
       }
     },
     [cropRect],
   );
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setDragStart(null);
-    setDragType(null);
-    setActiveHandle(null);
-  }, []);
+
+  const handlePointerUp = useCallback(
+    (event?: PointerEvent<HTMLDivElement>) => {
+      setIsDragging(false);
+      setDragStart(null);
+      setDragType(null);
+      setActiveHandle(null);
+      if (event && activePointerId != null) {
+        try {
+          event.currentTarget.releasePointerCapture(activePointerId);
+        } catch {
+          // Ignore if pointer capture is not held.
+        }
+      }
+      setActivePointerId(null);
+    },
+    [activePointerId],
+  );
   useEffect(() => {
     onChange?.(cropRect);
   }, [cropRect, onChange]);
 
-  const handleMouseMove = useMemo(
-    () => (event: MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = useMemo(
+    () => (event: PointerEvent<HTMLDivElement>) => {
       // If not dragging or no drag start, return
       if (!isDragging || !dragStart) {
+        return;
+      }
+
+      if (activePointerId != null && event.pointerId !== activePointerId) {
         return;
       }
 
@@ -121,6 +149,7 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
     [
       isDragging,
       dragStart,
+      activePointerId,
       activeHandle,
       dragType,
       moveCropRect,
@@ -132,10 +161,11 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
     <div
       className="absolute inset-0"
       style={{ cursor: getCursor(dragType, activeHandle) }}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseUp}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerUp}
     >
       {/* Semi-transparent overlay */}
       <div className="absolute inset-0 bg-black/50" />
@@ -180,6 +210,7 @@ function DragHandle({
   return (
     <div
       data-testid={`crop-handle-${position}`}
+      aria-hidden="true"
       className="absolute bg-background border border-border"
       style={{
         width: HANDLE_SIZE,
