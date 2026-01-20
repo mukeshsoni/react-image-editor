@@ -486,12 +486,14 @@ export function CropOptions({
       <Separator className="my-2" />
 
       <div className="flex items-center gap-2">
-        <label className="text-xs">Aspect Ratio</label>
+        <label className="text-xs" htmlFor="crop-aspect-ratio">
+          Aspect Ratio
+        </label>
         <Select
           onValueChange={handleAspectRatioOptionChange}
           value={cropSettings.aspectRatio}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger id="crop-aspect-ratio" className="w-[180px]" aria-label="Aspect ratio">
             <SelectValue placeholder="Select aspect ratio">
               {getAspectRatioDisplayValue()}
             </SelectValue>
