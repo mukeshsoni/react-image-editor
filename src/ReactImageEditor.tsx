@@ -1632,6 +1632,7 @@ export function ReactImageEditor({
                 size="icon"
                 variant="outline"
                 title="Zoom Out"
+                aria-label="Zoom out"
               >
                 <MinusIcon />
               </Button>
@@ -1650,6 +1651,7 @@ export function ReactImageEditor({
                 className="size-8"
                 onClick={zoomIn}
                 title="Zoom In"
+                aria-label="Zoom in"
               >
                 <PlusIcon />
               </Button>
