@@ -68,9 +68,18 @@ function App() {
   }, [mode]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="h-screen flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 border-b bg-background px-2 py-2">
-        <Input type="file" onChange={handleFileChange} className="max-w-[320px]" />
+        <label htmlFor="image-upload" className="sr-only">
+          Upload image
+        </label>
+        <Input
+          id="image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="max-w-[320px]"
+        />
 
         <div className="ml-auto flex items-center gap-2">
           <div className="relative">
