@@ -1,5 +1,6 @@
 import {
   Fragment,
+  type MouseEvent,
   type PointerEvent,
   useCallback,
   useEffect,
@@ -50,6 +51,9 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   const [dragType, setDragType] = useState<"move" | "resize" | null>(null);
   const [activeHandle, setActiveHandle] = useState<Handle | null>(null);
 
+  const supportsPointerEvents =
+    typeof window !== "undefined" && "PointerEvent" in window;
+
   // Initialize cropRect when component mounts or bounds change
   useEffect(() => {
     initializeCropRect(cropBounds);
@@ -62,7 +66,10 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
+      if (!supportsPointerEvents) return;
       if (event.pointerType === "mouse" && event.button !== 0) return;
+
+      const pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
 
       const rect = event.currentTarget.getBoundingClientRect();
       // clientX and clientY for the event will give us coordinates with respect to the whole viewport
@@ -80,8 +87,10 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
         if (isPointInRect(hitPoint, handleRect)) {
           setDragType("resize");
           setActiveHandle(handle);
-          setActivePointerId(event.pointerId);
-          event.currentTarget.setPointerCapture(event.pointerId);
+          setActivePointerId(pointerId);
+          if (pointerId != null) {
+            event.currentTarget.setPointerCapture?.(pointerId);
+          }
           event.preventDefault();
           return;
         }
@@ -91,16 +100,50 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
       if (isPointInRect(hitPoint, cropRect)) {
         setDragType("move");
         setActiveHandle(null);
-        setActivePointerId(event.pointerId);
-        event.currentTarget.setPointerCapture(event.pointerId);
+        setActivePointerId(pointerId);
+        if (pointerId != null) {
+          event.currentTarget.setPointerCapture?.(pointerId);
+        }
         event.preventDefault();
       }
     },
-    [cropRect],
+    [cropRect, supportsPointerEvents],
+  );
+
+  const handleMouseDown = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (supportsPointerEvents) return;
+      if (event.button !== 0) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      setIsDragging(true);
+      setDragStart({ x, y });
+
+      const hitPoint = { x, y };
+
+      for (const handle of handles) {
+        const handleRect = getHandleRect(handle, cropRect);
+        if (isPointInRect(hitPoint, handleRect)) {
+          setDragType("resize");
+          setActiveHandle(handle);
+          return;
+        }
+      }
+
+      if (isPointInRect(hitPoint, cropRect)) {
+        setDragType("move");
+        setActiveHandle(null);
+      }
+    },
+    [cropRect, supportsPointerEvents],
   );
 
   const handlePointerUp = useCallback(
     (event?: PointerEvent<HTMLDivElement>) => {
+      if (!supportsPointerEvents) return;
       setIsDragging(false);
       setDragStart(null);
       setDragType(null);
@@ -114,20 +157,30 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
       }
       setActivePointerId(null);
     },
-    [activePointerId],
+    [activePointerId, supportsPointerEvents],
   );
+
+  const handleMouseUp = useCallback(() => {
+    if (supportsPointerEvents) return;
+    setIsDragging(false);
+    setDragStart(null);
+    setDragType(null);
+    setActiveHandle(null);
+  }, [supportsPointerEvents]);
   useEffect(() => {
     onChange?.(cropRect);
   }, [cropRect, onChange]);
 
   const handlePointerMove = useMemo(
     () => (event: PointerEvent<HTMLDivElement>) => {
+      if (!supportsPointerEvents) return;
       // If not dragging or no drag start, return
       if (!isDragging || !dragStart) {
         return;
       }
 
-      if (activePointerId != null && event.pointerId !== activePointerId) {
+      const pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+      if (activePointerId != null && pointerId != null && pointerId !== activePointerId) {
         return;
       }
 
@@ -154,18 +207,51 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
       dragType,
       moveCropRect,
       resizeCropRect,
+      supportsPointerEvents,
+    ],
+  );
+
+  const handleMouseMove = useMemo(
+    () => (event: MouseEvent<HTMLDivElement>) => {
+      if (supportsPointerEvents) return;
+      if (!isDragging || !dragStart) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      if (dragType == "move") {
+        moveCropRect({ x, y }, dragStart);
+      } else if (dragType == "resize" && activeHandle) {
+        resizeCropRect({ x, y }, dragStart, activeHandle);
+      }
+
+      setDragStart({ x, y });
+    },
+    [
+      activeHandle,
+      dragStart,
+      dragType,
+      isDragging,
+      moveCropRect,
+      resizeCropRect,
+      supportsPointerEvents,
     ],
   );
 
   return (
     <div
       className="absolute inset-0"
-      style={{ cursor: getCursor(dragType, activeHandle) }}
+      style={{ cursor: getCursor(dragType, activeHandle), touchAction: "none" }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerUp}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseUp}
     >
       {/* Semi-transparent overlay */}
       <div className="absolute inset-0 bg-black/50" />
