@@ -34,6 +34,12 @@ function App() {
   useEffect(() => {
     if (!themeMenuOpen) return;
 
+    // Move focus into the menu when it opens.
+    const firstItem = themeMenuRef.current?.querySelector<HTMLElement>(
+      '[role="menuitemradio"]',
+    );
+    firstItem?.focus();
+
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
       if (!(target instanceof Node)) return;
@@ -45,8 +51,43 @@ function App() {
     }
 
     document.addEventListener("pointerdown", handlePointerDown, true);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setThemeMenuOpen(false);
+        themeButtonRef.current?.focus();
+        return;
+      }
+
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+
+      const items = Array.from(
+        themeMenuRef.current?.querySelectorAll<HTMLElement>(
+          '[role="menuitemradio"]',
+        ) ?? [],
+      );
+      if (items.length === 0) return;
+
+      const active = document.activeElement;
+      const currentIndex = items.findIndex((item) => item === active);
+
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex =
+        currentIndex === -1
+          ? 0
+          : (currentIndex + delta + items.length) % items.length;
+      const next = items[nextIndex];
+      if (!next) return;
+
+      event.preventDefault();
+      next.focus();
+    }
+
+    document.addEventListener("keydown", handleKeyDown, true);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [themeMenuOpen]);
 
@@ -68,9 +109,18 @@ function App() {
   }, [mode]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="h-screen flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 border-b bg-background px-2 py-2">
-        <Input type="file" onChange={handleFileChange} className="max-w-[320px]" />
+        <label htmlFor="image-upload" className="sr-only">
+          Upload image
+        </label>
+        <Input
+          id="image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="max-w-[320px]"
+        />
 
         <div className="ml-auto flex items-center gap-2">
           <div className="relative">
@@ -168,6 +218,7 @@ function ThemeMenuItem({
       type="button"
       role="menuitemradio"
       aria-checked={selected}
+      tabIndex={selected ? 0 : -1}
       className={
         selected
           ? "flex w-full items-center gap-2 rounded-sm bg-accent px-2 py-1.5 text-left text-sm"

@@ -1,6 +1,7 @@
 import {
   Fragment,
   type MouseEvent,
+  type PointerEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -50,6 +51,9 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   const [dragType, setDragType] = useState<"move" | "resize" | null>(null);
   const [activeHandle, setActiveHandle] = useState<Handle | null>(null);
 
+  const supportsPointerEvents =
+    typeof window !== "undefined" && "PointerEvent" in window;
+
   // Initialize cropRect when component mounts or bounds change
   useEffect(() => {
     initializeCropRect(cropBounds);
@@ -58,8 +62,15 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   // We check where in the box is the user clicked down on
   // If it's on a handle, we set the active handle and start resizing
   // If it's on the box, we start moving
-  const handleMouseDown = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
+  const [activePointerId, setActivePointerId] = useState<number | null>(null);
+
+  const handlePointerDown = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      if (!supportsPointerEvents) return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+
+      const pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+
       const rect = event.currentTarget.getBoundingClientRect();
       // clientX and clientY for the event will give us coordinates with respect to the whole viewport
       // We need coordinates within our box
@@ -69,37 +80,107 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
       setIsDragging(true);
       setDragStart({ x, y });
 
+      const hitPoint = { x, y };
+
       for (const handle of handles) {
         const handleRect = getHandleRect(handle, cropRect);
-        if (isPointInRect({ x, y }, handleRect)) {
+        if (isPointInRect(hitPoint, handleRect)) {
+          setDragType("resize");
+          setActiveHandle(handle);
+          setActivePointerId(pointerId);
+          if (pointerId != null) {
+            event.currentTarget.setPointerCapture?.(pointerId);
+          }
+          event.preventDefault();
+          return;
+        }
+      }
+
+      // Check if clicking inside crop area
+      if (isPointInRect(hitPoint, cropRect)) {
+        setDragType("move");
+        setActiveHandle(null);
+        setActivePointerId(pointerId);
+        if (pointerId != null) {
+          event.currentTarget.setPointerCapture?.(pointerId);
+        }
+        event.preventDefault();
+      }
+    },
+    [cropRect, supportsPointerEvents],
+  );
+
+  const handleMouseDown = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (supportsPointerEvents) return;
+      if (event.button !== 0) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      setIsDragging(true);
+      setDragStart({ x, y });
+
+      const hitPoint = { x, y };
+
+      for (const handle of handles) {
+        const handleRect = getHandleRect(handle, cropRect);
+        if (isPointInRect(hitPoint, handleRect)) {
           setDragType("resize");
           setActiveHandle(handle);
           return;
         }
       }
 
-      // Check if clicking inside crop area
-      if (isPointInRect({ x, y }, cropRect)) {
+      if (isPointInRect(hitPoint, cropRect)) {
         setDragType("move");
         setActiveHandle(null);
       }
     },
-    [cropRect],
+    [cropRect, supportsPointerEvents],
   );
+
+  const handlePointerUp = useCallback(
+    (event?: PointerEvent<HTMLDivElement>) => {
+      if (!supportsPointerEvents) return;
+      setIsDragging(false);
+      setDragStart(null);
+      setDragType(null);
+      setActiveHandle(null);
+      if (event && activePointerId != null) {
+        try {
+          event.currentTarget.releasePointerCapture(activePointerId);
+        } catch {
+          // Ignore if pointer capture is not held.
+        }
+      }
+      setActivePointerId(null);
+    },
+    [activePointerId, supportsPointerEvents],
+  );
+
   const handleMouseUp = useCallback(() => {
+    if (supportsPointerEvents) return;
     setIsDragging(false);
     setDragStart(null);
     setDragType(null);
     setActiveHandle(null);
-  }, []);
+  }, [supportsPointerEvents]);
   useEffect(() => {
     onChange?.(cropRect);
   }, [cropRect, onChange]);
 
-  const handleMouseMove = useMemo(
-    () => (event: MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = useMemo(
+    () => (event: PointerEvent<HTMLDivElement>) => {
+      if (!supportsPointerEvents) return;
       // If not dragging or no drag start, return
       if (!isDragging || !dragStart) {
+        return;
+      }
+
+      const pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+      if (activePointerId != null && pointerId != null && pointerId !== activePointerId) {
         return;
       }
 
@@ -121,17 +202,52 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
     [
       isDragging,
       dragStart,
+      activePointerId,
       activeHandle,
       dragType,
       moveCropRect,
       resizeCropRect,
+      supportsPointerEvents,
+    ],
+  );
+
+  const handleMouseMove = useMemo(
+    () => (event: MouseEvent<HTMLDivElement>) => {
+      if (supportsPointerEvents) return;
+      if (!isDragging || !dragStart) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      if (dragType == "move") {
+        moveCropRect({ x, y }, dragStart);
+      } else if (dragType == "resize" && activeHandle) {
+        resizeCropRect({ x, y }, dragStart, activeHandle);
+      }
+
+      setDragStart({ x, y });
+    },
+    [
+      activeHandle,
+      dragStart,
+      dragType,
+      isDragging,
+      moveCropRect,
+      resizeCropRect,
+      supportsPointerEvents,
     ],
   );
 
   return (
     <div
       className="absolute inset-0"
-      style={{ cursor: getCursor(dragType, activeHandle) }}
+      style={{ cursor: getCursor(dragType, activeHandle), touchAction: "none" }}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerUp}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseMove={handleMouseMove}
@@ -166,7 +282,7 @@ export function Cropper({ cropBounds, onChange }: CropperProps) {
   );
 }
 
-const HANDLE_SIZE = 10;
+const HANDLE_SIZE = 18;
 
 // Helper functions
 function DragHandle({
@@ -180,7 +296,8 @@ function DragHandle({
   return (
     <div
       data-testid={`crop-handle-${position}`}
-      className="absolute bg-background border border-border"
+      aria-hidden="true"
+      className="absolute bg-background border border-border rounded-sm"
       style={{
         width: HANDLE_SIZE,
         height: HANDLE_SIZE,
@@ -455,12 +572,14 @@ export function CropOptions({
       <Separator className="my-2" />
 
       <div className="flex items-center gap-2">
-        <label className="text-xs">Aspect Ratio</label>
+        <label className="text-xs" htmlFor="crop-aspect-ratio">
+          Aspect Ratio
+        </label>
         <Select
           onValueChange={handleAspectRatioOptionChange}
           value={cropSettings.aspectRatio}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger id="crop-aspect-ratio" className="w-[180px]" aria-label="Aspect ratio">
             <SelectValue placeholder="Select aspect ratio">
               {getAspectRatioDisplayValue()}
             </SelectValue>
@@ -500,6 +619,11 @@ export function CropOptions({
           className="size-8"
           style={{ cursor: "pointer" }}
           onClick={handleAspectRatioLockClick}
+          aria-label={
+            cropSettings.aspectRatioLocked
+              ? "Unlock aspect ratio"
+              : "Lock aspect ratio"
+          }
         >
           {cropSettings.aspectRatioLocked ? (
             <LockClosedIcon />

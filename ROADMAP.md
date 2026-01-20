@@ -20,7 +20,9 @@
 - Code TODO in `use-canvas-zoom-pan.ts` line 552
 - **Impact**: Better UX consistency
 
-### Dark mode
+### Mobile support
+
+### Dark mode [done]
 
 ### Undo/Redo Functionality [done]
 - Add a left panel (Lightroom-style) with a **History** accordion listing all edits

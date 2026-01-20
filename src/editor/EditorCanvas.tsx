@@ -297,6 +297,7 @@ export function EditorCanvas({
     <canvas
       ref={canvasRef}
       {...listeners}
+      aria-label="Image preview"
       onClick={(event) => {
         onPickWhiteBalance(event);
         onPickPointColor(event);
@@ -304,6 +305,8 @@ export function EditorCanvas({
       style={{
         cursor: isPickingWhiteBalance || isPickingPointColor ? "crosshair" : cursor,
       }}
-    />
+    >
+      Image preview
+    </canvas>
   );
 }

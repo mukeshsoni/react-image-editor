@@ -1122,7 +1122,7 @@ export function ReactImageEditor({
                 type="button"
                 size="icon"
                 variant="outline"
-                className="absolute left-2 top-2 z-20 size-8"
+                className="absolute left-2 top-2 z-20 size-11 md:size-8"
                 onClick={() => {
                   setIsHistoryPaneOpen((prev: boolean) => !prev);
                 }}
@@ -1627,18 +1627,19 @@ export function ReactImageEditor({
               style={{ display: !cropMode ? "flex" : "none" }}
             >
               <Button
-                className="size-8"
+                className="size-11 md:size-8"
                 onClick={zoomOut}
                 size="icon"
                 variant="outline"
                 title="Zoom Out"
+                aria-label="Zoom out"
               >
                 <MinusIcon />
               </Button>
               <Button
                 size="icon"
                 variant="outline"
-                className="size-8 px-6"
+                className="size-11 px-6 md:size-8"
                 onClick={handleResetZoomClick}
                 title="Reset"
               >
@@ -1647,9 +1648,10 @@ export function ReactImageEditor({
               <Button
                 size="icon"
                 variant="outline"
-                className="size-8"
+                className="size-11 md:size-8"
                 onClick={zoomIn}
                 title="Zoom In"
+                aria-label="Zoom in"
               >
                 <PlusIcon />
               </Button>
