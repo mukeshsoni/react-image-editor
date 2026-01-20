@@ -531,6 +531,11 @@ export function CropOptions({
           className="size-8"
           style={{ cursor: "pointer" }}
           onClick={handleAspectRatioLockClick}
+          aria-label={
+            cropSettings.aspectRatioLocked
+              ? "Unlock aspect ratio"
+              : "Lock aspect ratio"
+          }
         >
           {cropSettings.aspectRatioLocked ? (
             <LockClosedIcon />
