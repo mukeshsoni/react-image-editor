@@ -7,9 +7,10 @@ A Lightroom-style, non-destructive image editor for React, built on top of the H
 - Crop/straighten, healing, tone/color adjustments, history + undo/redo
 - Export PNG/JPEG (with JPEG quality)
 
+[Link to demo](https://mukeshsoni.github.io/react-image-editor/)
+
 ## Demo
 
-[Demo](https://mukeshsoni.github.io/react-image-editor/)
 
 ![Demo](https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/demo.gif)
 
