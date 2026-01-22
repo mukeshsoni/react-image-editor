@@ -12,6 +12,7 @@ import { DebouncedRange } from "@/components/DebouncedRange";
 import { Button } from "@/components/ui/button";
 import { useThemeMode } from "@/hooks/useThemeMode";
 import { useLocalStorageBoolean } from "@/hooks/useLocalStorageBoolean";
+import { EditorThemeProvider } from "@/components/ui/editor-theme";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -50,11 +51,14 @@ import {
   estimateWhiteBalanceFromRgb,
   sampleAverageRgb,
 } from "./lib/white-balance";
+import type { ThemeMode } from "./lib/theme";
 import {
   calculateInitialImageStartOffset,
   calculateInitialZoomLevel,
   useCanvasZoomPan,
 } from "./use-canvas-zoom-pan";
+import type { ImageEditorEdits } from "./store/edits";
+import type { Point } from "./store/cropStore";
 
 const HISTORY_COMMIT_DEBOUNCE_MS = 250;
 import {
@@ -207,8 +211,8 @@ function LightSlider({
 
 type Props = {
   imageSrc: string;
-  onEditsChange?: (edits: import("@/store").ImageEditorEdits) => void;
-  themeMode?: import("@/lib/theme").ThemeMode;
+  onEditsChange?: (edits: ImageEditorEdits) => void;
+  themeMode?: ThemeMode;
   themeScope?: "global" | "local";
 };
 
@@ -264,14 +268,14 @@ export function ReactImageEditor({
   const removeHealingOp = useHealingStore((state) => state.removeHealingOp);
   const [healingCursor, setHealingCursor] = useState<{
     canvas: { x: number; y: number };
-    image: import("@/store/cropStore").Point | null;
+    image: Point | null;
   } | null>(null);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
   const [isHoveringSpotSource, setIsHoveringSpotSource] = useState(false);
   const [isDraggingSpotSource, setIsDraggingSpotSource] = useState(false);
   const draggingSpotSourceIdRef = useRef<string | null>(null);
   const draftStrokeRef = useRef<{
-    points: import("@/store/cropStore").Point[];
+    points: Point[];
   } | null>(null);
   const panRef = useRef<{
     isPanning: boolean;
@@ -487,7 +491,7 @@ export function ReactImageEditor({
     return (point: {
       x: number;
       y: number;
-    }): import("@/store/cropStore").Point | null => {
+    }): Point | null => {
       if (!imageRef.current) return null;
 
       const {
@@ -533,7 +537,7 @@ export function ReactImageEditor({
 
   const imagePointToCanvasPoint = useMemo(() => {
     return (
-      point: import("@/store/cropStore").Point,
+      point: Point,
     ): { x: number; y: number } | null => {
       if (!imageRef.current) return null;
 
@@ -1017,17 +1021,18 @@ export function ReactImageEditor({
   return (
     <div
       data-testid="react-image-editor"
-      className={`w-full h-full flex flex-col overflow-hidden ${localThemeClass}`}
+      className={`react-image-editor w-full h-full flex flex-col overflow-hidden ${localThemeClass}`}
     >
-      <ResizablePanelGroup
-        id="container-panel"
-        direction="horizontal"
-        className="flex flex-1 min-h-0 overflow-hidden"
-      >
-        {isHistoryPaneOpen ? (
-          <>
-            <ResizablePanel defaultSize={10} className="min-h-0">
-              <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
+      <EditorThemeProvider resolvedTheme={resolvedTheme}>
+        <ResizablePanelGroup
+          id="container-panel"
+          direction="horizontal"
+          className="flex flex-1 min-h-0 overflow-hidden"
+        >
+          {isHistoryPaneOpen ? (
+            <>
+              <ResizablePanel defaultSize={10} className="min-h-0">
+                <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
                 <details
                   className="rounded-md border bg-card"
                   data-testid="history-accordion"
@@ -2249,8 +2254,9 @@ export function ReactImageEditor({
               resetZoom();
             }}
           />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </EditorThemeProvider>
     </div>
   );
 }

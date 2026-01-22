@@ -97,7 +97,7 @@ A Lightroom-style, non-destructive image editor for React, built on top of the H
 ## Install
 
 ```bash
-npm install react-image-editor
+npm install @mukeshsoni/react-image-editor
 ```
 
 Peer dependencies:
@@ -109,7 +109,8 @@ Peer dependencies:
 
 ```tsx
 import { useMemo, useState } from "react";
-import { ReactImageEditor, type ImageEditorEdits } from "react-image-editor";
+import { ReactImageEditor, type ImageEditorEdits } from "@mukeshsoni/react-image-editor";
+import "@mukeshsoni/react-image-editor/styles.css";
 
 export function MyEditor() {
   const [file, setFile] = useState<File | null>(null);
@@ -180,10 +181,27 @@ If you want to inspect the full shape, see `src/store/edits.ts`.
 
 The editor UI is built with Tailwind CSS v4 + shadcn/ui components.
 
-When consumed as a library you have two options:
+When consumed as a library, Tailwind CSS is required in the host app (Tailwind v3 or v4).
 
-1. Use Tailwind in your host app and allow the editor’s class names to be compiled.
-2. Import a prebuilt CSS bundle shipped by the package (recommended for non-Tailwind hosts).
+1. Import the editor styles once in your app entry (Tailwind will compile it):
+
+```ts
+import "@mukeshsoni/react-image-editor/styles.css";
+```
+
+2. Ensure Tailwind scans the editor package output in `node_modules` so its class names are included in your build. Without this, the UI will look partially unstyled.
+
+Example `tailwind.config.{js,ts}`:
+
+```ts
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@mukeshsoni/react-image-editor/dist/**/*.{js,ts,jsx,tsx}",
+  ],
+};
+```
 
 ## CORS / Tainted Canvas Notes
 
