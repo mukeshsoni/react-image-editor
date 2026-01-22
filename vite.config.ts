@@ -8,12 +8,14 @@ import { defineConfig } from "vitest/config";
 
 const reactCompilerConfig = {};
 const isCi = process.env.CI === "true";
+const basePath = process.env.VITE_BASE_PATH ?? "/";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: basePath,
   plugins: [
     react({
       babel: {

@@ -9,6 +9,8 @@ A Lightroom-style, non-destructive image editor for React, built on top of the H
 
 ## Demo
 
+[Demo](https://mukeshsoni.github.io/react-image-editor/)
+
 ![Demo](https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/demo.gif)
 
 <p>
