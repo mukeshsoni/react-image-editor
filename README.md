@@ -9,16 +9,16 @@ A Lightroom-style, non-destructive image editor for React, built on top of the H
 
 ## Demo
 
-![Demo](docs/readme/demo.gif)
+![Demo](https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/demo.gif)
 
 <p>
-  <img src="docs/readme/01-overview.png" width="840" alt="Editor overview" />
+  <img src="https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/01-overview.png" width="840" alt="Editor overview" />
 </p>
 <p>
-  <img src="docs/readme/02-crop.png" width="840" alt="Crop tool" />
+  <img src="https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/02-crop.png" width="840" alt="Crop tool" />
 </p>
 <p>
-  <img src="docs/readme/03-healing.png" width="840" alt="Healing tool" />
+  <img src="https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/03-healing.png" width="840" alt="Healing tool" />
 </p>
 
 ## Features

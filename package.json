@@ -1,9 +1,10 @@
 {
   "name": "@mukeshsoni/react-image-editor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "license": "MIT",
   "description": "A Lightroom-style, non-destructive image editor for React (canvas-based).",
+  "homepage": "https://github.com/mukeshsoni/react-image-editor#readme",
   "keywords": [
     "react",
     "image",
@@ -28,6 +29,13 @@
   ],
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mukeshsoni/react-image-editor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mukeshsoni/react-image-editor/issues"
   },
   "scripts": {
     "test": "vitest",
