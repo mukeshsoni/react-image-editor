@@ -33,6 +33,9 @@ type Props = {
   cropMode: boolean;
   rotation: number;
 
+  buttonSize?: "sm" | "default" | "lg" | "icon";
+  buttonClassName?: string;
+
   exportFormat: ExportFormat;
   setExportFormat: (format: ExportFormat) => void;
   jpegQuality: number;
@@ -49,6 +52,8 @@ export function ExportTool({
   isImageLoaded,
   cropMode,
   rotation,
+  buttonSize,
+  buttonClassName,
   exportFormat,
   setExportFormat,
   jpegQuality,
@@ -146,7 +151,8 @@ export function ExportTool({
       <Button
         onClick={handleDownload}
         variant="default"
-        size="sm"
+        size={buttonSize ?? "sm"}
+        className={buttonClassName}
         disabled={!isImageLoaded || isDownloading || cropMode}
         title={
           !isImageLoaded
