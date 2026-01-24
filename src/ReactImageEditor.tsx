@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useThemeMode } from "@/hooks/useThemeMode";
 import { useLocalStorageBoolean } from "@/hooks/useLocalStorageBoolean";
 import { EditorThemeProvider } from "@/components/ui/editor-theme";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   CropToolButtons,
   CropToolOptions,
@@ -23,6 +24,7 @@ import { ExportTool } from "@/editor/ExportTool";
 import { HealingToolButtons, HealingToolPanel } from "@/editor/HealingTool";
 import { GeometryOpticsPanel } from "@/editor/GeometryOpticsPanel";
 import { DesktopEditorLayout } from "@/editor/layouts/DesktopEditorLayout";
+import { MobileEditorLayout } from "@/editor/layouts/MobileEditorLayout";
 import { getPanelRegistry } from "@/editor/panels";
 import {
   downscaleLuminanceNearest,
@@ -284,6 +286,8 @@ export function ReactImageEditor({
   const cropCommitted = useCropStore((state) => state.cropCommitted);
   const cropCommit = useCropStore((state) => state.cropCommit);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+
+  const isMobile = useIsMobile();
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
   const [jpegQuality, setJpegQuality] = useState(92);
@@ -1629,6 +1633,528 @@ export function ReactImageEditor({
     </>
   );
 
+  const mobileCanvasPanel = (
+    <>
+      <div className="flex flex-col flex-1 p-0">
+        <div className="flex-1 border-2 relative">
+          {isPickingWhiteBalance ? (
+            <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
+              Click image to pick white balance (Esc to cancel)
+            </div>
+          ) : null}
+
+          {isPickingPointColor ? (
+            <div className="absolute left-2 top-10 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
+              Click image to pick point color (Esc to cancel)
+            </div>
+          ) : null}
+
+          <EditorCanvas
+            canvasRef={canvasRef}
+            imageRef={imageRef}
+            zoomLevel={zoomLevel}
+            offset={offset}
+            rotation={rotation}
+            isPickingPointColor={isPickingPointColor}
+            listeners={
+              healingModeEnabled
+                ? {
+                    ...listeners,
+                    onMouseDown: undefined,
+                    onMouseMove: undefined,
+                    onMouseUp: undefined,
+                    onMouseLeave: undefined,
+                    onPointerDown: (event) => {
+                      if (!canvasRef.current) return;
+                      if (!healingModeEnabled) return;
+
+                      const isPanGesture = spaceDownRef.current;
+                      const isPickCloneSource =
+                        healingMode === "clone" &&
+                        (event.altKey || event.metaKey);
+
+                      if (healingMode === "spot") {
+                        const canvasPos = getMousePosInCanvas(
+                          canvasRef.current,
+                          event,
+                        );
+
+                        // Select an existing spot by clicking its target pin.
+                        const hitRadius = 10;
+                        for (const pin of spotPins) {
+                          const dx = canvasPos.x - pin.centerCanvas.x;
+                          const dy = canvasPos.y - pin.centerCanvas.y;
+                          if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+                            event.preventDefault();
+                            setSelectedSpotId(pin.id);
+                            return;
+                          }
+                        }
+
+                        // Drag the source pin for the selected spot.
+                        if (selectedSpotPin) {
+                          const dx =
+                            canvasPos.x - selectedSpotPin.sourceCanvas.x;
+                          const dy =
+                            canvasPos.y - selectedSpotPin.sourceCanvas.y;
+                          if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+                            event.preventDefault();
+                            draggingSpotSourceIdRef.current =
+                              selectedSpotPin.id;
+                            setIsDraggingSpotSource(true);
+                            setIsHoveringSpotSource(true);
+                            (
+                              event.currentTarget as HTMLElement
+                            ).setPointerCapture?.(event.pointerId);
+                            return;
+                          }
+                        }
+                      }
+
+                      const canvasPos = getMousePosInCanvas(
+                        canvasRef.current,
+                        event,
+                      );
+
+                      const imagePos = canvasPointToImagePoint(canvasPos);
+                      if (!imagePos) return;
+
+                      if (isPickCloneSource) {
+                        event.preventDefault();
+                        setCloneSource(imagePos);
+                        return;
+                      }
+
+                      if (isPanGesture) {
+                        panRef.current.isPanning = true;
+                        panRef.current.last = canvasPos;
+                        return;
+                      }
+
+                      if (healingMode === "clone" && !cloneSource) {
+                        return;
+                      }
+
+                      event.preventDefault();
+                      (
+                        event.currentTarget as HTMLElement
+                      ).setPointerCapture?.(event.pointerId);
+
+                      draftStrokeRef.current = { points: [imagePos] };
+                    },
+                    onPointerMove: (event) => {
+                      if (!canvasRef.current) return;
+
+                      const canvasPos = getMousePosInCanvas(
+                        canvasRef.current,
+                        event,
+                      );
+                      const imagePos = canvasPointToImagePoint(canvasPos);
+                      setHealingCursor({
+                        canvas: canvasPos,
+                        image: imagePos,
+                      });
+
+                      if (healingMode === "spot") {
+                        if (selectedSpotPin) {
+                          const hitRadius = 10;
+                          const dx =
+                            canvasPos.x - selectedSpotPin.sourceCanvas.x;
+                          const dy =
+                            canvasPos.y - selectedSpotPin.sourceCanvas.y;
+                          setIsHoveringSpotSource(
+                            dx * dx + dy * dy <= hitRadius * hitRadius,
+                          );
+                        } else {
+                          setIsHoveringSpotSource(false);
+                        }
+                      } else if (isHoveringSpotSource) {
+                        setIsHoveringSpotSource(false);
+                      }
+
+                      const draggingSpotId =
+                        draggingSpotSourceIdRef.current;
+                      if (
+                        healingMode === "spot" &&
+                        draggingSpotId &&
+                        imagePos
+                      ) {
+                        setSpotSource(draggingSpotId, imagePos);
+                        return;
+                      }
+
+                      if (panRef.current.isPanning) {
+                        const last = panRef.current.last;
+                        if (!last) {
+                          panRef.current.last = canvasPos;
+                          return;
+                        }
+
+                        const dx = canvasPos.x - last.x;
+                        const dy = canvasPos.y - last.y;
+                        panRef.current.last = canvasPos;
+
+                        setCamera(zoomLevel, {
+                          x: offset.x + dx,
+                          y: offset.y + dy,
+                        });
+
+                        return;
+                      }
+
+                      const draft = draftStrokeRef.current;
+                      if (!draft) return;
+                      if (!imagePos) return;
+
+                      const lastPoint =
+                        draft.points[draft.points.length - 1];
+                      const dx = imagePos.x - lastPoint.x;
+                      const dy = imagePos.y - lastPoint.y;
+                      const distSq = dx * dx + dy * dy;
+                      if (distSq < 1.5 * 1.5) return;
+
+                      draft.points.push(imagePos);
+                    },
+                    onPointerUp: () => {
+                      const draggedSpotId = draggingSpotSourceIdRef.current;
+                      draggingSpotSourceIdRef.current = null;
+                      setIsDraggingSpotSource(false);
+                      panRef.current.isPanning = false;
+                      panRef.current.last = null;
+
+                      if (draggedSpotId) {
+                        const nextEdits = getImageEditorEdits();
+                        editsPush({
+                          label: "Spot Sample",
+                          state: createEditorSerializableState({
+                            edits: nextEdits,
+                            zoomLevel: zoomPanStateRef.current.zoomLevel,
+                            offset: zoomPanStateRef.current.offset,
+                          }),
+                        });
+
+                        lastCommittedEditsRef.current = nextEdits;
+                        onEditsChange?.(nextEdits);
+                        return;
+                      }
+
+                      const draft = draftStrokeRef.current;
+
+                      draftStrokeRef.current = null;
+
+                      if (!draft) return;
+                      if (draft.points.length === 0) return;
+
+                      const id =
+                        typeof crypto !== "undefined" &&
+                        "randomUUID" in crypto
+                          ? crypto.randomUUID()
+                          : `${Date.now()}-${Math.random()}`;
+
+                      if (healingMode === "spot") {
+                        const center =
+                          draft.points[draft.points.length - 1];
+                        const radius = healingBrush.size / 2;
+                        const imageWidth = imageRef.current?.width ?? 0;
+                        const imageHeight = imageRef.current?.height ?? 0;
+                        const source = {
+                          x: Math.max(
+                            0,
+                            Math.min(imageWidth, center.x + radius * 2),
+                          ),
+                          y: Math.max(0, Math.min(imageHeight, center.y)),
+                        };
+
+                        addHealingOp({
+                          id,
+                          type: "spot",
+                          mode: "spot",
+                          center,
+                          radius,
+                          feather: healingBrush.feather,
+                          opacity: 255,
+                          source,
+                        });
+                        setSelectedSpotId(id);
+                        return;
+                      }
+
+                      addHealingOp({
+                        id,
+                        type: "stroke",
+                        mode: healingMode,
+                        points: draft.points,
+                        radius: healingBrush.size / 2,
+                        feather: healingBrush.feather,
+                        opacity: 255,
+                        source:
+                          healingMode === "clone"
+                            ? (cloneSource ?? undefined)
+                            : undefined,
+                      });
+                    },
+                    onPointerCancel: () => {
+                      draggingSpotSourceIdRef.current = null;
+                      setIsDraggingSpotSource(false);
+                      panRef.current.isPanning = false;
+                      panRef.current.last = null;
+                      draftStrokeRef.current = null;
+                      setHealingCursor(null);
+                    },
+
+                    onPointerLeave: () => {
+                      draggingSpotSourceIdRef.current = null;
+                      setIsDraggingSpotSource(false);
+                      setIsHoveringSpotSource(false);
+                      setHealingCursor(null);
+                    },
+                  }
+                : listeners
+            }
+            cursor={
+              healingModeEnabled
+                ? healingMode === "spot" &&
+                  selectedSpotPin &&
+                  (isHoveringSpotSource || isDraggingSpotSource)
+                  ? isDraggingSpotSource
+                    ? "grabbing"
+                    : "pointer"
+                  : "none"
+                : undefined
+            }
+            onPickWhiteBalance={(event) => {
+              if (!isPickingWhiteBalance) {
+                return;
+              }
+
+              if (!canvasRef.current) return;
+
+              // Cancel pick mode after a click attempt.
+              setIsPickingWhiteBalance(false);
+
+              // Read a small region from the preview canvas. This can fail if the
+              // canvas is tainted (CORS).
+              const ctx = canvasRef.current.getContext("2d", {
+                willReadFrequently: true,
+              });
+              if (!ctx) return;
+
+              try {
+                const rect = canvasRef.current.getBoundingClientRect();
+                const x = Math.round(event.clientX - rect.left);
+                const y = Math.round(event.clientY - rect.top);
+
+                const radius = WHITE_BALANCE_PICKER_RADIUS;
+                const size = radius * 2 + 1;
+
+                const sx = Math.max(0, x - radius);
+                const sy = Math.max(0, y - radius);
+                const sw = Math.min(
+                  size,
+                  Math.max(1, canvasRef.current.width - sx),
+                );
+                const sh = Math.min(
+                  size,
+                  Math.max(1, canvasRef.current.height - sy),
+                );
+
+                const imageData = ctx.getImageData(sx, sy, sw, sh);
+                const avg = sampleAverageRgb(
+                  imageData.data,
+                  sw,
+                  sh,
+                  radius,
+                  radius,
+                  radius,
+                );
+                const estimated = estimateWhiteBalanceFromRgb(avg);
+
+                setWhiteBalance({
+                  preset: "custom",
+                  temperatureKelvin: Math.round(estimated.temperatureKelvin),
+                  tint: Math.round(estimated.tint),
+                });
+              } catch {
+                setExportError("Cannot pick colors from this image (CORS)");
+              }
+            }}
+            isPickingWhiteBalance={isPickingWhiteBalance}
+            onPickPointColor={(event) => {
+              if (!isPickingPointColor) {
+                return;
+              }
+
+              if (!canvasRef.current) return;
+
+              // Cancel pick mode after a click attempt.
+              setIsPickingPointColor(false);
+
+              const ctx = canvasRef.current.getContext("2d", {
+                willReadFrequently: true,
+              });
+              if (!ctx) return;
+
+              try {
+                const rect = canvasRef.current.getBoundingClientRect();
+                const x = Math.round(event.clientX - rect.left);
+                const y = Math.round(event.clientY - rect.top);
+
+                const radius = POINT_COLOR_PICKER_RADIUS;
+                const size = radius * 2 + 1;
+
+                const sx = Math.max(0, x - radius);
+                const sy = Math.max(0, y - radius);
+                const sw = Math.min(
+                  size,
+                  Math.max(1, canvasRef.current.width - sx),
+                );
+                const sh = Math.min(
+                  size,
+                  Math.max(1, canvasRef.current.height - sy),
+                );
+
+                const imageData = ctx.getImageData(sx, sy, sw, sh);
+                const avg = sampleAverageRgb(
+                  imageData.data,
+                  sw,
+                  sh,
+                  radius,
+                  radius,
+                  radius,
+                );
+
+                const hsl = rgbToHsl(avg.r / 255, avg.g / 255, avg.b / 255);
+
+                useColorStore.getState().setPointColor({
+                  hue: hsl.h,
+                });
+              } catch {
+                setExportError("Cannot pick colors from this image (CORS)");
+              }
+            }}
+          />
+
+          {healingModeEnabled && healingCursor ? (
+            <div
+              className="pointer-events-none absolute left-0 top-0 z-10"
+              style={{
+                transform: `translate(${healingCursor.canvas.x}px, ${healingCursor.canvas.y}px)`,
+              }}
+            >
+              <div
+                className="rounded-full border border-border bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.65)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.25)]"
+                style={{
+                  width: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
+                  height: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
+                  transform: "translate(-50%, -50%)",
+                }}
+              />
+            </div>
+          ) : null}
+
+          {healingModeEnabled && healingMode === "spot" ? (
+            <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-full">
+              {spotPins.map((pin) => (
+                <div
+                  key={pin.id}
+                  className={
+                    pin.id === selectedSpotId
+                      ? "absolute rounded-full bg-background shadow-[0_0_0_2px_rgba(0,0,0,0.75)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
+                      : "absolute rounded-full bg-background/70 shadow-[0_0_0_2px_rgba(0,0,0,0.55)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.2)]"
+                  }
+                  style={{
+                    left: pin.centerCanvas.x,
+                    top: pin.centerCanvas.y,
+                    width: 10,
+                    height: 10,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                />
+              ))}
+
+              {selectedSpotPin ? (
+                <>
+                  <svg
+                    className="absolute left-0 top-0 h-full w-full"
+                    aria-hidden="true"
+                  >
+                    <line
+                      x1={selectedSpotPin.centerCanvas.x}
+                      y1={selectedSpotPin.centerCanvas.y}
+                      x2={selectedSpotPin.sourceCanvas.x}
+                      y2={selectedSpotPin.sourceCanvas.y}
+                      stroke="currentColor"
+                      strokeWidth={3}
+                      className="text-foreground/70"
+                    />
+                    <line
+                      x1={selectedSpotPin.centerCanvas.x}
+                      y1={selectedSpotPin.centerCanvas.y}
+                      x2={selectedSpotPin.sourceCanvas.x}
+                      y2={selectedSpotPin.sourceCanvas.y}
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      className="text-background/90"
+                    />
+                  </svg>
+                  <div
+                    className="absolute rounded-full bg-background shadow-[0_0_0_2px_rgba(0,0,0,0.75)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
+                    style={{
+                      left: selectedSpotPin.sourceCanvas.x,
+                      top: selectedSpotPin.sourceCanvas.y,
+                      width: 10,
+                      height: 10,
+                      transform: "translate(-50%, -50%)",
+                    }}
+                  />
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          <CropToolOverlay
+            cropMode={cropMode}
+            imageRef={imageRef}
+            cropBounds={cropBounds}
+          />
+        </div>
+      </div>
+      <div className="flex flex-row-reverse w-full py-2 px-4">
+        <div className="flex gap-0.5" style={{ display: !cropMode ? "flex" : "none" }}>
+          <Button
+            className="size-11 md:size-8"
+            onClick={zoomOut}
+            size="icon"
+            variant="outline"
+            title="Zoom Out"
+            aria-label="Zoom out"
+          >
+            <MinusIcon />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            className="size-11 px-6 md:size-8"
+            onClick={handleResetZoomClick}
+            title="Reset"
+          >
+            {Math.round(zoomLevel * 100)}%
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            className="size-11 md:size-8"
+            onClick={zoomIn}
+            title="Zoom In"
+            aria-label="Zoom in"
+          >
+            <PlusIcon />
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+
   const controlsPanel = (
     <>
       <div className="flex h-full min-h-0 flex-col">
@@ -2196,19 +2722,152 @@ export function ReactImageEditor({
     </>
   );
 
+  const mobileTrayPanel = (
+    <div className="flex flex-col gap-3 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            title="Undo (⌘Z)"
+            aria-label="Undo (⌘Z)"
+            disabled={!canUndo}
+            onClick={() => {
+              const nextEntry = historyUndo();
+              if (!nextEntry) return;
+
+              isApplyingHistoryRef.current = true;
+              try {
+                applyEditsSnapshot(nextEntry.state.edits);
+                const camera = nextEntry.state.camera;
+                if (camera) {
+                  setCamera(camera.zoomLevel, camera.offset);
+                }
+
+                lastCommittedEditsRef.current = nextEntry.state.edits;
+                if (camera) {
+                  zoomPanStateRef.current = {
+                    zoomLevel: camera.zoomLevel,
+                    offset: camera.offset,
+                  };
+                }
+              } finally {
+                queueMicrotask(() => {
+                  isApplyingHistoryRef.current = false;
+                });
+              }
+            }}
+          >
+            ↶
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            title="Redo (⇧⌘Z)"
+            aria-label="Redo (⇧⌘Z)"
+            disabled={!canRedo}
+            onClick={() => {
+              const nextEntry = historyRedo();
+              if (!nextEntry) return;
+
+              isApplyingHistoryRef.current = true;
+              try {
+                applyEditsSnapshot(nextEntry.state.edits);
+                const camera = nextEntry.state.camera;
+                if (camera) {
+                  setCamera(camera.zoomLevel, camera.offset);
+                }
+
+                lastCommittedEditsRef.current = nextEntry.state.edits;
+                if (camera) {
+                  zoomPanStateRef.current = {
+                    zoomLevel: camera.zoomLevel,
+                    offset: camera.offset,
+                  };
+                }
+              } finally {
+                queueMicrotask(() => {
+                  isApplyingHistoryRef.current = false;
+                });
+              }
+            }}
+          >
+            ↷
+          </Button>
+        </div>
+
+        <HealingToolButtons
+          enabled={healingModeEnabled}
+          disabled={!isImageLoaded}
+          onToggle={() => {
+            setHealingModeEnabled((prev) => {
+              const next = !prev;
+              if (next) {
+                setCropMode(false);
+              }
+              return next;
+            });
+          }}
+        />
+
+        <CropToolButtons
+          cropMode={cropMode}
+          setCropMode={(next) => {
+            setCropMode(next);
+            if (next) {
+              setHealingModeEnabled(false);
+            }
+          }}
+          hasAppliedCrop={cropCommitted}
+          onResetCrop={() => {
+            if (!originalImageRef.current) return;
+            imageRef.current = originalImageRef.current;
+            useCropStore.getState?.().clearCommittedCrop?.();
+            resetRotation();
+            resetZoom();
+          }}
+        />
+
+        <ExportTool
+          imageRef={imageRef}
+          isImageLoaded={isImageLoaded}
+          cropMode={cropMode}
+          rotation={rotation}
+          exportFormat={exportFormat}
+          setExportFormat={setExportFormat}
+          jpegQuality={jpegQuality}
+          setJpegQuality={setJpegQuality}
+          isDownloading={isDownloading}
+          setIsDownloading={setIsDownloading}
+          exportError={exportError}
+          setExportError={setExportError}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div
       data-testid="react-image-editor"
       className={`react-image-editor w-full h-full flex flex-col overflow-hidden ${localThemeClass}`}
     >
       <EditorThemeProvider resolvedTheme={resolvedTheme}>
-        <DesktopEditorLayout
-          historyPanel={historyPanel}
-          canvasPanel={canvasPanel}
-          controlsPanel={controlsPanel}
-          isHistoryPaneOpen={isHistoryPaneOpen}
-          onCanvasResize={handleImagePanelResize}
-        />
+        {isMobile ? (
+          <MobileEditorLayout
+            canvasPanel={mobileCanvasPanel}
+            trayPanel={mobileTrayPanel}
+          />
+        ) : (
+          <DesktopEditorLayout
+            historyPanel={historyPanel}
+            canvasPanel={canvasPanel}
+            controlsPanel={controlsPanel}
+            isHistoryPaneOpen={isHistoryPaneOpen}
+            onCanvasResize={handleImagePanelResize}
+          />
+        )}
       </EditorThemeProvider>
     </div>
   );
