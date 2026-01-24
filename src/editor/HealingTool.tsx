@@ -13,14 +13,24 @@ type HealingToolButtonsProps = {
   enabled: boolean;
   disabled: boolean;
   onToggle: () => void;
+  size?: "sm" | "default" | "lg" | "icon";
+  className?: string;
 };
 
-export function HealingToolButtons({ enabled, disabled, onToggle }: HealingToolButtonsProps) {
+export function HealingToolButtons({
+  enabled,
+  disabled,
+  onToggle,
+  size,
+  className,
+}: HealingToolButtonsProps) {
   return (
     <Button
       type="button"
       disabled={disabled}
       variant={enabled ? "default" : "outline"}
+      size={size}
+      className={className}
       onClick={onToggle}
       aria-pressed={enabled}
       aria-label="Healing tool"

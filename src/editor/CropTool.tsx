@@ -11,6 +11,8 @@ type CropToolButtonsProps = {
   setCropMode: (next: boolean) => void;
   hasAppliedCrop: boolean;
   onResetCrop: () => void;
+  size?: "sm" | "default" | "lg" | "icon";
+  className?: string;
 };
 
 export function CropToolButtons({
@@ -18,15 +20,29 @@ export function CropToolButtons({
   setCropMode,
   hasAppliedCrop,
   onResetCrop,
+  size,
+  className,
 }: CropToolButtonsProps) {
   return (
     <>
-      <Button type="button" variant={cropMode ? "default" : "outline"} onClick={() => setCropMode(!cropMode)}>
+      <Button
+        type="button"
+        variant={cropMode ? "default" : "outline"}
+        size={size}
+        className={className}
+        onClick={() => setCropMode(!cropMode)}
+      >
         Crop
       </Button>
 
       {hasAppliedCrop ? (
-        <Button type="button" variant="outline" onClick={onResetCrop}>
+        <Button
+          type="button"
+          variant="outline"
+          size={size}
+          className={className}
+          onClick={onResetCrop}
+        >
           Reset Crop
         </Button>
       ) : null}
