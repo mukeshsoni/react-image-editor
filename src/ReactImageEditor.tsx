@@ -2724,13 +2724,13 @@ export function ReactImageEditor({
 
   const mobileTrayPanel = (
     <div className="flex flex-col gap-3 p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             type="button"
             size="icon"
             variant="outline"
-            className="size-11"
+            className="size-11 shrink-0"
             title="Undo (⌘Z)"
             aria-label="Undo (⌘Z)"
             disabled={!canUndo}
@@ -2766,7 +2766,7 @@ export function ReactImageEditor({
             type="button"
             size="icon"
             variant="outline"
-            className="size-11"
+            className="size-11 shrink-0"
             title="Redo (⇧⌘Z)"
             aria-label="Redo (⇧⌘Z)"
             disabled={!canRedo}
@@ -2804,7 +2804,7 @@ export function ReactImageEditor({
           enabled={healingModeEnabled}
           disabled={!isImageLoaded}
           size="lg"
-          className="h-11 px-4"
+          className="h-11 px-4 shrink-0"
           onToggle={() => {
             setHealingModeEnabled((prev) => {
               const next = !prev;
@@ -2826,7 +2826,7 @@ export function ReactImageEditor({
           }}
           hasAppliedCrop={cropCommitted}
           size="lg"
-          className="h-11 px-4"
+          className="h-11 px-4 shrink-0"
           onResetCrop={() => {
             if (!originalImageRef.current) return;
             imageRef.current = originalImageRef.current;
@@ -2842,7 +2842,7 @@ export function ReactImageEditor({
           cropMode={cropMode}
           rotation={rotation}
           buttonSize="lg"
-          buttonClassName="h-11 px-4"
+          buttonClassName="h-11 px-4 shrink-0"
           exportFormat={exportFormat}
           setExportFormat={setExportFormat}
           jpegQuality={jpegQuality}
