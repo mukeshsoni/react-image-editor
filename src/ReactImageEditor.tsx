@@ -255,6 +255,11 @@ export function ReactImageEditor({
     defaultValue: false,
   });
 
+  const [isPresetsPanelOpen, setIsPresetsPanelOpen] = useLocalStorageBoolean({
+    key: "react-image-editor:accordion:presets",
+    defaultValue: false,
+  });
+
   const [isTransformPanelOpen, setIsTransformPanelOpen] = useLocalStorageBoolean({
     key: "react-image-editor:accordion:transform",
     defaultValue: false,
@@ -1079,7 +1084,9 @@ export function ReactImageEditor({
     themeScope === "local" && resolvedTheme === "dark" ? "dark" : "";
 
   const panelRegistry = getPanelRegistry();
-  const basicPanels = panelRegistry.filter((panel) => panel.groupId === "basic");
+  const basicPanels = panelRegistry.filter(
+    (panel) => panel.groupId === "basic" && panel.id !== "presets",
+  );
   const advancedPanels = panelRegistry.filter((panel) => panel.groupId !== "basic");
   const mobileBasicPanels = panelRegistry.filter((panel) =>
     ["white-balance", "light", "color"].includes(panel.id),
@@ -1092,6 +1099,7 @@ export function ReactImageEditor({
   );
   const mobileDetailsPanels = panelRegistry.filter((panel) => panel.id === "details");
   const mobilePresetsPanels = panelRegistry.filter((panel) => panel.id === "presets");
+  const desktopPresetsPanels = panelRegistry.filter((panel) => panel.id === "presets");
 
   const historyList = (
     <div data-testid="history-list" className="flex flex-col gap-1">
@@ -2444,17 +2452,47 @@ export function ReactImageEditor({
                   />
                 </div>
               </div>
-          {basicPanels.map((panel) => (
-            <panel.Component
-              key={panel.id}
-              isImageLoaded={isImageLoaded}
-              Slider={LightSlider}
-              formatSigned={formatSigned}
-              formatSignedInt={formatSignedInt}
-              setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-              setIsPickingPointColor={setIsPickingPointColor}
-            />
-          ))}
+              {basicPanels.map((panel) => (
+                <panel.Component
+                  key={panel.id}
+                  isImageLoaded={isImageLoaded}
+                  Slider={LightSlider}
+                  formatSigned={formatSigned}
+                  formatSignedInt={formatSignedInt}
+                  setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                  setIsPickingPointColor={setIsPickingPointColor}
+                />
+              ))}
+            </div>
+          </details>
+
+          <details
+            className="rounded-md border bg-card"
+            open={isPresetsPanelOpen}
+            onToggle={(event) => {
+              setIsPresetsPanelOpen((event.target as HTMLDetailsElement).open);
+            }}
+          >
+            <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span>Presets</span>
+              </span>
+              <span className="text-xs text-muted-foreground">▾</span>
+            </summary>
+
+            <div className="px-3 pb-3">
+              {desktopPresetsPanels.map((panel) => (
+                <panel.Component
+                  key={panel.id}
+                  isImageLoaded={isImageLoaded}
+                  Slider={LightSlider}
+                  formatSigned={formatSigned}
+                  formatSignedInt={formatSignedInt}
+                  setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                  setIsPickingPointColor={setIsPickingPointColor}
+                  panelVariant="accordion"
+                />
+              ))}
             </div>
           </details>
 
