@@ -12,7 +12,7 @@ export function MobileEditorLayout({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-1 min-h-0 flex-col">{canvasPanel}</div>
-      <div className="flex max-h-[40%] min-h-0 flex-col overflow-y-auto border-t bg-muted">
+      <div className="flex min-h-0 flex-col overflow-hidden border-t bg-muted">
         {trayPanel}
       </div>
     </div>

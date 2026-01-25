@@ -28,6 +28,7 @@ type Props = {
   setIsPickingPointColor: (updater: (current: boolean) => boolean) => void;
   formatSignedInt: (value: number) => string;
   Slider: (props: SliderProps) => import("react").ReactNode;
+  variant?: "accordion" | "flat";
 };
 
 export function ColorMixerPanel({
@@ -36,6 +37,7 @@ export function ColorMixerPanel({
   setIsPickingPointColor,
   formatSignedInt,
   Slider,
+  variant = "accordion",
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("mixer");
   const [activeMixerBand, setActiveMixerBand] = useState<ColorMixerBand>("red");
@@ -61,22 +63,8 @@ export function ColorMixerPanel({
       defaultValue: false,
     });
 
-  return (
-    <details
-      className="rounded-md border bg-card"
-      data-testid="color-mixer-accordion"
-      open={isColorMixerAccordionOpen}
-      onToggle={(event) => {
-        setIsColorMixerAccordionOpen((event.target as HTMLDetailsElement).open);
-      }}
-    >
-      <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
-        <span className="flex items-center gap-2">
-          <span>Color Mixer</span>
-        </span>
-        <span className="text-xs text-muted-foreground">▾</span>
-      </summary>
-
+  if (variant === "flat") {
+    return (
       <div className="px-3 pb-3">
         <div className="flex items-center justify-between py-2">
           <div className="text-xs font-medium text-foreground">Color Mixer</div>
@@ -296,6 +284,229 @@ export function ColorMixerPanel({
             />
           </div>
         ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <details
+      className="rounded-md border bg-card"
+      data-testid="color-mixer-accordion"
+      open={isColorMixerAccordionOpen}
+      onToggle={(event) => {
+        setIsColorMixerAccordionOpen((event.target as HTMLDetailsElement).open);
+      }}
+    >
+      <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
+        <span className="flex items-center gap-2">
+          <span>Color Mixer</span>
+        </span>
+        <span className="text-xs text-muted-foreground">▾</span>
+      </summary>
+
+      <div className="px-3 pb-3">
+        <div className="flex items-center justify-between py-2">
+          <div className="text-xs font-medium text-foreground">Color Mixer</div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              if (activeTab === "mixer") {
+                resetMixer();
+              } else {
+                resetPointColor();
+              }
+            }}
+            disabled={!isImageLoaded}
+          >
+            Reset
+          </Button>
+        </div>
+
+        <div className="mt-3 flex gap-1" role="tablist" aria-label="Color mixer tabs">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "mixer"}
+            className={cn(tabButtonClass, activeTab === "mixer" && "bg-accent")}
+            onClick={() => setActiveTab("mixer")}
+            disabled={!isImageLoaded}
+            data-testid="color-mixer-tab-mixer"
+          >
+            Mixer
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "point-color"}
+            className={cn(tabButtonClass, activeTab === "point-color" && "bg-accent")}
+            onClick={() => setActiveTab("point-color")}
+            disabled={!isImageLoaded}
+            data-testid="color-mixer-tab-point-color"
+          >
+            Point Color
+          </button>
+        </div>
+
+        {activeTab === "mixer" ? (
+          <div className="mt-3 flex flex-col gap-3" data-testid="color-mixer-tab-panel-mixer">
+            <div className="flex flex-wrap gap-1" aria-label="Mixer bands">
+              {COLOR_MIXER_BANDS.map((band) => (
+                <button
+                  key={band}
+                  type="button"
+                  className={cn(
+                    tabButtonClass,
+                    "capitalize",
+                    activeMixerBand === band && "bg-accent",
+                  )}
+                  onClick={() => setActiveMixerBand(band)}
+                  disabled={!isImageLoaded}
+                  data-testid={`mixer-band-${band}`}
+                >
+                  {band}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-medium text-foreground capitalize">{activeMixerBand}</div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() => resetMixerBand(activeMixerBand)}
+                disabled={!isImageLoaded}
+              >
+                Reset band
+              </Button>
+            </div>
+
+            <Slider
+              label="Hue"
+              name={`mixer-${activeMixerBand}-hue`}
+              value={colorAdjustments.mixerHsl[activeMixerBand].hue}
+              defaultValue={0}
+              min={-100}
+              max={100}
+              step={1}
+              disabled={!isImageLoaded}
+              format={(value) => formatSignedInt(value)}
+              onValueChange={(value) => setMixerBandAdjustment(activeMixerBand, "hue", value)}
+            />
+
+            <Slider
+              label="Saturation"
+              name={`mixer-${activeMixerBand}-saturation`}
+              value={colorAdjustments.mixerHsl[activeMixerBand].saturation}
+              defaultValue={0}
+              min={-100}
+              max={100}
+              step={1}
+              disabled={!isImageLoaded}
+              format={(value) => formatSignedInt(value)}
+              onValueChange={(value) =>
+                setMixerBandAdjustment(activeMixerBand, "saturation", value)
+              }
+            />
+
+            <Slider
+              label="Luminance"
+              name={`mixer-${activeMixerBand}-luminance`}
+              value={colorAdjustments.mixerHsl[activeMixerBand].luminance}
+              defaultValue={0}
+              min={-100}
+              max={100}
+              step={1}
+              disabled={!isImageLoaded}
+              format={(value) => formatSignedInt(value)}
+              onValueChange={(value) =>
+                setMixerBandAdjustment(activeMixerBand, "luminance", value)
+              }
+            />
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3" data-testid="color-mixer-tab-panel-point-color">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-medium text-foreground">Point Color</div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() => resetPointColor()}
+                disabled={!isImageLoaded}
+              >
+                Reset
+              </Button>
+            </div>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => setIsPickingPointColor((current) => !current)}
+              disabled={!isImageLoaded}
+              data-testid="point-color-eyedropper"
+            >
+              Pick
+            </Button>
+
+            <Slider
+              label="Hue Shift"
+              name="point-color-hue"
+              value={colorAdjustments.pointColor.hueShift}
+              defaultValue={0}
+              min={-100}
+              max={100}
+              step={1}
+              disabled={!isImageLoaded}
+              format={(value) => formatSignedInt(value)}
+              onValueChange={(value) => setPointColor({ hueShift: value })}
+            />
+            <Slider
+              label="Sat. Shift"
+              name="point-color-saturation"
+              value={colorAdjustments.pointColor.saturationShift}
+              defaultValue={0}
+              min={-100}
+              max={100}
+              step={1}
+              disabled={!isImageLoaded}
+              format={(value) => formatSignedInt(value)}
+              onValueChange={(value) => setPointColor({ saturationShift: value })}
+            />
+            <Slider
+              label="Lum. Shift"
+              name="point-color-luminance"
+              value={colorAdjustments.pointColor.luminanceShift}
+              defaultValue={0}
+              min={-100}
+              max={100}
+              step={1}
+              disabled={!isImageLoaded}
+              format={(value) => formatSignedInt(value)}
+              onValueChange={(value) => setPointColor({ luminanceShift: value })}
+            />
+
+            <Slider
+              label="Range"
+              name="point-color-range"
+              value={colorAdjustments.pointColor.range}
+              defaultValue={50}
+              min={0}
+              max={100}
+              step={1}
+              disabled={!isImageLoaded}
+              format={(value) => `${Math.round(value)}`}
+              onValueChange={(value) => setPointColor({ range: value })}
+            />
+          </div>
+        )}
       </div>
     </details>
   );

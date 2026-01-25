@@ -20,6 +20,8 @@ export type PanelContext = {
   formatSigned: (value: number, digits: number) => string;
   formatSignedInt: (value: number) => string;
 
+  panelVariant?: "accordion" | "flat";
+
   setIsPickingWhiteBalance: (updater: (current: boolean) => boolean) => void;
   setIsPickingPointColor: (updater: (current: boolean) => boolean) => void;
 };

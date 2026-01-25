@@ -15,9 +15,9 @@ Source PRD: `prds/mobile-support-prd.md`
 - [x] Build `MobileEditorLayout` skeleton (canvas + bottom tray)
 
 ## 2) Mobile tool row
-- [ ] Reuse undo/redo buttons with mobile sizing
-- [ ] Reuse crop/healing/export controls in compact row
-- [ ] Ensure tool buttons have 44px minimum touch size
+- [x] Reuse undo/redo buttons with mobile sizing
+- [x] Reuse crop/healing/export controls in compact row
+- [x] Ensure tool buttons have 44px minimum touch size
 
 ## 3) Bottom tray tabs
 - [ ] Define tab registry for panel groups (Basic, Color, Details, Geometry, Presets)

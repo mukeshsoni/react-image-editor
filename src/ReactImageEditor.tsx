@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  DotsHorizontalIcon,
   MinusIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
@@ -87,6 +88,20 @@ function formatSignedInt(value: number) {
 
 const WHITE_BALANCE_PICKER_RADIUS = 2;
 const POINT_COLOR_PICKER_RADIUS = 2;
+
+const mobileTabRegistry = [
+  { id: "basic", label: "Basic" },
+  { id: "color", label: "Color" },
+  { id: "tone", label: "Tone" },
+  { id: "details", label: "Details" },
+  { id: "geometry", label: "Geometry" },
+  { id: "presets", label: "Presets" },
+  { id: "crop", label: "Crop" },
+  { id: "healing", label: "Healing" },
+  { id: "history", label: "History" },
+] as const;
+
+type MobileTabId = (typeof mobileTabRegistry)[number]["id"];
 
 type LightSliderProps = {
   label: string;
@@ -288,11 +303,44 @@ export function ReactImageEditor({
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const isMobile = useIsMobile();
+  const [activeMobileTab, setActiveMobileTab] = useState<MobileTabId | null>(
+    null,
+  );
+  const [isMobileMoreMenuOpen, setIsMobileMoreMenuOpen] = useState(false);
+  const mobileMoreMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
   const [jpegQuality, setJpegQuality] = useState(92);
   const [isDownloading, setIsDownloading] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleMobileTabToggle = (tabId: MobileTabId) => {
+    setActiveMobileTab((current) => {
+      const next = current === tabId ? null : tabId;
+
+      if (tabId === "crop") {
+        const isEnabled = next === "crop";
+        setCropMode(isEnabled);
+        if (isEnabled) {
+          setHealingModeEnabled(false);
+        }
+        return next;
+      }
+
+      if (tabId === "healing") {
+        const isEnabled = next === "healing";
+        setHealingModeEnabled(isEnabled);
+        if (isEnabled) {
+          setCropMode(false);
+        }
+        return next;
+      }
+
+      setCropMode(false);
+      setHealingModeEnabled(false);
+      return next;
+    });
+  };
 
   const [isPickingWhiteBalance, setIsPickingWhiteBalance] = useState(false);
   const [isPickingPointColor, setIsPickingPointColor] = useState(false);
@@ -351,6 +399,30 @@ export function ReactImageEditor({
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [healingModeEnabled]);
+
+  useEffect(() => {
+    if (!isMobileMoreMenuOpen) return;
+
+    function handleClick(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (mobileMoreMenuRef.current?.contains(target)) return;
+      setIsMobileMoreMenuOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setIsMobileMoreMenuOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobileMoreMenuOpen]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -1018,6 +1090,81 @@ export function ReactImageEditor({
   const localThemeClass =
     themeScope === "local" && resolvedTheme === "dark" ? "dark" : "";
 
+  const panelRegistry = getPanelRegistry();
+  const basicPanels = panelRegistry.filter((panel) => panel.groupId === "basic");
+  const advancedPanels = panelRegistry.filter((panel) => panel.groupId !== "basic");
+  const mobileBasicPanels = panelRegistry.filter((panel) =>
+    ["white-balance", "light", "color"].includes(panel.id),
+  );
+  const mobileColorPanels = panelRegistry.filter((panel) =>
+    ["color-mixer"].includes(panel.id),
+  );
+  const mobileToneCurvePanels = panelRegistry.filter((panel) =>
+    ["tone-curve"].includes(panel.id),
+  );
+  const mobileDetailsPanels = panelRegistry.filter((panel) => panel.id === "details");
+  const mobilePresetsPanels = panelRegistry.filter((panel) => panel.id === "presets");
+
+  const historyList = (
+    <div data-testid="history-list" className="flex flex-col gap-1">
+      {historyEntries.length === 0 ? (
+        <div
+          data-testid="history-entry-placeholder"
+          className="text-xs text-muted-foreground"
+        >
+          History entries will appear here
+        </div>
+      ) : (
+        historyEntries.map((entry, idx) => (
+          <button
+            key={entry.id}
+            type="button"
+            data-testid={`history-entry-${idx}`}
+            onClick={() => {
+              isApplyingHistoryRef.current = true;
+
+              try {
+                const nextEntry = historyJumpTo(idx);
+                if (nextEntry) {
+                  applyEditsSnapshot(nextEntry.state.edits);
+                  const camera = nextEntry.state.camera;
+                  if (camera) {
+                    setCamera(camera.zoomLevel, camera.offset);
+                  }
+
+                  lastCommittedEditsRef.current = nextEntry.state.edits;
+                  const nextCamera = nextEntry.state.camera;
+                  if (nextCamera) {
+                    zoomPanStateRef.current = {
+                      zoomLevel: nextCamera.zoomLevel,
+                      offset: nextCamera.offset,
+                    };
+                  }
+                }
+              } finally {
+                queueMicrotask(() => {
+                  isApplyingHistoryRef.current = false;
+                });
+              }
+            }}
+            className={
+              idx === historyIndex
+                ? "flex items-center gap-2 rounded-sm bg-primary px-2 py-1 text-left text-xs text-primary-foreground"
+                : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-foreground hover:bg-accent"
+            }
+          >
+            <span className="flex-1 truncate">{entry.label}</span>
+            {entry.delta ? (
+              <span className="tabular-nums text-right min-w-[3rem]">
+                {entry.delta}
+              </span>
+            ) : null}
+          </button>
+        ))
+      )}
+    </div>
+  );
+
   const historyPanel = (
     <div className="w-full bg-muted py-1 px-2 flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
       <details
@@ -1035,65 +1182,7 @@ export function ReactImageEditor({
           <span className="text-xs text-muted-foreground">▾</span>
         </summary>
 
-        <div className="px-3 pb-3">
-          <div data-testid="history-list" className="flex flex-col gap-1">
-            {historyEntries.length === 0 ? (
-              <div
-                data-testid="history-entry-placeholder"
-                className="text-xs text-muted-foreground"
-              >
-                History entries will appear here
-              </div>
-            ) : (
-              historyEntries.map((entry, idx) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  data-testid={`history-entry-${idx}`}
-                  onClick={() => {
-                    isApplyingHistoryRef.current = true;
-
-                    try {
-                      const nextEntry = historyJumpTo(idx);
-                      if (nextEntry) {
-                        applyEditsSnapshot(nextEntry.state.edits);
-                        const camera = nextEntry.state.camera;
-                        if (camera) {
-                          setCamera(camera.zoomLevel, camera.offset);
-                        }
-
-                        lastCommittedEditsRef.current = nextEntry.state.edits;
-                        const nextCamera = nextEntry.state.camera;
-                        if (nextCamera) {
-                          zoomPanStateRef.current = {
-                            zoomLevel: nextCamera.zoomLevel,
-                            offset: nextCamera.offset,
-                          };
-                        }
-                      }
-                    } finally {
-                      queueMicrotask(() => {
-                        isApplyingHistoryRef.current = false;
-                      });
-                    }
-                  }}
-                  className={
-                    idx === historyIndex
-                      ? "flex items-center gap-2 rounded-sm bg-primary px-2 py-1 text-left text-xs text-primary-foreground"
-                      : "flex items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-foreground hover:bg-accent"
-                  }
-                >
-                  <span className="flex-1 truncate">{entry.label}</span>
-                  {entry.delta ? (
-                    <span className="tabular-nums text-right min-w-[3rem]">
-                      {entry.delta}
-                    </span>
-                  ) : null}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
+        <div className="px-3 pb-3">{historyList}</div>
       </details>
     </div>
   );
@@ -2367,19 +2456,17 @@ export function ReactImageEditor({
                   />
                 </div>
               </div>
-              {getPanelRegistry()
-                .filter((panel) => panel.groupId === "basic")
-                .map((panel) => (
-                  <panel.Component
-                    key={panel.id}
-                    isImageLoaded={isImageLoaded}
-                    Slider={LightSlider}
-                    formatSigned={formatSigned}
-                    formatSignedInt={formatSignedInt}
-                    setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                    setIsPickingPointColor={setIsPickingPointColor}
-                  />
-                ))}
+          {basicPanels.map((panel) => (
+            <panel.Component
+              key={panel.id}
+              isImageLoaded={isImageLoaded}
+              Slider={LightSlider}
+              formatSigned={formatSigned}
+              formatSignedInt={formatSignedInt}
+              setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+              setIsPickingPointColor={setIsPickingPointColor}
+            />
+          ))}
             </div>
           </details>
 
@@ -2652,19 +2739,17 @@ export function ReactImageEditor({
             </div>
           </details>
 
-          {getPanelRegistry()
-            .filter((panel) => panel.groupId !== "basic")
-            .map((panel) => (
-              <panel.Component
-                key={panel.id}
-                isImageLoaded={isImageLoaded}
-                Slider={LightSlider}
-                formatSigned={formatSigned}
-                formatSignedInt={formatSignedInt}
-                setIsPickingWhiteBalance={setIsPickingWhiteBalance}
-                setIsPickingPointColor={setIsPickingPointColor}
-              />
-            ))}
+          {advancedPanels.map((panel) => (
+            <panel.Component
+              key={panel.id}
+              isImageLoaded={isImageLoaded}
+              Slider={LightSlider}
+              formatSigned={formatSigned}
+              formatSignedInt={formatSignedInt}
+              setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+              setIsPickingPointColor={setIsPickingPointColor}
+            />
+          ))}
         </div>
         <div className="sticky bottom-0 mt-auto border-t bg-muted px-2 py-2">
           <div className="flex justify-end">
@@ -2722,9 +2807,9 @@ export function ReactImageEditor({
     </>
   );
 
-  const mobileTrayPanel = (
-    <div className="flex flex-col gap-3 p-3">
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+  const mobileToolbar = (
+    <div className="flex items-center gap-2 border-b bg-muted px-3 py-2">
+      <div className="flex flex-1 min-w-0 items-center gap-2 overflow-x-auto pb-1">
         <div className="flex items-center gap-2 shrink-0">
           <Button
             type="button"
@@ -2800,42 +2885,6 @@ export function ReactImageEditor({
           </Button>
         </div>
 
-        <HealingToolButtons
-          enabled={healingModeEnabled}
-          disabled={!isImageLoaded}
-          size="lg"
-          className="h-11 px-4 shrink-0"
-          onToggle={() => {
-            setHealingModeEnabled((prev) => {
-              const next = !prev;
-              if (next) {
-                setCropMode(false);
-              }
-              return next;
-            });
-          }}
-        />
-
-        <CropToolButtons
-          cropMode={cropMode}
-          setCropMode={(next) => {
-            setCropMode(next);
-            if (next) {
-              setHealingModeEnabled(false);
-            }
-          }}
-          hasAppliedCrop={cropCommitted}
-          size="lg"
-          className="h-11 px-4 shrink-0"
-          onResetCrop={() => {
-            if (!originalImageRef.current) return;
-            imageRef.current = originalImageRef.current;
-            useCropStore.getState?.().clearCommittedCrop?.();
-            resetRotation();
-            resetZoom();
-          }}
-        />
-
         <ExportTool
           imageRef={imageRef}
           isImageLoaded={isImageLoaded}
@@ -2853,6 +2902,377 @@ export function ReactImageEditor({
           setExportError={setExportError}
         />
       </div>
+
+      <div className="relative shrink-0" ref={mobileMoreMenuRef}>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="size-11"
+          aria-haspopup="menu"
+          aria-expanded={isMobileMoreMenuOpen}
+          aria-label="More actions"
+          onClick={() => setIsMobileMoreMenuOpen((open) => !open)}
+        >
+          <DotsHorizontalIcon />
+        </Button>
+
+        {isMobileMoreMenuOpen ? (
+          <div
+            role="menu"
+            aria-label="More actions"
+            className="absolute right-0 z-30 mt-2 w-[200px] rounded-md border bg-popover p-2 text-sm shadow-md"
+          >
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-sm px-2 py-2 text-left hover:bg-accent"
+              onClick={() => setActiveMobileTab("history")}
+            >
+              <span>History</span>
+              <span className="text-xs text-muted-foreground">Tab</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+
+
+  const mobileTrayPanel = (
+    <div className="flex h-full flex-col gap-3 p-3">
+      {activeMobileTab ? (
+        <div className="max-h-[250px] overflow-y-auto rounded-md border bg-card p-3 pt-5">
+          {activeMobileTab === "basic"
+            ? mobileBasicPanels.map((panel) => (
+                <panel.Component
+                  key={panel.id}
+                  isImageLoaded={isImageLoaded}
+                  Slider={LightSlider}
+                  formatSigned={formatSigned}
+                  formatSignedInt={formatSignedInt}
+                  setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                  setIsPickingPointColor={setIsPickingPointColor}
+                />
+              ))
+            : null}
+
+          {activeMobileTab === "color"
+            ? mobileColorPanels.map((panel) => (
+                <panel.Component
+                  key={panel.id}
+                  isImageLoaded={isImageLoaded}
+                  Slider={LightSlider}
+                  formatSigned={formatSigned}
+                  formatSignedInt={formatSignedInt}
+                  setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                  setIsPickingPointColor={setIsPickingPointColor}
+                  panelVariant="flat"
+                />
+              ))
+            : null}
+
+          {activeMobileTab === "tone"
+            ? mobileToneCurvePanels.map((panel) => (
+                <panel.Component
+                  key={panel.id}
+                  isImageLoaded={isImageLoaded}
+                  Slider={LightSlider}
+                  formatSigned={formatSigned}
+                  formatSignedInt={formatSignedInt}
+                  setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                  setIsPickingPointColor={setIsPickingPointColor}
+                  panelVariant="flat"
+                />
+              ))
+            : null}
+
+          {activeMobileTab === "details"
+            ? mobileDetailsPanels.map((panel) => (
+                <panel.Component
+                  key={panel.id}
+                  isImageLoaded={isImageLoaded}
+                  Slider={LightSlider}
+                  formatSigned={formatSigned}
+                  formatSignedInt={formatSignedInt}
+                  setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                  setIsPickingPointColor={setIsPickingPointColor}
+                />
+              ))
+            : null}
+
+          {activeMobileTab === "geometry" ? (
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="text-xs font-medium text-foreground">Straighten</div>
+                <div className="mt-3 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs" htmlFor="mobile-transform-rotate">
+                      Rotate
+                    </label>
+                    <span className="text-xs font-medium tabular-nums">
+                      {(cropSettings.rotation ?? 0).toFixed(1)}°
+                    </span>
+                  </div>
+
+                  <DebouncedRange
+                    id="mobile-transform-rotate"
+                    label="Rotate"
+                    value={cropSettings.rotation ?? 0}
+                    defaultValue={0}
+                    min={-45}
+                    max={45}
+                    step={0.1}
+                    onValueChange={setRotation}
+                    className="w-full"
+                    disabled={!isImageLoaded}
+                  />
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3 text-xs"
+                      onClick={resetRotation}
+                      disabled={!isImageLoaded}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3 text-xs"
+                      onClick={handleAutoStraighten}
+                      disabled={!isImageLoaded || isAutoStraightening}
+                    >
+                      {isAutoStraightening
+                        ? "Straightening…"
+                        : "Auto Straighten"}
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs" htmlFor="mobile-transform-rotate-input">
+                      Angle
+                    </label>
+                    <input
+                      id="mobile-transform-rotate-input"
+                      type="number"
+                      min={-45}
+                      max={45}
+                      step={0.1}
+                      value={(cropSettings.rotation ?? 0).toFixed(1)}
+                      onChange={(e) => setRotation(Number(e.target.value))}
+                      disabled={!isImageLoaded}
+                      className="w-[84px] rounded-sm border bg-background px-2 py-1 text-xs text-foreground"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-medium text-foreground">Perspective</div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-3 text-xs"
+                    onClick={() =>
+                      setPerspective({
+                        vertical: 0,
+                        horizontal: 0,
+                        aspect: 0,
+                      })
+                    }
+                    disabled={!isImageLoaded}
+                  >
+                    Reset
+                  </Button>
+                </div>
+
+                <div className="mt-3 flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs" htmlFor="mobile-transform-vertical">
+                        Vertical
+                      </label>
+                      <span className="text-xs font-medium tabular-nums">
+                        {formatSignedInt(geometryOptics.perspective.vertical)}
+                      </span>
+                    </div>
+                    <DebouncedRange
+                      id="mobile-transform-vertical"
+                      label="Vertical"
+                      value={geometryOptics.perspective.vertical}
+                      defaultValue={0}
+                      min={-100}
+                      max={100}
+                      step={1}
+                      onValueChange={(value) =>
+                        setPerspective({ vertical: value })
+                      }
+                      className="w-full"
+                      disabled={!isImageLoaded}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs" htmlFor="mobile-transform-horizontal">
+                        Horizontal
+                      </label>
+                      <span className="text-xs font-medium tabular-nums">
+                        {formatSignedInt(geometryOptics.perspective.horizontal)}
+                      </span>
+                    </div>
+                    <DebouncedRange
+                      id="mobile-transform-horizontal"
+                      label="Horizontal"
+                      value={geometryOptics.perspective.horizontal}
+                      defaultValue={0}
+                      min={-100}
+                      max={100}
+                      step={1}
+                      onValueChange={(value) =>
+                        setPerspective({ horizontal: value })
+                      }
+                      className="w-full"
+                      disabled={!isImageLoaded}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs" htmlFor="mobile-transform-aspect">
+                        Aspect
+                      </label>
+                      <span className="text-xs font-medium tabular-nums">
+                        {formatSignedInt(geometryOptics.perspective.aspect ?? 0)}
+                      </span>
+                    </div>
+                    <DebouncedRange
+                      id="mobile-transform-aspect"
+                      label="Aspect"
+                      value={geometryOptics.perspective.aspect ?? 0}
+                      defaultValue={0}
+                      min={-100}
+                      max={100}
+                      step={1}
+                      onValueChange={(value) => setPerspective({ aspect: value })}
+                      className="w-full"
+                      disabled={!isImageLoaded}
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={cropSettings.constrainCrop ?? true}
+                      onChange={(e) => setConstrainCrop(e.target.checked)}
+                      disabled={!isImageLoaded}
+                    />
+                    Constrain crop
+                  </label>
+                </div>
+              </div>
+
+              <div className="border-t pt-3">
+                <div className="text-xs font-medium text-foreground">Guided Upright</div>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={guidedUprightEnabled}
+                      onChange={(e) => setGuidedUprightEnabled(e.target.checked)}
+                      disabled={!isImageLoaded}
+                    />
+                    Guided
+                  </label>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-3 text-xs"
+                    onClick={() => setGuidedUprightEnabled(false)}
+                    disabled={!isImageLoaded || !guidedUprightEnabled}
+                  >
+                    Apply Guided
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border-t pt-3">
+                <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="lens" />
+              </div>
+
+              <div className="border-t pt-3">
+                <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="optics" />
+              </div>
+            </div>
+          ) : null}
+
+          {activeMobileTab === "presets"
+            ? mobilePresetsPanels.map((panel) => (
+                <panel.Component
+                  key={panel.id}
+                  isImageLoaded={isImageLoaded}
+                  Slider={LightSlider}
+                  formatSigned={formatSigned}
+                  formatSignedInt={formatSignedInt}
+                  setIsPickingWhiteBalance={setIsPickingWhiteBalance}
+                  setIsPickingPointColor={setIsPickingPointColor}
+                />
+              ))
+            : null}
+
+          {activeMobileTab === "history" ? (
+            <>
+              <div className="text-xs font-medium text-foreground">History</div>
+              {historyList}
+            </>
+          ) : null}
+
+          {activeMobileTab === "healing" ? (
+            <HealingToolPanel enabled={healingModeEnabled} isImageLoaded={isImageLoaded} />
+          ) : null}
+
+          {activeMobileTab === "crop" ? (
+            <CropToolOptions
+              cropMode={cropMode}
+              imageRef={imageRef}
+              zoomLevel={zoomLevel}
+              offset={offset}
+              rotation={rotation}
+              resetAll={resetAll}
+              onCropCommitted={() => {
+                setIsImageLoaded(true);
+                setCropMode(false);
+                resetRotation();
+                resetZoom();
+              }}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {mobileTabRegistry.map((tab) => (
+          <Button
+            key={tab.id}
+            type="button"
+            size="sm"
+            variant={activeMobileTab === tab.id ? "default" : "outline"}
+            className="h-9 px-4 text-xs shrink-0"
+            onClick={() => handleMobileTabToggle(tab.id)}
+            aria-pressed={activeMobileTab === tab.id}
+          >
+            {tab.label}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 
@@ -2863,10 +3283,15 @@ export function ReactImageEditor({
     >
       <EditorThemeProvider resolvedTheme={resolvedTheme}>
         {isMobile ? (
-          <MobileEditorLayout
-            canvasPanel={mobileCanvasPanel}
-            trayPanel={mobileTrayPanel}
-          />
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="relative z-20">
+            {mobileToolbar}
+            </div>
+            <MobileEditorLayout
+              canvasPanel={mobileCanvasPanel}
+              trayPanel={mobileTrayPanel}
+            />
+          </div>
         ) : (
           <DesktopEditorLayout
             historyPanel={historyPanel}
