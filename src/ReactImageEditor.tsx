@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  DotsHorizontalIcon,
   MinusIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
@@ -89,19 +88,24 @@ function formatSignedInt(value: number) {
 const WHITE_BALANCE_PICKER_RADIUS = 2;
 const POINT_COLOR_PICKER_RADIUS = 2;
 
-const mobileTabRegistry = [
+const mobileEditTabRegistry = [
   { id: "basic", label: "Basic" },
   { id: "color", label: "Color" },
   { id: "tone", label: "Tone" },
   { id: "details", label: "Details" },
   { id: "geometry", label: "Geometry" },
+] as const;
+
+const mobileBottomTabRegistry = [
   { id: "presets", label: "Presets" },
   { id: "crop", label: "Crop" },
   { id: "healing", label: "Healing" },
+  { id: "edit", label: "Edit" },
   { id: "history", label: "History" },
 ] as const;
 
-type MobileTabId = (typeof mobileTabRegistry)[number]["id"];
+type MobileEditTabId = (typeof mobileEditTabRegistry)[number]["id"];
+type MobileBottomTabId = (typeof mobileBottomTabRegistry)[number]["id"];
 
 type LightSliderProps = {
   label: string;
@@ -303,19 +307,20 @@ export function ReactImageEditor({
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const isMobile = useIsMobile();
-  const [activeMobileTab, setActiveMobileTab] = useState<MobileTabId | null>(
-    null,
-  );
-  const [isMobileMoreMenuOpen, setIsMobileMoreMenuOpen] = useState(false);
-  const mobileMoreMenuRef = useRef<HTMLDivElement | null>(null);
+  const [activeMobileBottomTab, setActiveMobileBottomTab] = useState<
+    MobileBottomTabId | null
+  >(null);
+  const [activeMobileEditTab, setActiveMobileEditTab] = useState<
+    MobileEditTabId
+  >("basic");
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
   const [jpegQuality, setJpegQuality] = useState(92);
   const [isDownloading, setIsDownloading] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  const handleMobileTabToggle = (tabId: MobileTabId) => {
-    setActiveMobileTab((current) => {
+  const handleMobileBottomTabToggle = (tabId: MobileBottomTabId) => {
+    setActiveMobileBottomTab((current) => {
       const next = current === tabId ? null : tabId;
 
       if (tabId === "crop") {
@@ -340,6 +345,13 @@ export function ReactImageEditor({
       setHealingModeEnabled(false);
       return next;
     });
+  };
+
+  const handleMobileEditTabToggle = (tabId: MobileEditTabId) => {
+    setActiveMobileEditTab(tabId);
+    setActiveMobileBottomTab("edit");
+    setCropMode(false);
+    setHealingModeEnabled(false);
   };
 
   const [isPickingWhiteBalance, setIsPickingWhiteBalance] = useState(false);
@@ -399,30 +411,6 @@ export function ReactImageEditor({
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [healingModeEnabled]);
-
-  useEffect(() => {
-    if (!isMobileMoreMenuOpen) return;
-
-    function handleClick(event: MouseEvent) {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (mobileMoreMenuRef.current?.contains(target)) return;
-      setIsMobileMoreMenuOpen(false);
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setIsMobileMoreMenuOpen(false);
-    }
-
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isMobileMoreMenuOpen]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -1725,7 +1713,7 @@ export function ReactImageEditor({
   const mobileCanvasPanel = (
     <>
       <div className="flex flex-col flex-1 p-0">
-        <div className="flex-1 border-2 relative">
+        <div className="flex-1 border-2 relative z-0">
           {isPickingWhiteBalance ? (
             <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
               Click image to pick white balance (Esc to cancel)
@@ -2903,46 +2891,15 @@ export function ReactImageEditor({
         />
       </div>
 
-      <div className="relative shrink-0" ref={mobileMoreMenuRef}>
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          className="size-11"
-          aria-haspopup="menu"
-          aria-expanded={isMobileMoreMenuOpen}
-          aria-label="More actions"
-          onClick={() => setIsMobileMoreMenuOpen((open) => !open)}
-        >
-          <DotsHorizontalIcon />
-        </Button>
-
-        {isMobileMoreMenuOpen ? (
-          <div
-            role="menu"
-            aria-label="More actions"
-            className="absolute right-0 z-30 mt-2 w-[200px] rounded-md border bg-popover p-2 text-sm shadow-md"
-          >
-            <button
-              type="button"
-              className="flex w-full items-center justify-between rounded-sm px-2 py-2 text-left hover:bg-accent"
-              onClick={() => setActiveMobileTab("history")}
-            >
-              <span>History</span>
-              <span className="text-xs text-muted-foreground">Tab</span>
-            </button>
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 
 
   const mobileTrayPanel = (
-    <div className="flex h-full flex-col gap-3 p-3">
-      {activeMobileTab ? (
-        <div className="max-h-[250px] overflow-y-auto rounded-md border bg-card p-3 pt-5">
-          {activeMobileTab === "basic"
+    <div className="mobile-tray-panel relative flex h-full flex-col gap-3 p-3">
+      {activeMobileBottomTab ? (
+        <div className="relative max-h-[250px] overflow-y-auto rounded-md border bg-card p-3 pt-5">
+          {activeMobileBottomTab === "edit" && activeMobileEditTab === "basic"
             ? mobileBasicPanels.map((panel) => (
                 <panel.Component
                   key={panel.id}
@@ -2956,7 +2913,7 @@ export function ReactImageEditor({
               ))
             : null}
 
-          {activeMobileTab === "color"
+          {activeMobileBottomTab === "edit" && activeMobileEditTab === "color"
             ? mobileColorPanels.map((panel) => (
                 <panel.Component
                   key={panel.id}
@@ -2971,7 +2928,7 @@ export function ReactImageEditor({
               ))
             : null}
 
-          {activeMobileTab === "tone"
+          {activeMobileBottomTab === "edit" && activeMobileEditTab === "tone"
             ? mobileToneCurvePanels.map((panel) => (
                 <panel.Component
                   key={panel.id}
@@ -2986,7 +2943,7 @@ export function ReactImageEditor({
               ))
             : null}
 
-          {activeMobileTab === "details"
+          {activeMobileBottomTab === "edit" && activeMobileEditTab === "details"
             ? mobileDetailsPanels.map((panel) => (
                 <panel.Component
                   key={panel.id}
@@ -3000,7 +2957,7 @@ export function ReactImageEditor({
               ))
             : null}
 
-          {activeMobileTab === "geometry" ? (
+          {activeMobileBottomTab === "edit" && activeMobileEditTab === "geometry" ? (
             <div className="flex flex-col gap-4">
               <div>
                 <div className="text-xs font-medium text-foreground">Straighten</div>
@@ -3214,7 +3171,7 @@ export function ReactImageEditor({
             </div>
           ) : null}
 
-          {activeMobileTab === "presets"
+          {activeMobileBottomTab === "presets"
             ? mobilePresetsPanels.map((panel) => (
                 <panel.Component
                   key={panel.id}
@@ -3228,50 +3185,72 @@ export function ReactImageEditor({
               ))
             : null}
 
-          {activeMobileTab === "history" ? (
+          {activeMobileBottomTab === "history" ? (
             <>
               <div className="text-xs font-medium text-foreground">History</div>
               {historyList}
             </>
           ) : null}
 
-          {activeMobileTab === "healing" ? (
+          {activeMobileBottomTab === "healing" ? (
             <HealingToolPanel enabled={healingModeEnabled} isImageLoaded={isImageLoaded} />
           ) : null}
 
-          {activeMobileTab === "crop" ? (
-            <CropToolOptions
-              cropMode={cropMode}
-              imageRef={imageRef}
-              zoomLevel={zoomLevel}
-              offset={offset}
-              rotation={rotation}
-              resetAll={resetAll}
-              onCropCommitted={() => {
-                setIsImageLoaded(true);
-                setCropMode(false);
-                resetRotation();
-                resetZoom();
-              }}
-            />
+          {activeMobileBottomTab === "crop" ? (
+            <div className="relative z-10">
+              <CropToolOptions
+                cropMode={cropMode}
+                imageRef={imageRef}
+                zoomLevel={zoomLevel}
+                offset={offset}
+                rotation={rotation}
+                resetAll={resetAll}
+                onCropCommitted={() => {
+                  setIsImageLoaded(true);
+                  setCropMode(false);
+                  resetRotation();
+                  resetZoom();
+                }}
+              />
+            </div>
           ) : null}
         </div>
       ) : null}
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {mobileTabRegistry.map((tab) => (
-          <Button
-            key={tab.id}
-            type="button"
-            size="sm"
-            variant={activeMobileTab === tab.id ? "default" : "outline"}
-            className="h-9 px-4 text-xs shrink-0"
-            onClick={() => handleMobileTabToggle(tab.id)}
-            aria-pressed={activeMobileTab === tab.id}
-          >
-            {tab.label}
-          </Button>
-        ))}
+      <div className="flex flex-col gap-2">
+        {activeMobileBottomTab === "edit" ? (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {mobileEditTabRegistry.map((tab) => (
+              <Button
+                key={tab.id}
+                type="button"
+                size="sm"
+                variant={activeMobileEditTab === tab.id ? "default" : "outline"}
+                className="h-9 px-4 text-xs shrink-0"
+                onClick={() => handleMobileEditTabToggle(tab.id)}
+                aria-pressed={activeMobileEditTab === tab.id}
+              >
+                {tab.label}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {mobileBottomTabRegistry.map((tab) => (
+            <Button
+              key={tab.id}
+              type="button"
+              size="sm"
+              variant={activeMobileBottomTab === tab.id ? "default" : "outline"}
+              className="h-9 px-4 text-xs shrink-0"
+              onClick={() => handleMobileBottomTabToggle(tab.id)}
+              aria-pressed={activeMobileBottomTab === tab.id}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -3284,7 +3263,7 @@ export function ReactImageEditor({
       <EditorThemeProvider resolvedTheme={resolvedTheme}>
         {isMobile ? (
           <div className="flex h-full min-h-0 flex-col">
-            <div className="relative z-20">
+            <div className="relative">
             {mobileToolbar}
             </div>
             <MobileEditorLayout

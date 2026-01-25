@@ -191,3 +191,61 @@
         cursor: not-allowed;
     }
 }
+
+@layer base {
+    @media (max-width: 768px) {
+        .react-image-editor .mobile-editor-layout {
+            height: 100dvh;
+        }
+
+        @supports not (height: 100dvh) {
+            .react-image-editor .mobile-editor-layout {
+                height: 100svh;
+            }
+        }
+
+        .react-image-editor .mobile-tray-panel {
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        }
+
+        .react-image-editor input[type="range"] {
+            height: 28px;
+            touch-action: pan-y;
+        }
+
+        .react-image-editor input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+        }
+
+        .react-image-editor input[type="range"]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            margin-top: -7px;
+        }
+
+        .react-image-editor input[type="range"]::-moz-range-track {
+            height: 4px;
+        }
+
+        .react-image-editor input[type="range"]::-moz-range-thumb {
+            height: 18px;
+            width: 18px;
+        }
+
+        .react-image-editor input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .react-image-editor [data-slot="select-trigger"] {
+            min-height: 40px;
+        }
+
+        .react-image-editor input[type="checkbox"],
+        .react-image-editor [data-slot="select-trigger"],
+        .react-image-editor button,
+        .react-image-editor [role="button"] {
+            touch-action: manipulation;
+        }
+    }
+}

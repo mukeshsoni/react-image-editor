@@ -776,9 +776,24 @@ export const useCanvasZoomPan = (
     if (!zoomPanConfig.enableTouch) return;
 
     const handleNativeTouchStart = (event: globalThis.TouchEvent) => {
+      if (!canvasRef.current || !imageRef.current) return;
+
+      const target = event.target;
+      if (target instanceof Element && !canvasRef.current.contains(target)) {
+        return;
+      }
+
       handleTouchStart(event as unknown as TouchEvent<HTMLCanvasElement>);
     };
+
     const handleNativeTouchMove = (event: globalThis.TouchEvent) => {
+      if (!canvasRef.current || !imageRef.current) return;
+
+      const target = event.target;
+      if (target instanceof Element && !canvasRef.current.contains(target)) {
+        return;
+      }
+
       handleTouchMove(event as unknown as TouchEvent<HTMLCanvasElement>);
     };
 
@@ -793,7 +808,7 @@ export const useCanvasZoomPan = (
       document.removeEventListener("touchstart", handleNativeTouchStart);
       document.removeEventListener("touchmove", handleNativeTouchMove);
     };
-  }, [handleTouchMove, handleTouchStart, zoomPanConfig.enableTouch]);
+  }, [canvasRef, handleTouchMove, handleTouchStart, imageRef, zoomPanConfig.enableTouch]);
   useEffect(() => {
     if (canvasRef.current && imageRef.current) {
       // This is the same as resetZoom functions content

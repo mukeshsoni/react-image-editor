@@ -119,7 +119,9 @@ export function CropToolOptions({
 
   return (
     <div className="m-2">
-      <CropOptions onReset={handleCropReset} onApply={handleCropApplication} />
+      <div className="relative z-10">
+        <CropOptions onReset={handleCropReset} onApply={handleCropApplication} />
+      </div>
     </div>
   );
 }
