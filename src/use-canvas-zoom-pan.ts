@@ -779,7 +779,7 @@ export const useCanvasZoomPan = (
       if (!canvasRef.current || !imageRef.current) return;
 
       const target = event.target;
-      if (target instanceof Element && !canvasRef.current.contains(target)) {
+      if (!target || !canvasRef.current.contains(target as Node)) {
         return;
       }
 
@@ -790,7 +790,7 @@ export const useCanvasZoomPan = (
       if (!canvasRef.current || !imageRef.current) return;
 
       const target = event.target;
-      if (target instanceof Element && !canvasRef.current.contains(target)) {
+      if (!target || !canvasRef.current.contains(target as Node)) {
         return;
       }
 
