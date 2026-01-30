@@ -3618,7 +3618,7 @@ export function ReactImageEditor({
 
       <div className="flex flex-col">
         {activeMobileBottomTab === "edit" ? (
-          <div className="flex items-center gap-2 overflow-x-auto py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex items-center gap-2 overflow-x-auto px-3 py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {mobileEditTabRegistry.map((tab) => (
               <Button
                 key={tab.id}
@@ -3639,7 +3639,7 @@ export function ReactImageEditor({
           <div className="my-0.5 h-px w-full bg-border/20" aria-hidden="true" />
         ) : null}
 
-        <div className="flex items-center gap-2 overflow-x-auto py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center gap-2 overflow-x-auto px-3 py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {mobileBottomTabRegistry.map((tab) => (
             <Button
               key={tab.id}
