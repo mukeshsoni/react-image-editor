@@ -7,7 +7,7 @@ import { useSharpeningStore } from "@/store/sharpeningStore";
 import type { PanelContext } from "./context";
 import type { PanelDefinition } from "./types";
 
-function DetailsPanelFromContext({ isImageLoaded, Slider }: PanelContext) {
+function DetailsPanelFromContext({ isImageLoaded, Slider, panelVariant }: PanelContext) {
   const sharpening = useSharpeningStore((state) => state.sharpening);
   const setSharpening = useSharpeningStore((state) => state.setSharpening);
   const resetSharpening = useSharpeningStore((state) => state.resetSharpening);
@@ -21,6 +21,23 @@ function DetailsPanelFromContext({ isImageLoaded, Slider }: PanelContext) {
       key: "react-image-editor:accordion:details",
       defaultValue: false,
     });
+
+  // On mobile the editor already provides its own tray + tabs; nesting another
+  // accordion makes the UI feel redundant and cramped.
+  if (panelVariant === "flat") {
+    return (
+      <DetailsPanel
+        isImageLoaded={isImageLoaded}
+        sharpening={sharpening}
+        setSharpening={setSharpening}
+        resetSharpening={resetSharpening}
+        denoise={denoise}
+        setDenoise={setDenoise}
+        resetDenoise={resetDenoise}
+        Slider={Slider}
+      />
+    );
+  }
 
   return (
     <details

@@ -221,7 +221,11 @@ function LightSlider({
         disabled={disabled}
         aria-label={label}
         className="w-full"
-        style={{ "--range-progress": `${progress}%` } as unknown as import("react").CSSProperties}
+        style={
+          {
+            "--range-progress": `${progress}%`,
+          } as unknown as import("react").CSSProperties
+        }
       />
     </div>
   );
@@ -263,10 +267,11 @@ export function ReactImageEditor({
     defaultValue: false,
   });
 
-  const [isTransformPanelOpen, setIsTransformPanelOpen] = useLocalStorageBoolean({
-    key: "react-image-editor:accordion:transform",
-    defaultValue: false,
-  });
+  const [isTransformPanelOpen, setIsTransformPanelOpen] =
+    useLocalStorageBoolean({
+      key: "react-image-editor:accordion:transform",
+      defaultValue: false,
+    });
 
   const [isLensCorrectionsPanelOpen, setIsLensCorrectionsPanelOpen] =
     useLocalStorageBoolean({
@@ -315,12 +320,10 @@ export function ReactImageEditor({
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const isMobile = useIsMobile();
-  const [activeMobileBottomTab, setActiveMobileBottomTab] = useState<
-    MobileBottomTabId | null
-  >(null);
-  const [activeMobileEditTab, setActiveMobileEditTab] = useState<
-    MobileEditTabId | null
-  >(null);
+  const [activeMobileBottomTab, setActiveMobileBottomTab] =
+    useState<MobileBottomTabId | null>(null);
+  const [activeMobileEditTab, setActiveMobileEditTab] =
+    useState<MobileEditTabId | null>(null);
 
   const isMobileTrayContentOpen =
     activeMobileBottomTab != null &&
@@ -433,6 +436,7 @@ export function ReactImageEditor({
 
   const mobileCanvasViewportRef = useRef<HTMLDivElement | null>(null);
   const mobileTrayRef = useRef<HTMLDivElement | null>(null);
+  const mobileTrayScrollRef = useRef<HTMLDivElement | null>(null);
   const mobileNudgeRafRef = useRef<number | null>(null);
 
   const isAutoCameraAdjustRef = useRef(false);
@@ -575,7 +579,11 @@ export function ReactImageEditor({
       }
 
       const currentCamera = { zoomLevel, offset };
-      if (!Number.isFinite(currentCamera.zoomLevel) || currentCamera.zoomLevel <= 0) return;
+      if (
+        !Number.isFinite(currentCamera.zoomLevel) ||
+        currentCamera.zoomLevel <= 0
+      )
+        return;
 
       // Clamp current camera after resize.
       const panBounds = calculatePanBounds(
@@ -721,6 +729,17 @@ export function ReactImageEditor({
   useEffect(() => {
     if (!isMobile) return;
 
+    const el = mobileTrayScrollRef.current;
+    if (!el) return;
+
+    // Each mobile tray tab should start scrolled to the top.
+    // Without this, switching tabs retains the prior scroll position.
+    el.scrollTop = 0;
+  }, [activeMobileBottomTab, activeMobileEditTab, isMobile]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+
     const wasOpen = wasMobileTrayContentOpenRef.current;
     wasMobileTrayContentOpenRef.current = isMobileTrayContentOpen;
 
@@ -844,10 +863,7 @@ export function ReactImageEditor({
   }, [cropCommit, cropCommitted, offset, rotation, zoomLevel]);
 
   const canvasPointToImagePoint = useMemo(() => {
-    return (point: {
-      x: number;
-      y: number;
-    }): Point | null => {
+    return (point: { x: number; y: number }): Point | null => {
       if (!imageRef.current) return null;
 
       const {
@@ -892,9 +908,7 @@ export function ReactImageEditor({
   }, [cropCommit, cropCommitted, zoomLevel]);
 
   const imagePointToCanvasPoint = useMemo(() => {
-    return (
-      point: Point,
-    ): { x: number; y: number } | null => {
+    return (point: Point): { x: number; y: number } | null => {
       if (!imageRef.current) return null;
 
       const {
@@ -1374,7 +1388,9 @@ export function ReactImageEditor({
   const basicPanels = panelRegistry.filter(
     (panel) => panel.groupId === "basic" && panel.id !== "presets",
   );
-  const advancedPanels = panelRegistry.filter((panel) => panel.groupId !== "basic");
+  const advancedPanels = panelRegistry.filter(
+    (panel) => panel.groupId !== "basic",
+  );
   const mobileBasicPanels = panelRegistry.filter((panel) =>
     ["white-balance", "light", "color"].includes(panel.id),
   );
@@ -1384,9 +1400,15 @@ export function ReactImageEditor({
   const mobileToneCurvePanels = panelRegistry.filter((panel) =>
     ["tone-curve"].includes(panel.id),
   );
-  const mobileDetailsPanels = panelRegistry.filter((panel) => panel.id === "details");
-  const mobilePresetsPanels = panelRegistry.filter((panel) => panel.id === "presets");
-  const desktopPresetsPanels = panelRegistry.filter((panel) => panel.id === "presets");
+  const mobileDetailsPanels = panelRegistry.filter(
+    (panel) => panel.id === "details",
+  );
+  const mobilePresetsPanels = panelRegistry.filter(
+    (panel) => panel.id === "presets",
+  );
+  const desktopPresetsPanels = panelRegistry.filter(
+    (panel) => panel.id === "presets",
+  );
 
   const historyList = (
     <div data-testid="history-list" className="flex flex-col gap-1">
@@ -1586,9 +1608,9 @@ export function ReactImageEditor({
                       }
 
                       event.preventDefault();
-                      (
-                        event.currentTarget as HTMLElement
-                      ).setPointerCapture?.(event.pointerId);
+                      (event.currentTarget as HTMLElement).setPointerCapture?.(
+                        event.pointerId,
+                      );
 
                       draftStrokeRef.current = { points: [imagePos] };
                     },
@@ -1622,8 +1644,7 @@ export function ReactImageEditor({
                         setIsHoveringSpotSource(false);
                       }
 
-                      const draggingSpotId =
-                        draggingSpotSourceIdRef.current;
+                      const draggingSpotId = draggingSpotSourceIdRef.current;
                       if (
                         healingMode === "spot" &&
                         draggingSpotId &&
@@ -1656,8 +1677,7 @@ export function ReactImageEditor({
                       if (!draft) return;
                       if (!imagePos) return;
 
-                      const lastPoint =
-                        draft.points[draft.points.length - 1];
+                      const lastPoint = draft.points[draft.points.length - 1];
                       const dx = imagePos.x - lastPoint.x;
                       const dy = imagePos.y - lastPoint.y;
                       const distSq = dx * dx + dy * dy;
@@ -1696,14 +1716,12 @@ export function ReactImageEditor({
                       if (draft.points.length === 0) return;
 
                       const id =
-                        typeof crypto !== "undefined" &&
-                        "randomUUID" in crypto
+                        typeof crypto !== "undefined" && "randomUUID" in crypto
                           ? crypto.randomUUID()
                           : `${Date.now()}-${Math.random()}`;
 
                       if (healingMode === "spot") {
-                        const center =
-                          draft.points[draft.points.length - 1];
+                        const center = draft.points[draft.points.length - 1];
                         const radius = healingBrush.size / 2;
                         const imageWidth = imageRef.current?.width ?? 0;
                         const imageHeight = imageRef.current?.height ?? 0;
@@ -1894,8 +1912,14 @@ export function ReactImageEditor({
               <div
                 className="rounded-full border border-border bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.65)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.25)]"
                 style={{
-                  width: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
-                  height: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
+                  width: Math.max(
+                    1,
+                    healingBrush.size * drawZoomLevelForCursor,
+                  ),
+                  height: Math.max(
+                    1,
+                    healingBrush.size * drawZoomLevelForCursor,
+                  ),
                   transform: "translate(-50%, -50%)",
                 }}
               />
@@ -1970,7 +1994,10 @@ export function ReactImageEditor({
         </div>
       </div>
       <div className="flex flex-row-reverse w-full py-2 px-4">
-        <div className="flex gap-0.5" style={{ display: !cropMode ? "flex" : "none" }}>
+        <div
+          className="flex gap-0.5"
+          style={{ display: !cropMode ? "flex" : "none" }}
+        >
           <Button
             className="size-11 md:size-8"
             onClick={zoomOut}
@@ -2111,9 +2138,9 @@ export function ReactImageEditor({
                       }
 
                       event.preventDefault();
-                      (
-                        event.currentTarget as HTMLElement
-                      ).setPointerCapture?.(event.pointerId);
+                      (event.currentTarget as HTMLElement).setPointerCapture?.(
+                        event.pointerId,
+                      );
 
                       draftStrokeRef.current = { points: [imagePos] };
                     },
@@ -2147,8 +2174,7 @@ export function ReactImageEditor({
                         setIsHoveringSpotSource(false);
                       }
 
-                      const draggingSpotId =
-                        draggingSpotSourceIdRef.current;
+                      const draggingSpotId = draggingSpotSourceIdRef.current;
                       if (
                         healingMode === "spot" &&
                         draggingSpotId &&
@@ -2181,8 +2207,7 @@ export function ReactImageEditor({
                       if (!draft) return;
                       if (!imagePos) return;
 
-                      const lastPoint =
-                        draft.points[draft.points.length - 1];
+                      const lastPoint = draft.points[draft.points.length - 1];
                       const dx = imagePos.x - lastPoint.x;
                       const dy = imagePos.y - lastPoint.y;
                       const distSq = dx * dx + dy * dy;
@@ -2221,14 +2246,12 @@ export function ReactImageEditor({
                       if (draft.points.length === 0) return;
 
                       const id =
-                        typeof crypto !== "undefined" &&
-                        "randomUUID" in crypto
+                        typeof crypto !== "undefined" && "randomUUID" in crypto
                           ? crypto.randomUUID()
                           : `${Date.now()}-${Math.random()}`;
 
                       if (healingMode === "spot") {
-                        const center =
-                          draft.points[draft.points.length - 1];
+                        const center = draft.points[draft.points.length - 1];
                         const radius = healingBrush.size / 2;
                         const imageWidth = imageRef.current?.width ?? 0;
                         const imageHeight = imageRef.current?.height ?? 0;
@@ -2419,8 +2442,14 @@ export function ReactImageEditor({
               <div
                 className="rounded-full border border-border bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.65)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.25)]"
                 style={{
-                  width: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
-                  height: Math.max(1, healingBrush.size * drawZoomLevelForCursor),
+                  width: Math.max(
+                    1,
+                    healingBrush.size * drawZoomLevelForCursor,
+                  ),
+                  height: Math.max(
+                    1,
+                    healingBrush.size * drawZoomLevelForCursor,
+                  ),
                   transform: "translate(-50%, -50%)",
                 }}
               />
@@ -2628,7 +2657,9 @@ export function ReactImageEditor({
               className="rounded-md border bg-card"
               open={isHealingPanelOpen}
               onToggle={(event) => {
-                setIsHealingPanelOpen((event.target as HTMLDetailsElement).open);
+                setIsHealingPanelOpen(
+                  (event.target as HTMLDetailsElement).open,
+                );
               }}
             >
               <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
@@ -2757,7 +2788,9 @@ export function ReactImageEditor({
             className="rounded-md border bg-card"
             open={isTransformPanelOpen}
             onToggle={(event) => {
-              setIsTransformPanelOpen((event.target as HTMLDetailsElement).open);
+              setIsTransformPanelOpen(
+                (event.target as HTMLDetailsElement).open,
+              );
             }}
           >
             <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
@@ -2922,7 +2955,9 @@ export function ReactImageEditor({
                         Aspect
                       </label>
                       <span className="text-xs font-medium tabular-nums">
-                        {formatSignedInt(geometryOptics.perspective.aspect ?? 0)}
+                        {formatSignedInt(
+                          geometryOptics.perspective.aspect ?? 0,
+                        )}
                       </span>
                     </div>
                     <DebouncedRange
@@ -2933,7 +2968,9 @@ export function ReactImageEditor({
                       min={-100}
                       max={100}
                       step={1}
-                      onValueChange={(value) => setPerspective({ aspect: value })}
+                      onValueChange={(value) =>
+                        setPerspective({ aspect: value })
+                      }
                       className="w-full"
                       disabled={!isImageLoaded}
                     />
@@ -2963,7 +3000,9 @@ export function ReactImageEditor({
                     <input
                       type="checkbox"
                       checked={guidedUprightEnabled}
-                      onChange={(e) => setGuidedUprightEnabled(e.target.checked)}
+                      onChange={(e) =>
+                        setGuidedUprightEnabled(e.target.checked)
+                      }
                       disabled={!isImageLoaded}
                     />
                     Guided
@@ -2988,7 +3027,9 @@ export function ReactImageEditor({
             className="rounded-md border bg-card"
             open={isLensCorrectionsPanelOpen}
             onToggle={(event) => {
-              setIsLensCorrectionsPanelOpen((event.target as HTMLDetailsElement).open);
+              setIsLensCorrectionsPanelOpen(
+                (event.target as HTMLDetailsElement).open,
+              );
             }}
           >
             <summary className="cursor-pointer select-none list-none px-3 py-2 text-sm font-medium flex items-center justify-between">
@@ -2999,7 +3040,10 @@ export function ReactImageEditor({
             </summary>
 
             <div className="px-3 pb-3">
-              <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="lens" />
+              <GeometryOpticsPanel
+                isImageLoaded={isImageLoaded}
+                section="lens"
+              />
             </div>
           </details>
 
@@ -3018,7 +3062,10 @@ export function ReactImageEditor({
             </summary>
 
             <div className="px-3 pb-3">
-              <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="optics" />
+              <GeometryOpticsPanel
+                isImageLoaded={isImageLoaded}
+                section="optics"
+              />
             </div>
           </details>
 
@@ -3185,15 +3232,13 @@ export function ReactImageEditor({
           setExportError={setExportError}
         />
       </div>
-
     </div>
   );
-
 
   const mobileTrayPanel = (
     <div
       ref={mobileTrayRef}
-      className="mobile-tray-panel relative flex flex-col gap-3 p-3"
+      className="mobile-tray-panel relative flex flex-col gap-3 pb-3 pt-0"
     >
       <div
         className="pointer-events-none absolute inset-0 -z-10 rounded-none"
@@ -3206,8 +3251,15 @@ export function ReactImageEditor({
         }}
       />
 
-      {activeMobileBottomTab && (activeMobileBottomTab !== "edit" || activeMobileEditTab) ? (
-        <div className="relative max-h-[clamp(160px,34svh,260px)] overflow-y-auto rounded-md border bg-card/90 p-3 pt-5 backdrop-blur-sm">
+      <div className="h-px w-full bg-border/20" aria-hidden="true" />
+
+      {activeMobileBottomTab &&
+      (activeMobileBottomTab !== "edit" || activeMobileEditTab) ? (
+        <div
+          ref={mobileTrayScrollRef}
+          data-testid="mobile-tray-scroll"
+          className="relative max-h-[clamp(160px,34svh,200px)] overflow-y-auto rounded-none border-x-0 border-b-0 border-t bg-card/90 px-3 pt-5 pb-3 backdrop-blur-sm"
+        >
           {activeMobileBottomTab === "edit" && activeMobileEditTab === "basic"
             ? mobileBasicPanels.map((panel) => (
                 <panel.Component
@@ -3262,17 +3314,24 @@ export function ReactImageEditor({
                   formatSignedInt={formatSignedInt}
                   setIsPickingWhiteBalance={setIsPickingWhiteBalance}
                   setIsPickingPointColor={setIsPickingPointColor}
+                  panelVariant="flat"
                 />
               ))
             : null}
 
-          {activeMobileBottomTab === "edit" && activeMobileEditTab === "geometry" ? (
+          {activeMobileBottomTab === "edit" &&
+          activeMobileEditTab === "geometry" ? (
             <div className="flex flex-col gap-4">
               <div>
-                <div className="text-xs font-medium text-foreground">Straighten</div>
+                <div className="text-xs font-medium text-foreground">
+                  Straighten
+                </div>
                 <div className="mt-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs" htmlFor="mobile-transform-rotate">
+                    <label
+                      className="text-xs"
+                      htmlFor="mobile-transform-rotate"
+                    >
                       Rotate
                     </label>
                     <span className="text-xs font-medium tabular-nums">
@@ -3319,7 +3378,10 @@ export function ReactImageEditor({
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs" htmlFor="mobile-transform-rotate-input">
+                    <label
+                      className="text-xs"
+                      htmlFor="mobile-transform-rotate-input"
+                    >
                       Angle
                     </label>
                     <input
@@ -3339,7 +3401,9 @@ export function ReactImageEditor({
 
               <div className="border-t pt-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-medium text-foreground">Perspective</div>
+                  <div className="text-xs font-medium text-foreground">
+                    Perspective
+                  </div>
                   <Button
                     type="button"
                     size="sm"
@@ -3361,7 +3425,10 @@ export function ReactImageEditor({
                 <div className="mt-3 flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs" htmlFor="mobile-transform-vertical">
+                      <label
+                        className="text-xs"
+                        htmlFor="mobile-transform-vertical"
+                      >
                         Vertical
                       </label>
                       <span className="text-xs font-medium tabular-nums">
@@ -3386,7 +3453,10 @@ export function ReactImageEditor({
 
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs" htmlFor="mobile-transform-horizontal">
+                      <label
+                        className="text-xs"
+                        htmlFor="mobile-transform-horizontal"
+                      >
                         Horizontal
                       </label>
                       <span className="text-xs font-medium tabular-nums">
@@ -3411,11 +3481,16 @@ export function ReactImageEditor({
 
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs" htmlFor="mobile-transform-aspect">
+                      <label
+                        className="text-xs"
+                        htmlFor="mobile-transform-aspect"
+                      >
                         Aspect
                       </label>
                       <span className="text-xs font-medium tabular-nums">
-                        {formatSignedInt(geometryOptics.perspective.aspect ?? 0)}
+                        {formatSignedInt(
+                          geometryOptics.perspective.aspect ?? 0,
+                        )}
                       </span>
                     </div>
                     <DebouncedRange
@@ -3426,7 +3501,9 @@ export function ReactImageEditor({
                       min={-100}
                       max={100}
                       step={1}
-                      onValueChange={(value) => setPerspective({ aspect: value })}
+                      onValueChange={(value) =>
+                        setPerspective({ aspect: value })
+                      }
                       className="w-full"
                       disabled={!isImageLoaded}
                     />
@@ -3445,13 +3522,17 @@ export function ReactImageEditor({
               </div>
 
               <div className="border-t pt-3">
-                <div className="text-xs font-medium text-foreground">Guided Upright</div>
+                <div className="text-xs font-medium text-foreground">
+                  Guided Upright
+                </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <label className="flex items-center gap-2 text-xs">
                     <input
                       type="checkbox"
                       checked={guidedUprightEnabled}
-                      onChange={(e) => setGuidedUprightEnabled(e.target.checked)}
+                      onChange={(e) =>
+                        setGuidedUprightEnabled(e.target.checked)
+                      }
                       disabled={!isImageLoaded}
                     />
                     Guided
@@ -3471,11 +3552,17 @@ export function ReactImageEditor({
               </div>
 
               <div className="border-t pt-3">
-                <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="lens" />
+                <GeometryOpticsPanel
+                  isImageLoaded={isImageLoaded}
+                  section="lens"
+                />
               </div>
 
               <div className="border-t pt-3">
-                <GeometryOpticsPanel isImageLoaded={isImageLoaded} section="optics" />
+                <GeometryOpticsPanel
+                  isImageLoaded={isImageLoaded}
+                  section="optics"
+                />
               </div>
             </div>
           ) : null}
@@ -3502,7 +3589,10 @@ export function ReactImageEditor({
           ) : null}
 
           {activeMobileBottomTab === "healing" ? (
-            <HealingToolPanel enabled={healingModeEnabled} isImageLoaded={isImageLoaded} />
+            <HealingToolPanel
+              enabled={healingModeEnabled}
+              isImageLoaded={isImageLoaded}
+            />
           ) : null}
 
           {activeMobileBottomTab === "crop" ? (
@@ -3576,9 +3666,7 @@ export function ReactImageEditor({
       <EditorThemeProvider resolvedTheme={resolvedTheme}>
         {isMobile ? (
           <div className="flex h-full min-h-0 flex-col">
-            <div className="relative">
-            {mobileToolbar}
-            </div>
+            <div className="relative">{mobileToolbar}</div>
             <MobileEditorLayout
               canvasPanel={mobileCanvasPanel}
               trayPanel={mobileTrayPanel}
