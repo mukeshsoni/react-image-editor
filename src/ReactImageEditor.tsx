@@ -53,8 +53,11 @@ import type { ThemeMode } from "./lib/theme";
 import {
   calculateInitialImageStartOffset,
   calculateInitialZoomLevel,
+  calculatePanBounds,
+  clampOffset,
   useCanvasZoomPan,
 } from "./use-canvas-zoom-pan";
+import { computeMobileTrayNudge } from "@/editor/mobileTrayNudge";
 import type { ImageEditorEdits } from "./store/edits";
 import type { Point } from "./store/cropStore";
 
@@ -319,6 +322,10 @@ export function ReactImageEditor({
     MobileEditTabId | null
   >(null);
 
+  const isMobileTrayContentOpen =
+    activeMobileBottomTab != null &&
+    (activeMobileBottomTab !== "edit" || activeMobileEditTab != null);
+
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
   const [jpegQuality, setJpegQuality] = useState(92);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -424,6 +431,21 @@ export function ReactImageEditor({
   const imageRef = useRef<HTMLImageElement | null>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
 
+  const mobileCanvasViewportRef = useRef<HTMLDivElement | null>(null);
+  const mobileTrayRef = useRef<HTMLDivElement | null>(null);
+  const mobileNudgeRafRef = useRef<number | null>(null);
+
+  const isAutoCameraAdjustRef = useRef(false);
+  const mobileNudgeBaseCameraRef = useRef<{
+    zoomLevel: number;
+    offset: { x: number; y: number };
+  } | null>(null);
+  const mobileNudgeLastAppliedCameraRef = useRef<{
+    zoomLevel: number;
+    offset: { x: number; y: number };
+  } | null>(null);
+  const wasMobileTrayContentOpenRef = useRef(false);
+
   const cropSettings = useCropStore((state) => state.cropSettings);
   const setRotation = useCropStore((state) => state.setRotation);
   const resetRotation = useCropStore((state) => state.resetRotation);
@@ -471,7 +493,11 @@ export function ReactImageEditor({
   } = useCanvasZoomPan(canvasRef, imageRef, {
     enableWheel: true,
     onCameraChange: (camera) => {
-      if (isInitializingRef.current || isApplyingHistoryRef.current) {
+      if (
+        isInitializingRef.current ||
+        isApplyingHistoryRef.current ||
+        isAutoCameraAdjustRef.current
+      ) {
         zoomPanStateRef.current = camera;
         return;
       }
@@ -511,8 +537,270 @@ export function ReactImageEditor({
       if (commitCameraTimeoutRef.current) {
         clearTimeout(commitCameraTimeoutRef.current);
       }
+
+      if (mobileNudgeRafRef.current) {
+        cancelAnimationFrame(mobileNudgeRafRef.current);
+        mobileNudgeRafRef.current = null;
+      }
     };
   }, []);
+
+  const applyMobileTrayNudge = useMemo(() => {
+    return (reason: "tray" | "viewport") => {
+      if (!isMobile) return;
+      if (!canvasRef.current) return;
+
+      const viewportEl = mobileCanvasViewportRef.current;
+      const trayEl = mobileTrayRef.current;
+      if (!viewportEl || !trayEl) return;
+
+      // Use client sizes (integers) to avoid subpixel jitter from getBoundingClientRect
+      // that can cause the camera to drift by ~0.5-1px across open/close cycles.
+      const viewportWidth = Math.max(1, viewportEl.clientWidth);
+      const viewportHeight = Math.max(1, viewportEl.clientHeight);
+      const trayHeight = Math.max(0, trayEl.clientHeight);
+
+      trayEl.style.setProperty("--mobile-tray-overlap", "0px");
+
+      // Keep backing buffer in sync with visible viewport.
+      if (canvasRef.current.width !== viewportWidth) {
+        canvasRef.current.width = viewportWidth;
+      }
+      if (canvasRef.current.height !== viewportHeight) {
+        canvasRef.current.height = viewportHeight;
+      }
+
+      if (!imageRef.current) {
+        return;
+      }
+
+      const currentCamera = { zoomLevel, offset };
+      if (!Number.isFinite(currentCamera.zoomLevel) || currentCamera.zoomLevel <= 0) return;
+
+      // Clamp current camera after resize.
+      const panBounds = calculatePanBounds(
+        viewportWidth,
+        viewportHeight,
+        imageRef.current.width,
+        imageRef.current.height,
+        currentCamera.zoomLevel,
+      );
+
+      // When the image is smaller than the viewport, default pan bounds lock it centered.
+      // For the tray nudge behavior we allow moving the image up until the top margin.
+      const renderedHeight = imageRef.current.height * currentCamera.zoomLevel;
+      if (renderedHeight <= viewportHeight) {
+        const centerY = panBounds.minY;
+        const topMargin = 20;
+        panBounds.minY = Math.min(centerY, topMargin);
+        panBounds.maxY = centerY;
+      }
+
+      const clamped = clampOffset(currentCamera.offset, panBounds);
+
+      // Only nudge when it helps reveal the image above the tray.
+      const nudge = computeMobileTrayNudge({
+        offsetY: clamped.y,
+        zoomLevel: currentCamera.zoomLevel,
+        imageHeight: imageRef.current.height,
+        viewportHeight,
+        trayHeight,
+        topMargin: 20,
+      });
+
+      const nextOffset = {
+        x: clamped.x,
+        y: nudge.nextOffsetY,
+      };
+
+      const nextClamped = clampOffset(nextOffset, panBounds);
+
+      trayEl.style.setProperty("--mobile-tray-overlap", `${nudge.overlapPx}px`);
+
+      // Apply the camera update. This will also update state used by rendering.
+      // Avoid nudging while applying history or during initialization.
+      if (isInitializingRef.current || isApplyingHistoryRef.current) {
+        zoomPanStateRef.current = {
+          zoomLevel: currentCamera.zoomLevel,
+          offset: nextClamped,
+        };
+        mobileNudgeLastAppliedCameraRef.current = {
+          zoomLevel: currentCamera.zoomLevel,
+          offset: nextClamped,
+        };
+        return;
+      }
+
+      // Skip redundant state updates.
+      if (
+        offset.x === nextClamped.x &&
+        offset.y === nextClamped.y &&
+        zoomLevel === currentCamera.zoomLevel
+      ) {
+        return;
+      }
+
+      // When the tray is closed, we don't want the auto-adjust logic to subtly
+      // reposition the image (it should return to the user's previous camera).
+      // The restoration effect handles the close transition.
+      if (!isMobileTrayContentOpen) {
+        return;
+      }
+
+      void reason;
+
+      isAutoCameraAdjustRef.current = true;
+      try {
+        setCamera(currentCamera.zoomLevel, nextClamped);
+      } finally {
+        queueMicrotask(() => {
+          isAutoCameraAdjustRef.current = false;
+        });
+      }
+      zoomPanStateRef.current = {
+        zoomLevel: currentCamera.zoomLevel,
+        offset: nextClamped,
+      };
+      mobileNudgeLastAppliedCameraRef.current = {
+        zoomLevel: currentCamera.zoomLevel,
+        offset: nextClamped,
+      };
+    };
+  }, [isMobile, isMobileTrayContentOpen, offset, setCamera, zoomLevel]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    if (typeof ResizeObserver === "undefined") return;
+
+    const viewportEl = mobileCanvasViewportRef.current;
+    const trayEl = mobileTrayRef.current;
+    if (!viewportEl || !trayEl) return;
+
+    const schedule = (reason: "tray" | "viewport") => {
+      if (mobileNudgeRafRef.current) {
+        cancelAnimationFrame(mobileNudgeRafRef.current);
+      }
+      mobileNudgeRafRef.current = requestAnimationFrame(() => {
+        mobileNudgeRafRef.current = null;
+        applyMobileTrayNudge(reason);
+      });
+    };
+
+    const viewportObserver = new ResizeObserver(() => schedule("viewport"));
+    viewportObserver.observe(viewportEl);
+
+    const trayObserver = new ResizeObserver(() => schedule("tray"));
+    trayObserver.observe(trayEl);
+
+    // Run once on mount of mobile layout.
+    schedule("tray");
+
+    return () => {
+      viewportObserver.disconnect();
+      trayObserver.disconnect();
+      if (mobileNudgeRafRef.current) {
+        cancelAnimationFrame(mobileNudgeRafRef.current);
+        mobileNudgeRafRef.current = null;
+      }
+    };
+  }, [applyMobileTrayNudge, isMobile]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    if (!isImageLoaded) return;
+
+    if (mobileNudgeRafRef.current) {
+      cancelAnimationFrame(mobileNudgeRafRef.current);
+    }
+    mobileNudgeRafRef.current = requestAnimationFrame(() => {
+      mobileNudgeRafRef.current = null;
+      applyMobileTrayNudge("tray");
+    });
+  }, [applyMobileTrayNudge, isImageLoaded, isMobile]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const wasOpen = wasMobileTrayContentOpenRef.current;
+    wasMobileTrayContentOpenRef.current = isMobileTrayContentOpen;
+
+    if (!wasOpen && isMobileTrayContentOpen) {
+      // Capture the pre-nudge camera so we can restore it when the tray content closes,
+      // but only if the user hasn't manually changed the camera in the meantime.
+      mobileNudgeBaseCameraRef.current = {
+        zoomLevel,
+        offset,
+      };
+      mobileNudgeLastAppliedCameraRef.current = null;
+      return;
+    }
+
+    if (wasOpen && !isMobileTrayContentOpen) {
+      const base = mobileNudgeBaseCameraRef.current;
+      const lastApplied = mobileNudgeLastAppliedCameraRef.current;
+
+      mobileNudgeBaseCameraRef.current = null;
+      mobileNudgeLastAppliedCameraRef.current = null;
+
+      if (!base || !lastApplied) return;
+
+      // Only restore if the current camera still matches the last auto-applied camera.
+      // If the user panned/zoomed while the tray was open, keep their camera.
+      const isStillAutoApplied =
+        zoomLevel === lastApplied.zoomLevel &&
+        offset.x === lastApplied.offset.x &&
+        offset.y === lastApplied.offset.y;
+
+      if (!isStillAutoApplied) return;
+      if (!canvasRef.current || !imageRef.current) return;
+
+      const viewportEl = mobileCanvasViewportRef.current;
+      if (!viewportEl) return;
+
+      const viewportWidth = Math.max(1, viewportEl.clientWidth);
+      const viewportHeight = Math.max(1, viewportEl.clientHeight);
+
+      const panBounds = calculatePanBounds(
+        viewportWidth,
+        viewportHeight,
+        imageRef.current.width,
+        imageRef.current.height,
+        base.zoomLevel,
+      );
+
+      const renderedHeight = imageRef.current.height * base.zoomLevel;
+      if (renderedHeight <= viewportHeight) {
+        const centerY = panBounds.minY;
+        const topMargin = 20;
+        panBounds.minY = Math.min(centerY, topMargin);
+        panBounds.maxY = centerY;
+      }
+
+      const restoredOffset = clampOffset(base.offset, panBounds);
+
+      isAutoCameraAdjustRef.current = true;
+      try {
+        setCamera(base.zoomLevel, restoredOffset);
+      } finally {
+        queueMicrotask(() => {
+          isAutoCameraAdjustRef.current = false;
+        });
+      }
+
+      zoomPanStateRef.current = {
+        zoomLevel: base.zoomLevel,
+        offset: restoredOffset,
+      };
+    }
+  }, [
+    activeMobileBottomTab,
+    activeMobileEditTab,
+    isMobile,
+    isMobileTrayContentOpen,
+    offset,
+    setCamera,
+    zoomLevel,
+  ]);
 
   const applyHistoryEntry = useMemo(() => {
     return (entry: HistoryEntry) => {
@@ -1720,7 +2008,10 @@ export function ReactImageEditor({
   const mobileCanvasPanel = (
     <>
       <div className="flex flex-col flex-1 p-0">
-        <div className="flex-1 relative z-0">
+        <div
+          ref={mobileCanvasViewportRef}
+          className="flex-1 relative z-0 overflow-hidden"
+        >
           {isPickingWhiteBalance ? (
             <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
               Click image to pick white balance (Esc to cancel)
@@ -2900,9 +3191,23 @@ export function ReactImageEditor({
 
 
   const mobileTrayPanel = (
-    <div className="mobile-tray-panel relative flex flex-col gap-3 p-3">
+    <div
+      ref={mobileTrayRef}
+      className="mobile-tray-panel relative flex flex-col gap-3 p-3"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 rounded-none"
+        aria-hidden="true"
+        style={{
+          background:
+            "linear-gradient(to bottom, hsl(var(--muted) / 0.55) 0px, hsl(var(--muted) / 0.92) var(--mobile-tray-overlap), hsl(var(--muted) / 0.98) 100%)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+        }}
+      />
+
       {activeMobileBottomTab && (activeMobileBottomTab !== "edit" || activeMobileEditTab) ? (
-        <div className="relative max-h-[250px] overflow-y-auto rounded-md border bg-card p-3 pt-5">
+        <div className="relative max-h-[clamp(160px,34svh,260px)] overflow-y-auto rounded-md border bg-card/90 p-3 pt-5 backdrop-blur-sm">
           {activeMobileBottomTab === "edit" && activeMobileEditTab === "basic"
             ? mobileBasicPanels.map((panel) => (
                 <panel.Component

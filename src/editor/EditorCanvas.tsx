@@ -296,6 +296,7 @@ export function EditorCanvas({
   return (
     <canvas
       ref={canvasRef}
+      className="block h-full w-full"
       {...listeners}
       aria-label="Image preview"
       onClick={(event) => {

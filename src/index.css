@@ -195,13 +195,7 @@
 @layer base {
     @media (max-width: 768px) {
         .react-image-editor .mobile-editor-layout {
-            height: 100dvh;
-        }
-
-        @supports not (height: 100dvh) {
-            .react-image-editor .mobile-editor-layout {
-                height: 100svh;
-            }
+            height: 100%;
         }
 
         .react-image-editor .mobile-tray-panel {
