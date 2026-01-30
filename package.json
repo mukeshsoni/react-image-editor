@@ -1,6 +1,6 @@
 {
   "name": "@mukeshsoni/react-image-editor",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "type": "module",
   "license": "MIT",
   "description": "A Lightroom-style, non-destructive image editor for React (canvas-based).",
