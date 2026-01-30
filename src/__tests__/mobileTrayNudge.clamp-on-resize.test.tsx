@@ -4,10 +4,20 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 const hoisted = vi.hoisted(() => {
   const setCamera = vi.fn();
   const historyResetToBaseline = vi.fn();
+  let notifyCamera: ((camera: { zoomLevel: number; offset: { x: number; y: number } }) => void) | null =
+    null;
 
   return {
     setCamera,
     historyResetToBaseline,
+    get notifyCamera() {
+      return notifyCamera;
+    },
+    setNotifyCamera(next: typeof notifyCamera) {
+      notifyCamera = next;
+    },
+    mockZoomLevel: 1,
+    mockOffset: { x: 0, y: 0 },
   };
 });
 
@@ -29,10 +39,12 @@ vi.mock("@/use-canvas-zoom-pan", async () => {
       _imageRef: unknown,
       config?: { onCameraChange?: (camera: unknown) => void },
     ) => {
-      config?.onCameraChange?.({ zoomLevel: 1, offset: { x: 0, y: 0 } });
+      hoisted.setNotifyCamera((camera) => {
+        config?.onCameraChange?.(camera);
+      });
       return {
-        zoomLevel: 1,
-        offset: { x: -900, y: -900 },
+        zoomLevel: hoisted.mockZoomLevel,
+        offset: hoisted.mockOffset,
         zoomIn: vi.fn(),
         zoomOut: vi.fn(),
         resetZoom: vi.fn(),
@@ -355,10 +367,12 @@ describe("mobile tray nudge", () => {
 
     const createdObservers: Array<{ trigger: () => void }> = [];
     class MockResizeObserver {
-      private cb: ResizeObserverCallback;
-      constructor(cb: ResizeObserverCallback) {
+      private cb: (entries: unknown[], observer: unknown) => void;
+      constructor(cb: (entries: unknown[], observer: unknown) => void) {
         this.cb = cb;
-        createdObservers.push({ trigger: () => this.cb([], this as unknown as ResizeObserver) });
+        createdObservers.push({
+          trigger: () => this.cb([], this as unknown as ResizeObserver),
+        });
       }
       observe() {}
       disconnect() {}
@@ -448,6 +462,10 @@ describe("mobile tray nudge", () => {
       queueMicrotask(() => resolve());
     });
 
+    // Simulate the user being out-of-bounds at the moment the viewport changes.
+    expect(hoisted.notifyCamera).toBeTypeOf("function");
+    hoisted.notifyCamera?.({ zoomLevel: 1, offset: { x: -900, y: -900 } });
+
     // Trigger the viewport ResizeObserver callback.
     const observers = (globalThis as unknown as { __testObservers: Array<{ trigger: () => void }> })
       .__testObservers;
@@ -457,5 +475,30 @@ describe("mobile tray nudge", () => {
     // For zoom=1, viewportWidth=400, imageWidth=1000 -> minX = 400-1000 = -600.
     // Initial mocked offset.x = -900 should clamp to -600.
     expect(hoisted.setCamera).toHaveBeenCalledWith(1, expect.objectContaining({ x: -600 }));
+  });
+
+  test("does not recreate ResizeObservers when camera state changes", async () => {
+    const { rerender } = render(
+      <ReactImageEditor imageSrc="https://example.com/image.jpg" />,
+    );
+
+    await waitFor(() => {
+      expect(hoisted.historyResetToBaseline).toHaveBeenCalled();
+    });
+
+    const observers = (globalThis as unknown as { __testObservers: Array<{ trigger: () => void }> })
+      .__testObservers;
+    expect(observers).toHaveLength(2);
+
+    // Simulate a camera change causing a re-render (previously this would
+    // recreate observers because applyMobileTrayNudge depended on offset/zoomLevel).
+    hoisted.mockZoomLevel = 2;
+    hoisted.mockOffset = { x: 10, y: 20 };
+    rerender(<ReactImageEditor imageSrc="https://example.com/image.jpg" />);
+
+    const observersAfter = (
+      globalThis as unknown as { __testObservers: Array<{ trigger: () => void }> }
+    ).__testObservers;
+    expect(observersAfter).toHaveLength(2);
   });
 });

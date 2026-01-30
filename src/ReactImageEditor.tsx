@@ -480,6 +480,7 @@ export function ReactImageEditor({
   const lastCommittedEditsRef = useRef(getImageEditorEdits());
 
   const zoomPanStateRef = useRef({ zoomLevel: 1, offset: { x: 0, y: 0 } });
+  const liveCameraRef = useRef({ zoomLevel: 1, offset: { x: 0, y: 0 } });
   const commitCameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -497,6 +498,7 @@ export function ReactImageEditor({
   } = useCanvasZoomPan(canvasRef, imageRef, {
     enableWheel: true,
     onCameraChange: (camera) => {
+      liveCameraRef.current = camera;
       if (
         isInitializingRef.current ||
         isApplyingHistoryRef.current ||
@@ -549,9 +551,17 @@ export function ReactImageEditor({
     };
   }, []);
 
+  const isMobileTrayContentOpenRef = useRef(isMobileTrayContentOpen);
+  useEffect(() => {
+    isMobileTrayContentOpenRef.current = isMobileTrayContentOpen;
+  }, [isMobileTrayContentOpen]);
+
   const applyMobileTrayNudge = useMemo(() => {
     return (reason: "tray" | "viewport") => {
       if (!isMobile) return;
+
+      const currentCamera = liveCameraRef.current;
+
       if (!canvasRef.current) return;
 
       const viewportEl = mobileCanvasViewportRef.current;
@@ -578,7 +588,6 @@ export function ReactImageEditor({
         return;
       }
 
-      const currentCamera = { zoomLevel, offset };
       if (
         !Number.isFinite(currentCamera.zoomLevel) ||
         currentCamera.zoomLevel <= 0
@@ -609,16 +618,23 @@ export function ReactImageEditor({
       // When the tray is closed, we don't want the auto-adjust logic to subtly
       // reposition the image (it should return to the user's previous camera).
       // Still enforce clamping after resizes so the camera stays within bounds.
-      if (!isMobileTrayContentOpen) {
+      if (!isMobileTrayContentOpenRef.current) {
         if (isInitializingRef.current || isApplyingHistoryRef.current) {
           zoomPanStateRef.current = {
+            zoomLevel: currentCamera.zoomLevel,
+            offset: clamped,
+          };
+          liveCameraRef.current = {
             zoomLevel: currentCamera.zoomLevel,
             offset: clamped,
           };
           return;
         }
 
-        if (offset.x === clamped.x && offset.y === clamped.y) {
+        if (
+          currentCamera.offset.x === clamped.x &&
+          currentCamera.offset.y === clamped.y
+        ) {
           return;
         }
 
@@ -631,6 +647,10 @@ export function ReactImageEditor({
           });
         }
         zoomPanStateRef.current = {
+          zoomLevel: currentCamera.zoomLevel,
+          offset: clamped,
+        };
+        liveCameraRef.current = {
           zoomLevel: currentCamera.zoomLevel,
           offset: clamped,
         };
@@ -663,6 +683,10 @@ export function ReactImageEditor({
           zoomLevel: currentCamera.zoomLevel,
           offset: nextClamped,
         };
+        liveCameraRef.current = {
+          zoomLevel: currentCamera.zoomLevel,
+          offset: nextClamped,
+        };
         mobileNudgeLastAppliedCameraRef.current = {
           zoomLevel: currentCamera.zoomLevel,
           offset: nextClamped,
@@ -672,9 +696,8 @@ export function ReactImageEditor({
 
       // Skip redundant state updates.
       if (
-        offset.x === nextClamped.x &&
-        offset.y === nextClamped.y &&
-        zoomLevel === currentCamera.zoomLevel
+        currentCamera.offset.x === nextClamped.x &&
+        currentCamera.offset.y === nextClamped.y
       ) {
         return;
       }
@@ -693,12 +716,16 @@ export function ReactImageEditor({
         zoomLevel: currentCamera.zoomLevel,
         offset: nextClamped,
       };
+      liveCameraRef.current = {
+        zoomLevel: currentCamera.zoomLevel,
+        offset: nextClamped,
+      };
       mobileNudgeLastAppliedCameraRef.current = {
         zoomLevel: currentCamera.zoomLevel,
         offset: nextClamped,
       };
     };
-  }, [isMobile, isMobileTrayContentOpen, offset, setCamera, zoomLevel]);
+  }, [isMobile, setCamera]);
 
   useEffect(() => {
     if (!isMobile) return;
@@ -834,6 +861,10 @@ export function ReactImageEditor({
         zoomLevel: base.zoomLevel,
         offset: restoredOffset,
       };
+      liveCameraRef.current = {
+        zoomLevel: base.zoomLevel,
+        offset: restoredOffset,
+      };
     }
   }, [
     activeMobileBottomTab,
@@ -854,6 +885,10 @@ export function ReactImageEditor({
         if (camera) {
           setCamera(camera.zoomLevel, camera.offset);
           zoomPanStateRef.current = {
+            zoomLevel: camera.zoomLevel,
+            offset: camera.offset,
+          };
+          liveCameraRef.current = {
             zoomLevel: camera.zoomLevel,
             offset: camera.offset,
           };
@@ -1235,6 +1270,10 @@ export function ReactImageEditor({
         zoomLevel: baselineState.camera?.zoomLevel ?? initialZoomLevel,
         offset: baselineState.camera?.offset ?? initialOffset,
       };
+      liveCameraRef.current = {
+        zoomLevel: baselineState.camera?.zoomLevel ?? initialZoomLevel,
+        offset: baselineState.camera?.offset ?? initialOffset,
+      };
 
       setIsImageLoaded(true);
 
@@ -1465,6 +1504,10 @@ export function ReactImageEditor({
                   const nextCamera = nextEntry.state.camera;
                   if (nextCamera) {
                     zoomPanStateRef.current = {
+                      zoomLevel: nextCamera.zoomLevel,
+                      offset: nextCamera.offset,
+                    };
+                    liveCameraRef.current = {
                       zoomLevel: nextCamera.zoomLevel,
                       offset: nextCamera.offset,
                     };
@@ -2581,6 +2624,10 @@ export function ReactImageEditor({
                         zoomLevel: camera.zoomLevel,
                         offset: camera.offset,
                       };
+                      liveCameraRef.current = {
+                        zoomLevel: camera.zoomLevel,
+                        offset: camera.offset,
+                      };
                     }
                   } finally {
                     queueMicrotask(() => {
@@ -2613,6 +2660,10 @@ export function ReactImageEditor({
                     lastCommittedEditsRef.current = nextEntry.state.edits;
                     if (camera) {
                       zoomPanStateRef.current = {
+                        zoomLevel: camera.zoomLevel,
+                        offset: camera.offset,
+                      };
+                      liveCameraRef.current = {
                         zoomLevel: camera.zoomLevel,
                         offset: camera.offset,
                       };
@@ -3130,6 +3181,10 @@ export function ReactImageEditor({
                       zoomLevel: camera.zoomLevel,
                       offset: camera.offset,
                     };
+                    liveCameraRef.current = {
+                      zoomLevel: camera.zoomLevel,
+                      offset: camera.offset,
+                    };
                   }
                 } finally {
                   queueMicrotask(() => {
@@ -3186,13 +3241,17 @@ export function ReactImageEditor({
                 }
 
                 lastCommittedEditsRef.current = nextEntry.state.edits;
-                if (camera) {
-                  zoomPanStateRef.current = {
-                    zoomLevel: camera.zoomLevel,
-                    offset: camera.offset,
-                  };
-                }
-              } finally {
+                  if (camera) {
+                    zoomPanStateRef.current = {
+                      zoomLevel: camera.zoomLevel,
+                      offset: camera.offset,
+                    };
+                    liveCameraRef.current = {
+                      zoomLevel: camera.zoomLevel,
+                      offset: camera.offset,
+                    };
+                  }
+                } finally {
                 queueMicrotask(() => {
                   isApplyingHistoryRef.current = false;
                 });
