@@ -24,6 +24,7 @@
   "files": [
     "dist",
     "styles.css",
+    "CHANGELOG.md",
     "LICENSE",
     "README.md"
   ],
