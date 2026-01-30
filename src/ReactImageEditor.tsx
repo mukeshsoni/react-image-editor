@@ -606,6 +606,37 @@ export function ReactImageEditor({
 
       const clamped = clampOffset(currentCamera.offset, panBounds);
 
+      // When the tray is closed, we don't want the auto-adjust logic to subtly
+      // reposition the image (it should return to the user's previous camera).
+      // Still enforce clamping after resizes so the camera stays within bounds.
+      if (!isMobileTrayContentOpen) {
+        if (isInitializingRef.current || isApplyingHistoryRef.current) {
+          zoomPanStateRef.current = {
+            zoomLevel: currentCamera.zoomLevel,
+            offset: clamped,
+          };
+          return;
+        }
+
+        if (offset.x === clamped.x && offset.y === clamped.y) {
+          return;
+        }
+
+        isAutoCameraAdjustRef.current = true;
+        try {
+          setCamera(currentCamera.zoomLevel, clamped);
+        } finally {
+          queueMicrotask(() => {
+            isAutoCameraAdjustRef.current = false;
+          });
+        }
+        zoomPanStateRef.current = {
+          zoomLevel: currentCamera.zoomLevel,
+          offset: clamped,
+        };
+        return;
+      }
+
       // Only nudge when it helps reveal the image above the tray.
       const nudge = computeMobileTrayNudge({
         offsetY: clamped.y,
@@ -645,13 +676,6 @@ export function ReactImageEditor({
         offset.y === nextClamped.y &&
         zoomLevel === currentCamera.zoomLevel
       ) {
-        return;
-      }
-
-      // When the tray is closed, we don't want the auto-adjust logic to subtly
-      // reposition the image (it should return to the user's previous camera).
-      // The restoration effect handles the close transition.
-      if (!isMobileTrayContentOpen) {
         return;
       }
 
