@@ -10,6 +10,7 @@ function ColorMixerPanelFromContext({
   setIsPickingPointColor,
   formatSignedInt,
   Slider,
+  panelVariant,
 }: PanelContext) {
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
   return (
@@ -19,6 +20,7 @@ function ColorMixerPanelFromContext({
       setIsPickingPointColor={setIsPickingPointColor}
       formatSignedInt={formatSignedInt}
       Slider={Slider}
+      variant={panelVariant}
     />
   );
 }

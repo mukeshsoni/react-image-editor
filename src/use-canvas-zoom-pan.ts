@@ -78,7 +78,7 @@ export function calculateInitialZoomLevel(
 
 // When panning we don't allow any movement if image is smaller than the canvas
 // If image is larger than the canvas, then we stop the panning when the image is at the edge of the canvas
-function calculatePanBounds(
+export function calculatePanBounds(
   canvasWidth: number,
   canvasHeight: number,
   imageWidth: number,
@@ -119,7 +119,7 @@ function calculatePanBounds(
 
 // We calculate the offset normally during panning. But then clamp the offset by
 // the bounds we have set
-function clampOffset(
+export function clampOffset(
   offset: { x: number; y: number },
   bounds: { minX: number; maxX: number; minY: number; maxY: number },
 ) {
@@ -776,9 +776,24 @@ export const useCanvasZoomPan = (
     if (!zoomPanConfig.enableTouch) return;
 
     const handleNativeTouchStart = (event: globalThis.TouchEvent) => {
+      if (!canvasRef.current || !imageRef.current) return;
+
+      const target = event.target;
+      if (!target || !canvasRef.current.contains(target as Node)) {
+        return;
+      }
+
       handleTouchStart(event as unknown as TouchEvent<HTMLCanvasElement>);
     };
+
     const handleNativeTouchMove = (event: globalThis.TouchEvent) => {
+      if (!canvasRef.current || !imageRef.current) return;
+
+      const target = event.target;
+      if (!target || !canvasRef.current.contains(target as Node)) {
+        return;
+      }
+
       handleTouchMove(event as unknown as TouchEvent<HTMLCanvasElement>);
     };
 
@@ -793,7 +808,7 @@ export const useCanvasZoomPan = (
       document.removeEventListener("touchstart", handleNativeTouchStart);
       document.removeEventListener("touchmove", handleNativeTouchMove);
     };
-  }, [handleTouchMove, handleTouchStart, zoomPanConfig.enableTouch]);
+  }, [canvasRef, handleTouchMove, handleTouchStart, imageRef, zoomPanConfig.enableTouch]);
   useEffect(() => {
     if (canvasRef.current && imageRef.current) {
       // This is the same as resetZoom functions content

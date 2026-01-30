@@ -109,7 +109,7 @@ function App() {
   }, [mode]);
 
   return (
-      <div className="h-screen flex flex-col overflow-hidden">
+      <div className="h-[100dvh] md:h-screen flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 border-b bg-background px-2 py-2">
         <label htmlFor="image-upload" className="sr-only">
           Upload image

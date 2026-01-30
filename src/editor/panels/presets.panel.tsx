@@ -15,10 +15,12 @@ import type { PresetId } from "@/store/edits";
 import type { PanelContext } from "./context";
 import type { PanelDefinition } from "./types";
 
-function PresetsPanelFromContext({ isImageLoaded }: PanelContext) {
+function PresetsPanelFromContext({ isImageLoaded, panelVariant }: PanelContext) {
   const preset = usePresetStore((state) => state.preset);
   const setPresetIntensity = usePresetStore((state) => state.setPresetIntensity);
   const clearPreset = usePresetStore((state) => state.clearPreset);
+
+  const isAccordion = panelVariant === "accordion";
 
   const setPendingHistoryLabel = useHistoryLabelStore(
     (state) => state.setPendingHistoryLabel,
@@ -32,8 +34,6 @@ function PresetsPanelFromContext({ isImageLoaded }: PanelContext) {
 
   const colorAdjustments = useColorStore((state) => state.colorAdjustments);
   const setColorAdjustment = useColorStore((state) => state.setColorAdjustment);
-
-
   const applyPreset = (presetId: PresetId) => {
     if (presetId === "none") {
       clearPreset();
@@ -84,10 +84,15 @@ function PresetsPanelFromContext({ isImageLoaded }: PanelContext) {
   };
 
   return (
-    <div className="mt-4 border-t pt-3" data-testid="presets-section">
-      <div className="flex items-center justify-between">
-        <div className="text-xs font-medium text-foreground">Presets</div>
-      </div>
+    <div
+      className={cn("pt-3", isAccordion ? "" : "mt-4 border-t")}
+      data-testid="presets-section"
+    >
+      {isAccordion ? null : (
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-medium text-foreground">Presets</div>
+        </div>
+      )}
 
       <div className="mt-3 flex items-center justify-between gap-2">
         <label className="text-xs text-foreground" htmlFor="preset-intensity">
@@ -127,16 +132,16 @@ function PresetsPanelFromContext({ isImageLoaded }: PanelContext) {
       <div className="mt-3 grid grid-cols-3 gap-2">
         {BUILT_IN_PRESETS.map((item) => {
           return (
-              <button
-                key={item.id}
-                type="button"
-                disabled={!isImageLoaded}
-                onClick={() => applyPreset(item.id as PresetId)}
-                className={cn(
-                  "h-8 rounded-md border bg-background px-2 text-xs text-foreground disabled:opacity-70",
-                  "border-border hover:bg-accent",
-                )}
-              >
+            <button
+              key={item.id}
+              type="button"
+              disabled={!isImageLoaded}
+              onClick={() => applyPreset(item.id as PresetId)}
+              className={cn(
+                "h-8 rounded-md border bg-background px-2 text-xs text-foreground disabled:opacity-70",
+                "border-border hover:bg-accent",
+              )}
+            >
               {item.name}
             </button>
           );

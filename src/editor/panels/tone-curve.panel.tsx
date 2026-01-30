@@ -9,6 +9,7 @@ function ToneCurvePanelFromContext({
   isImageLoaded,
   Slider,
   formatSignedInt,
+  panelVariant,
 }: PanelContext) {
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
   const resetToneCurve = useToneCurveStore((state) => state.resetToneCurve);
@@ -25,6 +26,7 @@ function ToneCurvePanelFromContext({
       setToneCurveChannel={setToneCurveChannel}
       setToneCurvePoints={setToneCurvePoints}
       setToneCurveParametricRgb={setToneCurveParametricRgb}
+      variant={panelVariant}
       Slider={Slider}
       formatSignedInt={formatSignedInt}
     />
