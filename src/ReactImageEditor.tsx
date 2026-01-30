@@ -316,8 +316,8 @@ export function ReactImageEditor({
     MobileBottomTabId | null
   >(null);
   const [activeMobileEditTab, setActiveMobileEditTab] = useState<
-    MobileEditTabId
-  >("basic");
+    MobileEditTabId | null
+  >(null);
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
   const [jpegQuality, setJpegQuality] = useState(92);
@@ -325,36 +325,39 @@ export function ReactImageEditor({
   const [exportError, setExportError] = useState<string | null>(null);
 
   const handleMobileBottomTabToggle = (tabId: MobileBottomTabId) => {
-    setActiveMobileBottomTab((current) => {
-      const next = current === tabId ? null : tabId;
+    const next = activeMobileBottomTab === tabId ? null : tabId;
+    setActiveMobileBottomTab(next);
 
-      if (tabId === "crop") {
-        const isEnabled = next === "crop";
-        setCropMode(isEnabled);
-        if (isEnabled) {
-          setHealingModeEnabled(false);
-        }
-        return next;
+    if (tabId === "edit" && next === "edit") {
+      // Opening the Edit tray should not auto-open the Basic tab.
+      setActiveMobileEditTab(null);
+    }
+
+    if (tabId === "crop") {
+      const isEnabled = next === "crop";
+      setCropMode(isEnabled);
+      if (isEnabled) {
+        setHealingModeEnabled(false);
       }
+      return;
+    }
 
-      if (tabId === "healing") {
-        const isEnabled = next === "healing";
-        setHealingModeEnabled(isEnabled);
-        if (isEnabled) {
-          setCropMode(false);
-        }
-        return next;
+    if (tabId === "healing") {
+      const isEnabled = next === "healing";
+      setHealingModeEnabled(isEnabled);
+      if (isEnabled) {
+        setCropMode(false);
       }
+      return;
+    }
 
-      setCropMode(false);
-      setHealingModeEnabled(false);
-      return next;
-    });
+    setCropMode(false);
+    setHealingModeEnabled(false);
   };
 
   const handleMobileEditTabToggle = (tabId: MobileEditTabId) => {
-    setActiveMobileEditTab(tabId);
     setActiveMobileBottomTab("edit");
+    setActiveMobileEditTab((current) => (current === tabId ? null : tabId));
     setCropMode(false);
     setHealingModeEnabled(false);
   };
@@ -968,10 +971,6 @@ export function ReactImageEditor({
 
     return unsubscribe;
   }, [editsPush, onEditsChange]);
-
-  function handleResetZoomClick() {
-    resetZoom();
-  }
 
   async function handleAutoStraighten() {
     if (!isImageLoaded) return;
@@ -1698,7 +1697,7 @@ export function ReactImageEditor({
             size="icon"
             variant="outline"
             className="size-11 px-6 md:size-8"
-            onClick={handleResetZoomClick}
+            onClick={resetZoom}
             title="Reset"
           >
             {Math.round(zoomLevel * 100)}%
@@ -1721,7 +1720,7 @@ export function ReactImageEditor({
   const mobileCanvasPanel = (
     <>
       <div className="flex flex-col flex-1 p-0">
-        <div className="flex-1 border-2 relative z-0">
+        <div className="flex-1 relative z-0">
           {isPickingWhiteBalance ? (
             <div className="absolute left-2 top-2 z-10 rounded-md bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow">
               Click image to pick white balance (Esc to cancel)
@@ -2202,39 +2201,6 @@ export function ReactImageEditor({
             imageRef={imageRef}
             cropBounds={cropBounds}
           />
-        </div>
-      </div>
-      <div className="flex flex-row-reverse w-full py-2 px-4">
-        <div className="flex gap-0.5" style={{ display: !cropMode ? "flex" : "none" }}>
-          <Button
-            className="size-11 md:size-8"
-            onClick={zoomOut}
-            size="icon"
-            variant="outline"
-            title="Zoom Out"
-            aria-label="Zoom out"
-          >
-            <MinusIcon />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            className="size-11 px-6 md:size-8"
-            onClick={handleResetZoomClick}
-            title="Reset"
-          >
-            {Math.round(zoomLevel * 100)}%
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            className="size-11 md:size-8"
-            onClick={zoomIn}
-            title="Zoom In"
-            aria-label="Zoom in"
-          >
-            <PlusIcon />
-          </Button>
         </div>
       </div>
     </>
@@ -2934,8 +2900,8 @@ export function ReactImageEditor({
 
 
   const mobileTrayPanel = (
-    <div className="mobile-tray-panel relative flex h-full flex-col gap-3 p-3">
-      {activeMobileBottomTab ? (
+    <div className="mobile-tray-panel relative flex flex-col gap-3 p-3">
+      {activeMobileBottomTab && (activeMobileBottomTab !== "edit" || activeMobileEditTab) ? (
         <div className="relative max-h-[250px] overflow-y-auto rounded-md border bg-card p-3 pt-5">
           {activeMobileBottomTab === "edit" && activeMobileEditTab === "basic"
             ? mobileBasicPanels.map((panel) => (
@@ -3255,16 +3221,16 @@ export function ReactImageEditor({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col">
         {activeMobileBottomTab === "edit" ? (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2 overflow-x-auto py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {mobileEditTabRegistry.map((tab) => (
               <Button
                 key={tab.id}
                 type="button"
                 size="sm"
                 variant={activeMobileEditTab === tab.id ? "default" : "outline"}
-                className="h-9 px-4 text-xs shrink-0"
+                className="h-9 px-4 text-xs shrink-0 shadow-none"
                 onClick={() => handleMobileEditTabToggle(tab.id)}
                 aria-pressed={activeMobileEditTab === tab.id}
               >
@@ -3274,14 +3240,18 @@ export function ReactImageEditor({
           </div>
         ) : null}
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {activeMobileBottomTab === "edit" ? (
+          <div className="my-0.5 h-px w-full bg-border/20" aria-hidden="true" />
+        ) : null}
+
+        <div className="flex items-center gap-2 overflow-x-auto py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {mobileBottomTabRegistry.map((tab) => (
             <Button
               key={tab.id}
               type="button"
               size="sm"
               variant={activeMobileBottomTab === tab.id ? "default" : "outline"}
-              className="h-9 px-4 text-xs shrink-0"
+              className="h-9 px-4 text-xs shrink-0 shadow-none"
               onClick={() => handleMobileBottomTabToggle(tab.id)}
               aria-pressed={activeMobileBottomTab === tab.id}
             >
