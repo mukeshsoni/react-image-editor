@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-const reactCompilerConfig = {};
+const reactCompilerConfig = { target: "18" };
 const isCi = process.env.CI === "true";
 const basePath = process.env.VITE_BASE_PATH ?? "/";
 
