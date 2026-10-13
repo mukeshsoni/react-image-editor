@@ -1,0 +1,69 @@
+name: Browser E2E
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, mobile-chromium]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck:e2e
+      - name: Browser tests
+        env:
+          PROJECT: ${{ matrix.project }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            npm run test:e2e -- --project="$PROJECT" --grep-invert @stress
+          else
+            npm run test:e2e -- --project="$PROJECT"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-${{ matrix.project }}
+          path: |
+            playwright-report/source/
+            test-results/source/
+          retention-days: 7
+
+  package-consumers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:package
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-package-consumers
+          path: |
+            playwright-report/package/
+            test-results/package/
+          retention-days: 7

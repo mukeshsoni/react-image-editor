@@ -33,6 +33,7 @@ export default defineConfig({
     host: "0.0.0.0",
   },
   test: {
+    include: ["src/__tests__/**/*.test.{ts,tsx}"],
     environment: "jsdom",
     setupFiles: ["./src/__tests__/setup.ts"],
     ...(isCi ? { poolOptions: { threads: { singleThread: true } } } : {}),

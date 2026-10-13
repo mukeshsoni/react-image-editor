@@ -160,7 +160,7 @@ export function ExportTool({
         value={exportFormat}
         onValueChange={(value) => setExportFormat(value as ExportFormat)}
       >
-        <SelectTrigger size="sm" className="w-[110px]">
+        <SelectTrigger size="sm" className="w-[110px]" aria-label="Export format">
           <SelectValue placeholder="Format" />
         </SelectTrigger>
         <SelectContent>

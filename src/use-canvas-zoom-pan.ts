@@ -455,7 +455,12 @@ export const useCanvasZoomPan = (
   function handleMouseDown(event: MouseEvent<HTMLCanvasElement>) {
     startPan({ pageX: event.pageX, pageY: event.pageY });
   }
-  const touchState = useRef<{ startDistance?: number }>({});
+  const touchState = useRef<{
+    startDistance?: number;
+    startPoint?: Coords;
+    moved?: boolean;
+    pinched?: boolean;
+  }>({});
 
   // We will pan the image if the mouse moves and the user is dragging the mouse
   const handlePointerMove = useCallback(
@@ -509,10 +514,14 @@ export const useCanvasZoomPan = (
       // If user is using 2 fingers, it's probably for pinch and zoom.
       if (event.touches.length === 2) {
         cancelZoomAnimation();
+        touchState.current.pinched = true;
         touchState.current.startDistance = getTouchDistance(event.touches);
         return;
       }
 
+      touchState.current = {
+        startPoint: { x: event.touches[0].pageX, y: event.touches[0].pageY },
+      };
       startPan({
         pageX: event.touches[0].pageX,
         pageY: event.touches[0].pageY,
@@ -528,6 +537,11 @@ export const useCanvasZoomPan = (
       }
 
       event.preventDefault();
+
+      const start = touchState.current.startPoint;
+      if (start && Math.hypot(event.touches[0].pageX - start.x, event.touches[0].pageY - start.y) > 6) {
+        touchState.current.moved = true;
+      }
 
       if (
         event.touches.length === 2 &&
@@ -642,10 +656,20 @@ export const useCanvasZoomPan = (
   const lastTapTime = useRef(0);
   const handleTouchEnd = useCallback(
     (event: TouchEvent<HTMLCanvasElement>) => {
+      // Browsers may send separate touchend events for the two pinch fingers.
+      // Keep the multi-touch marker until every finger is lifted.
+      if (event.touches.length > 0) {
+        touchState.current.startDistance = undefined;
+        touchState.current.pinched = true;
+        startPan({ pageX: event.touches[0].pageX, pageY: event.touches[0].pageY });
+        return;
+      }
+      const isTap = !touchState.current.pinched && !touchState.current.moved;
       const imageSize = getImageSize();
       const currentTime = performance.now();
       const tapLength = currentTime - lastTapTime.current;
       if (
+        isTap &&
         tapLength < 300 &&
         tapLength > 0 &&
         canvasRef.current &&
@@ -674,11 +698,12 @@ export const useCanvasZoomPan = (
           }
         }
       }
-      lastTapTime.current = currentTime;
+      lastTapTime.current = isTap ? currentTime : 0;
+      touchState.current = {};
       // TODO
       handleMouseUp();
     },
-    [zoomToPoint, resetZoom, canvasRef, getImageSize, handleMouseUp, zoomLevel],
+    [zoomToPoint, resetZoom, canvasRef, getImageSize, handleMouseUp, startPan, zoomLevel],
   );
 
   function handleMouseMove(event: MouseEvent<HTMLCanvasElement>) {

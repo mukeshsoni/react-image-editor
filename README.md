@@ -232,6 +232,19 @@ npm run lint
 npx vitest run
 ```
 
+### Browser E2E tests
+
+```bash
+npm run test:e2e:install
+npm run test:e2e
+npm run test:e2e:package
+```
+
+The Playwright suite covers desktop/mobile workflows, actual downloaded pixels,
+loading/lifecycle races, history, and packed React 18/19 consumers. See
+[`e2e/README.md`](e2e/README.md) for the browser matrix, focused commands, CI behavior,
+and failure diagnostics.
+
 ## Roadmap
 
 See `ROADMAP.md`.

@@ -25,6 +25,10 @@ export function useThemeMode({ defaultMode, persist }: Options) {
   });
 
   useEffect(() => {
+    if (!persist) setMode(defaultMode);
+  }, [defaultMode, persist]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     if (mode !== "system") return;
 

@@ -17,20 +17,19 @@ const HISTORY_COMMIT_DEBOUNCE_MS = 250;
 type Unsubscribe = () => void;
 
 export function subscribeToEdits(onChange: (edits: ImageEditorEdits) => void): Unsubscribe {
-  let scheduled = false;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
 
   const emit = () => {
-    scheduled = false;
+    timeout = null;
     onChange(getImageEditorEdits());
   };
 
   const scheduleEmit = () => {
-    if (scheduled) {
+    if (timeout !== null) {
       return;
     }
 
-    scheduled = true;
-    setTimeout(emit, HISTORY_COMMIT_DEBOUNCE_MS);
+    timeout = setTimeout(emit, HISTORY_COMMIT_DEBOUNCE_MS);
   };
 
   const unsubscribes: Unsubscribe[] = [
@@ -47,6 +46,10 @@ export function subscribeToEdits(onChange: (edits: ImageEditorEdits) => void): U
   ];
 
   return () => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
     for (const unsubscribe of unsubscribes) {
       unsubscribe();
     }

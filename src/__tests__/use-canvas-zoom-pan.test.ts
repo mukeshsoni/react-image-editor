@@ -1,4 +1,5 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
+import type { TouchEvent as ReactTouchEvent } from "react";
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -102,5 +103,21 @@ describe("useCanvasZoomPan", () => {
     })));
     finishAnimation();
     expect(result.current.zoomLevel).toBe(1.5);
+  });
+
+  test("separate finger releases after a pinch are not a double tap", () => {
+    const { result, canvas } = setup();
+    touch(canvas, "touchstart", 100);
+    touch(canvas, "touchmove", 200);
+    expect(result.current.zoomLevel).toBe(2);
+    const finger = { pageX: 100, pageY: 100 };
+    const release = (touches: typeof finger[]) => ({
+      touches, changedTouches: [finger], preventDefault: vi.fn(),
+    } as unknown as ReactTouchEvent<HTMLCanvasElement>);
+    act(() => result.current.listeners.onTouchEnd(release([finger])));
+    act(() => vi.advanceTimersByTime(10));
+    act(() => result.current.listeners.onTouchEnd(release([])));
+    finishAnimation();
+    expect(result.current.zoomLevel).toBe(2);
   });
 });

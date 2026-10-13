@@ -684,7 +684,8 @@ export function ReactImageEditor({
         zoomLevel: currentCamera.zoomLevel,
         imageHeight: imageSize.height,
         viewportHeight,
-        trayHeight,
+        // Keep the bottom crop handles above the tray's hit-testing area too.
+        trayHeight: trayHeight + (cropModeRef.current ? 12 : 0),
         topMargin: 20,
       });
 

@@ -30,4 +30,14 @@ describe("ReactImageEditor theming", () => {
 
     expect(getByTestId("react-image-editor").className).not.toContain("dark");
   });
+
+  test("follows themeMode prop changes on the mounted editor", () => {
+    const { getByTestId, rerender } = render(
+      <ReactImageEditor imageSrc="image.png" themeMode="light" />,
+    );
+    rerender(<ReactImageEditor imageSrc="image.png" themeMode="dark" />);
+    expect(getByTestId("react-image-editor").className).toContain("dark");
+    rerender(<ReactImageEditor imageSrc="image.png" themeMode="light" />);
+    expect(getByTestId("react-image-editor").className).not.toContain("dark");
+  });
 });

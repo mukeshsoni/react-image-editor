@@ -40,6 +40,11 @@
   },
   "scripts": {
     "test": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:package": "npm run build:lib && npm run build:types && node e2e/scripts/prepare-consumers.mjs && playwright test -c playwright.package.config.ts",
+    "typecheck:e2e": "tsc -p tsconfig.e2e.json",
     "dev": "vite",
     "build": "vite build",
     "build:lib": "vite build -c vite.lib.config.ts",
@@ -74,8 +79,10 @@
     }
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.18.0",
     "@napi-rs/canvas": "^1.0.11",
+    "@playwright/test": "^1.64.0",
     "@simbathesailor/use-what-changed": "^2.0.0",
     "@tailwindcss/vite": "^4.1.8",
     "@testing-library/dom": "^10.4.0",
