@@ -204,6 +204,11 @@ export const useCanvasZoomPan = (
     () => zoomPanConfig.getImageSize?.() ?? imageRef.current,
     [imageRef, zoomPanConfig],
   );
+  const clampZoom = useCallback((value: number) => {
+    const min = Math.max(Number.EPSILON, zoomPanConfig.minZoom ?? 0.1);
+    const max = Math.max(min, zoomPanConfig.maxZoom ?? 4);
+    return Number.isNaN(value) ? min : Math.min(max, Math.max(min, value));
+  }, [zoomPanConfig.maxZoom, zoomPanConfig.minZoom]);
   const [zoomLevel, setZoomLevel] = useState(1);
   // The amount to which the image is scaled/zoomed
   // When the user loads an image, we calculate the zoomLevel so that the image fits in the canvas
@@ -330,6 +335,11 @@ export const useCanvasZoomPan = (
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
+      if (progress === 1) {
+        setCamera(targetZoom, targetOffset);
+        return;
+      }
+
       // Easing function for smooth animation
       const easeOutCubic = (x: number) => 1 - Math.pow(1 - x, 3);
       const easedProgress = easeOutCubic(progress);
@@ -359,7 +369,8 @@ export const useCanvasZoomPan = (
     [cancelZoomAnimation, setCamera],
   );
   const zoomToPoint = useCallback(
-    (newZoomLevel: number, point: { x: number; y: number }) => {
+    (requestedZoomLevel: number, point: { x: number; y: number }) => {
+      const newZoomLevel = clampZoom(requestedZoomLevel);
       const newOffset = calculateImageStartOffsetAroundAReferencePoint(
         zoomLevel,
         newZoomLevel,
@@ -375,7 +386,7 @@ export const useCanvasZoomPan = (
         performance.now(),
       );
     },
-    [animateZoom, offset, zoomLevel],
+    [animateZoom, clampZoom, offset, zoomLevel],
   );
   // User can zoom in and out of the image using the mouse wheel
   // This event is also called when user tries to zoom in/out of the image
@@ -497,6 +508,7 @@ export const useCanvasZoomPan = (
 
       // If user is using 2 fingers, it's probably for pinch and zoom.
       if (event.touches.length === 2) {
+        cancelZoomAnimation();
         touchState.current.startDistance = getTouchDistance(event.touches);
         return;
       }
@@ -506,7 +518,7 @@ export const useCanvasZoomPan = (
         pageY: event.touches[0].pageY,
       });
     },
-    [canvasRef, startPan],
+    [cancelZoomAnimation, canvasRef, startPan],
   );
 
   const handleTouchMove = useCallback(
@@ -524,7 +536,7 @@ export const useCanvasZoomPan = (
       ) {
         const currentDistance = getTouchDistance(event.touches);
         const scale = currentDistance / touchState.current.startDistance;
-        const newZoomLevel = zoomLevel * scale;
+        const newZoomLevel = clampZoom(zoomLevel * scale);
         const centerX = (event.touches[0].pageX + event.touches[1].pageX) / 2;
         const centerY = (event.touches[0].pageY + event.touches[1].pageY) / 2;
 
@@ -567,7 +579,7 @@ export const useCanvasZoomPan = (
         pageY: event.touches[0].pageY,
       });
     },
-    [canvasRef, getImageSize, offset, setCamera, handlePointerMove, zoomLevel],
+    [canvasRef, clampZoom, getImageSize, offset, setCamera, handlePointerMove, zoomLevel],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -589,10 +601,7 @@ export const useCanvasZoomPan = (
   // TODO: We are zooming from the center of the image always. We will fix it in the next iteration
   const zoomOut = useCallback(() => {
     // Decrease zoom by zoomStep
-    let newZoomLevel = zoomLevel - zoomLevel * zoomPanConfig.zoomStep;
-    if (zoomPanConfig.minZoom && newZoomLevel < zoomPanConfig.minZoom) {
-      newZoomLevel = zoomPanConfig.minZoom;
-    }
+    const newZoomLevel = zoomLevel - zoomLevel * zoomPanConfig.zoomStep;
     const canvasCenter = getCanvasCenter(canvasRef.current);
     zoomToPoint(newZoomLevel, canvasCenter);
   }, [
@@ -600,14 +609,10 @@ export const useCanvasZoomPan = (
     zoomLevel,
     canvasRef,
     zoomPanConfig.zoomStep,
-    zoomPanConfig.minZoom,
   ]);
   const zoomIn = useCallback(() => {
     // Increase zoom by zoomStep
-    let newZoomLevel = zoomLevel + zoomLevel * zoomPanConfig.zoomStep;
-    if (zoomPanConfig.maxZoom && newZoomLevel > zoomPanConfig.maxZoom) {
-      newZoomLevel = zoomPanConfig.maxZoom;
-    }
+    const newZoomLevel = zoomLevel + zoomLevel * zoomPanConfig.zoomStep;
     const canvasCenter = getCanvasCenter(canvasRef.current);
     zoomToPoint(newZoomLevel, canvasCenter);
   }, [
@@ -615,7 +620,6 @@ export const useCanvasZoomPan = (
     canvasRef,
     zoomLevel,
     zoomPanConfig.zoomStep,
-    zoomPanConfig.maxZoom,
   ]);
 
   const resetZoom = useCallback(() => {
@@ -761,21 +765,7 @@ export const useCanvasZoomPan = (
 
       const newZoomLevel = defaultZoomLevel * 2;
       const mousePosInCanvas = getMousePosInCanvas(canvasRef.current, event);
-      const newOffset = calculateImageStartOffsetAroundAReferencePoint(
-        zoomLevel,
-        newZoomLevel,
-        offset,
-        mousePosInCanvas,
-      );
-
-      animateZoom(
-        zoomLevel,
-        newZoomLevel,
-        offset,
-        newOffset,
-        mousePosInCanvas,
-        performance.now(),
-      );
+      zoomToPoint(newZoomLevel, mousePosInCanvas);
     }
 
     document.addEventListener("dblclick", handleNativeDoubleClick);
@@ -783,7 +773,7 @@ export const useCanvasZoomPan = (
     return () => {
       document.removeEventListener("dblclick", handleNativeDoubleClick);
     };
-  }, [animateZoom, canvasRef, getImageSize, offset, resetZoom, zoomLevel]);
+  }, [canvasRef, getImageSize, resetZoom, zoomLevel, zoomToPoint]);
 
   useEffect(() => {
     if (!zoomPanConfig.enableTouch) return;
