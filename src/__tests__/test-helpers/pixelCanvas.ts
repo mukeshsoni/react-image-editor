@@ -1,10 +1,11 @@
 import { createCanvas, ImageData as NativeImageData } from "@napi-rs/canvas";
+import type { Canvas } from "@napi-rs/canvas";
 import { vi } from "vitest";
 
 // Give jsdom canvases real pixel buffers so rendering tests can assert pixels,
 // rather than only checking calls to drawImage.
 export function installPixelCanvas() {
-  const surfaces = new WeakMap<object, ReturnType<typeof createCanvas>>();
+  const surfaces = new WeakMap<object, Canvas>();
   const contexts = new WeakMap<HTMLCanvasElement, CanvasRenderingContext2D>();
 
   function surfaceFor(source: HTMLCanvasElement | HTMLImageElement) {
