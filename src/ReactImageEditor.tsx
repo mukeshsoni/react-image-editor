@@ -60,7 +60,7 @@ import {
 } from "./use-canvas-zoom-pan";
 import { computeMobileTrayNudge } from "@/editor/mobileTrayNudge";
 import type { ImageEditorEdits } from "./store/edits";
-import type { Point } from "./store/cropStore";
+import type { CropCommit, Point } from "./store/cropStore";
 
 const HISTORY_COMMIT_DEBOUNCE_MS = 250;
 import {
@@ -462,6 +462,8 @@ export function ReactImageEditor({
   const mobileNudgeBaseCameraRef = useRef<{
     zoomLevel: number;
     offset: { x: number; y: number };
+    imageSrc: string;
+    cropCommit: CropCommit | null;
   } | null>(null);
   const mobileNudgeLastAppliedCameraRef = useRef<{
     zoomLevel: number;
@@ -819,6 +821,8 @@ export function ReactImageEditor({
       mobileNudgeBaseCameraRef.current = {
         zoomLevel,
         offset,
+        imageSrc,
+        cropCommit: cropCommitted ? cropCommit : null,
       };
       mobileNudgeLastAppliedCameraRef.current = null;
       return;
@@ -832,6 +836,13 @@ export function ReactImageEditor({
       mobileNudgeLastAppliedCameraRef.current = null;
 
       if (!base || !lastApplied) return;
+
+      // A new image or crop has its own camera. Never restore coordinates that
+      // were captured for the previous image framing.
+      if (
+        base.imageSrc !== imageSrc ||
+        base.cropCommit !== (cropCommitted ? cropCommit : null)
+      ) return;
 
       // Only restore if the current camera still matches the last auto-applied camera.
       // If the user panned/zoomed while the tray was open, keep their camera.
@@ -889,7 +900,10 @@ export function ReactImageEditor({
   }, [
     activeMobileBottomTab,
     activeMobileEditTab,
+    cropCommit,
+    cropCommitted,
     getViewImageSize,
+    imageSrc,
     isMobile,
     isMobileTrayContentOpen,
     offset,
