@@ -1,7 +1,7 @@
 import type { CropCommit } from "@/store/cropStore";
 
 export function createOffscreenCropCanvas(params: {
-  image: HTMLImageElement;
+  image: HTMLImageElement | HTMLCanvasElement;
   commit: CropCommit;
   background: "transparent" | "white";
 }): HTMLCanvasElement | null {

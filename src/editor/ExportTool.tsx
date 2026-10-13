@@ -16,6 +16,8 @@ import {
   type ExportFormat,
 } from "@/export-download";
 import { createOffscreenCropCanvas } from "@/editor/exportCrop";
+import { projectHealingOpsToCanvas } from "@/editor/pixel-pipeline/processors/healing";
+import { createProcessedImageCanvas } from "@/editor/renderPipeline";
 import { useColorStore } from "@/store/colorStore";
 import { useDenoiseStore } from "@/store/denoiseStore";
 import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
@@ -104,17 +106,33 @@ export function ExportTool({
 
       const baseImage = imageRef.current;
 
+      // Heal before cropping/rotation so points stay in original image space and
+      // sample regions outside the crop remain available.
+      const healedImage = healingOps.length > 0
+        ? createProcessedImageCanvas(baseImage, {
+            healingOps: projectHealingOpsToCanvas({
+              ops: healingOps,
+              imageSize: baseImage,
+              draw: { zoomLevel: 1, offset: { x: 0, y: 0 }, rotationDegrees: 0 },
+            }),
+          })
+        : baseImage;
+      if (!healedImage) {
+        setExportError("Failed to export image");
+        return;
+      }
+
       const cropCanvas =
         cropCommitted && cropCommit
           ? createOffscreenCropCanvas({
-              image: baseImage,
+              image: healedImage,
               commit: cropCommit,
               background,
             })
           : null;
 
         const offscreen = renderCommittedImageToOffscreenCanvas(
-          cropCanvas ?? baseImage,
+          cropCanvas ?? healedImage,
           cropCanvas ? 0 : rotation,
           background,
           effectiveAdjustments.whiteBalance,
@@ -123,7 +141,7 @@ export function ExportTool({
           effectiveAdjustments.color,
           sharpening,
           geometryOptics,
-          healingOps,
+          undefined,
           denoise,
         );
 

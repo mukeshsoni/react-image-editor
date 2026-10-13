@@ -24,6 +24,20 @@ type PipelineInputs = {
   sharpening?: SharpeningSettings;
 };
 
+export function createProcessedImageCanvas(
+  image: HTMLImageElement | HTMLCanvasElement,
+  inputs: PipelineInputs,
+): HTMLCanvasElement | null {
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.drawImage(image, 0, 0);
+  return applyPixelPipelineToCanvas(canvas, inputs) ? canvas : null;
+}
+
 export function applyPixelPipelineToCanvas(
   canvas: HTMLCanvasElement,
   inputs: PipelineInputs,

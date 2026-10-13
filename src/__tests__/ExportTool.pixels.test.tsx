@@ -5,6 +5,7 @@ import { ExportTool } from "@/editor/ExportTool";
 import * as download from "@/export-download";
 import { useCropStore } from "@/store/cropStore";
 import { useDenoiseStore } from "@/store/denoiseStore";
+import { useHealingStore } from "@/store/healingStore";
 
 import { installPixelCanvas } from "./test-helpers/pixelCanvas";
 
@@ -48,6 +49,7 @@ describe("export pixels", () => {
     useCropStore.getState().clearCommittedCrop();
     useCropStore.getState().resetCropSettings();
     useDenoiseStore.getState().resetDenoise();
+    useHealingStore.getState().resetHealing();
     vi.spyOn(download, "canvasToBlob").mockImplementation(async (canvas) => {
       exports.push(canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height));
       return new Blob(["export"]);
@@ -93,5 +95,38 @@ describe("export pixels", () => {
     expect(exports[1].width).toBe(cropped ? 20 : 32);
     expect(exports[1].data).not.toEqual(exports[0].data);
     expect(horizontalVariation(exports[1])).toBeLessThan(horizontalVariation(exports[0]));
+  });
+
+  test.each([
+    ["spot", 0], ["spot", 30],
+    ["heal", 0], ["heal", 30],
+    ["clone", 0], ["clone", 30],
+  ] as const)("preserves %s edits in a rotated crop (%s°), including external samples", async (mode, rotation) => {
+    const image = createImage(400, 200, (ctx) => {
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, 400, 200);
+      ctx.fillStyle = "blue";
+      ctx.fillRect(180, 80, 40, 40);
+      ctx.fillStyle = "red";
+      ctx.fillRect(280, 80, 40, 40);
+    });
+    const brush = { id: "sample", radius: 15, feather: 0, opacity: 255, source: { x: 300, y: 100 } };
+    useHealingStore.getState().addHealingOp(mode === "spot"
+      ? { ...brush, type: "spot", mode, center: { x: 200, y: 100 } }
+      : { ...brush, type: "stroke", mode, points: [{ x: 200, y: 100 }] },
+    );
+    useCropStore.getState().commitCrop({
+      outputWidth: 100,
+      outputHeight: 100,
+      bakedOffset: { x: -150, y: -50 },
+      rotationDegrees: rotation,
+    });
+
+    const { getByRole } = renderExport(image);
+    fireEvent.click(getByRole("button", { name: "Download" }));
+    await waitFor(() => expect(download.triggerDownload).toHaveBeenCalledTimes(1));
+
+    const center = (50 * exports[0].width + 50) * 4;
+    expect(Array.from(exports[0].data.slice(center, center + 4))).toEqual([255, 0, 0, 255]);
   });
 });
