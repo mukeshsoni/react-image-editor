@@ -32,6 +32,7 @@ import { useWhiteBalanceStore } from "@/store/whiteBalanceStore";
 
 type RenderCache = {
   baseCanvas: HTMLCanvasElement;
+  baseImage: HTMLImageElement | HTMLCanvasElement | null;
   baseKey: string;
   adjustedCanvas: HTMLCanvasElement;
   basePixels: Uint8ClampedArray;
@@ -95,7 +96,7 @@ function renderImageToCanvas(
     ? `${canvasWidth}x${canvasHeight}:${cropCommit.outputWidth}x${cropCommit.outputHeight}:${cropCommit.bakedOffset.x}:${cropCommit.bakedOffset.y}:${cropCommit.rotationDegrees}`
     : `${canvasWidth}x${canvasHeight}:${zoomLevel}:${offset.x}:${offset.y}:${rotation}`;
 
-  if (cache.baseKey !== baseKey) {
+  if (cache.baseImage !== imageRef || cache.baseKey !== baseKey) {
     cache.baseCanvas.width = canvasWidth;
     cache.baseCanvas.height = canvasHeight;
 
@@ -127,6 +128,7 @@ function renderImageToCanvas(
     cache.buffers.in.set(cache.basePixels);
 
     cache.baseKey = baseKey;
+    cache.baseImage = imageRef;
   }
 
    const projectedHealingOps =
@@ -235,6 +237,7 @@ export function EditorCanvas({
   if (!renderCacheRef.current && typeof document !== "undefined") {
     renderCacheRef.current = {
       baseCanvas: document.createElement("canvas"),
+      baseImage: null,
       baseKey: "",
       adjustedCanvas: document.createElement("canvas"),
       basePixels: new Uint8ClampedArray(0),
