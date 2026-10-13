@@ -3,6 +3,8 @@ import {
   ensurePipelineBufferCapacity,
   runPipeline,
 } from "@/editor/pixel-pipeline";
+import { projectHealingOpsToCanvas } from "@/editor/pixel-pipeline/processors/healing";
+import type { HealingOp } from "@/store/healingStore";
 import type {
   ColorAdjustments,
   DenoiseSettings,
@@ -24,10 +26,15 @@ type PipelineInputs = {
   sharpening?: SharpeningSettings;
 };
 
+export type ImageProcessingInputs = Omit<PipelineInputs, "healingOps"> & {
+  healingOps?: HealingOp[];
+};
+
 export function createProcessedImageCanvas(
   image: HTMLImageElement | HTMLCanvasElement,
-  inputs: PipelineInputs,
+  inputs: ImageProcessingInputs,
 ): HTMLCanvasElement | null {
+  if (image.width <= 0 || image.height <= 0) return null;
   const canvas = document.createElement("canvas");
   canvas.width = image.width;
   canvas.height = image.height;
@@ -35,7 +42,14 @@ export function createProcessedImageCanvas(
   if (!ctx) return null;
 
   ctx.drawImage(image, 0, 0);
-  return applyPixelPipelineToCanvas(canvas, inputs) ? canvas : null;
+  const healingOps = inputs.healingOps?.length
+    ? projectHealingOpsToCanvas({
+        ops: inputs.healingOps,
+        imageSize: image,
+        draw: { zoomLevel: 1, offset: { x: 0, y: 0 }, rotationDegrees: 0 },
+      })
+    : undefined;
+  return applyPixelPipelineToCanvas(canvas, { ...inputs, healingOps }) ? canvas : null;
 }
 
 export function applyPixelPipelineToCanvas(

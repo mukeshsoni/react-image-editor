@@ -1,5 +1,4 @@
-import { applyPixelPipelineToCanvas } from "@/editor/renderPipeline";
-import { projectHealingOpsToCanvas } from "@/editor/pixel-pipeline/processors/healing";
+import { createProcessedImageCanvas } from "@/editor/renderPipeline";
 import { getMaxInnerAxisAlignedRectSize } from "@/geometry/rotation";
 import { useCropStore } from "@/store/cropStore";
 
@@ -7,6 +6,7 @@ import type { HealingOp } from "@/store/healingStore";
 
 import type {
   ColorAdjustments,
+  CropCommit,
   DenoiseSettings,
   LightAdjustments,
   SharpeningSettings,
@@ -109,15 +109,25 @@ export function renderCommittedImageToOffscreenCanvas(
   geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings,
   healingOps?: HealingOp[],
   denoise?: DenoiseSettings,
+  cropCommit?: CropCommit | null,
 ): HTMLCanvasElement | null {
-  // NOTE: Crop is handled by the caller (see ExportTool) so that export can bake
-  // crop first and then run the same adjustment pipeline on the cropped pixels.
+  // All adjustments use original image coordinates, just like the preview.
+  // Crop, rotation, and the export background are applied only after processing.
+  const processedImage = createProcessedImageCanvas(image, {
+    geometryOptics,
+    whiteBalance,
+    lightAdjustments,
+    toneCurve,
+    colorAdjustments,
+    sharpening,
+    denoise,
+    healingOps,
+  });
+  if (!processedImage) return null;
 
-  const outputSize = getRotatedBoundingBoxSize(
-    image.width,
-    image.height,
-    rotationDegrees,
-  );
+  const outputSize = cropCommit
+    ? { width: cropCommit.outputWidth, height: cropCommit.outputHeight }
+    : getRotatedBoundingBoxSize(image.width, image.height, rotationDegrees);
 
   const offscreen = document.createElement("canvas");
   offscreen.width = outputSize.width;
@@ -131,6 +141,13 @@ export function renderCommittedImageToOffscreenCanvas(
     ctx.fillRect(0, 0, offscreen.width, offscreen.height);
   } else {
     ctx.clearRect(0, 0, offscreen.width, offscreen.height);
+  }
+
+  if (cropCommit) {
+    ctx.save();
+    drawImageWithRotation(ctx, processedImage, 1, cropCommit.bakedOffset, cropCommit.rotationDegrees);
+    ctx.restore();
+    return offscreen;
   }
 
   const centeredOffset = {
@@ -163,37 +180,13 @@ export function renderCommittedImageToOffscreenCanvas(
     };
 
     constrainedCtx.save();
-    drawImageWithRotation(constrainedCtx, image, 1, constrainedOffset, rotationDegrees);
+    drawImageWithRotation(constrainedCtx, processedImage, 1, constrainedOffset, rotationDegrees);
     constrainedCtx.restore();
   } else {
     ctx.save();
-    drawImageWithRotation(ctx, image, 1, centeredOffset, rotationDegrees);
+    drawImageWithRotation(ctx, processedImage, 1, centeredOffset, rotationDegrees);
     ctx.restore();
   }
-
-  const projectedHealingOps =
-    healingOps && healingOps.length > 0
-      ? projectHealingOpsToCanvas({
-          ops: healingOps,
-          imageSize: { width: image.width, height: image.height },
-          draw: {
-            zoomLevel: 1,
-            offset: centeredOffset,
-            rotationDegrees,
-          },
-        })
-      : undefined;
-
-  applyPixelPipelineToCanvas(offscreen, {
-    geometryOptics,
-    whiteBalance,
-    lightAdjustments,
-    toneCurve,
-    colorAdjustments,
-    sharpening,
-    denoise,
-    healingOps: projectedHealingOps,
-  });
 
   return offscreen;
 }
