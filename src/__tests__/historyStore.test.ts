@@ -155,4 +155,60 @@ describe("historyStore", () => {
     expect(entry?.label).toBe("Exposure");
     expect(useHistoryStore.getState().index).toBe(1);
   });
+
+  test("preserves the original reset target after exceeding the history limit", () => {
+    const history = useHistoryStore.getState();
+    const baseline = history.resetToBaseline(makeEntry("Original"));
+    for (let i = 1; i <= 70; i++) {
+      history.push({
+        label: `Edit ${i}`,
+        state: {
+          ...dummyState,
+          edits: {
+            ...dummyState.edits,
+            light: { ...dummyState.edits.light, exposure: i / 100 },
+          },
+        },
+      });
+    }
+
+    const { entries, index } = useHistoryStore.getState();
+    expect(entries).toHaveLength(50);
+    expect(index).toBe(49);
+    expect(entries[0]).toBe(baseline);
+    expect(entries[1].label).toBe("Edit 22");
+    expect(entries[49].label).toBe("Edit 70");
+    expect(history.jumpTo(0)?.state.edits.light.exposure).toBe(0);
+  });
+
+  test("keeps the baseline when branching after history eviction", () => {
+    useHistoryStore.setState({ maxEntries: 3 });
+    const history = useHistoryStore.getState();
+    const baseline = history.resetToBaseline(makeEntry("Original"));
+    for (let i = 1; i <= 4; i++) history.push(makeEntry(`Edit ${i}`));
+    expect(history.undo()?.label).toBe("Edit 3");
+    history.push(makeEntry("Branch"));
+
+    expect(useHistoryStore.getState().entries.map((entry) => entry.label))
+      .toEqual(["Original", "Edit 3", "Branch"]);
+    expect(history.redo()).toBeNull();
+    expect(history.jumpTo(0)).toBe(baseline);
+  });
+
+  test("replaces the pinned baseline when a new image is loaded", () => {
+    useHistoryStore.setState({ maxEntries: 2 });
+    const history = useHistoryStore.getState();
+    const oldBaseline = history.resetToBaseline(makeEntry("First image"));
+    history.push(makeEntry("First edit"));
+    history.push(makeEntry("Second edit"));
+
+    const newBaseline = history.resetToBaseline(makeEntry("Second image"));
+    history.push(makeEntry("New edit"));
+    history.push(makeEntry("Latest edit"));
+
+    expect(useHistoryStore.getState().entries).not.toContain(oldBaseline);
+    expect(history.jumpTo(0)).toBe(newBaseline);
+    expect(useHistoryStore.getState().entries.map((entry) => entry.label))
+      .toEqual(["Second image", "Latest edit"]);
+  });
 });

@@ -73,8 +73,13 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
       const base = state.entries.slice(0, state.index + 1);
       const appended = [...base, nextEntry];
 
-      const overflow = Math.max(0, appended.length - state.maxEntries);
-      const entries = overflow > 0 ? appended.slice(overflow) : appended;
+      // Index 0 is the original baseline used by Reset. Evict only edit entries,
+      // reserving room for the baseline and at least the current edit.
+      const maxEntries = Math.max(2, state.maxEntries);
+      const overflow = Math.max(0, appended.length - maxEntries);
+      const entries = overflow > 0
+        ? [appended[0], ...appended.slice(overflow + 1)]
+        : appended;
       const index = entries.length - 1;
 
       return {
