@@ -17,6 +17,7 @@ import {
 } from "@/export-download";
 import { createOffscreenCropCanvas } from "@/editor/exportCrop";
 import { useColorStore } from "@/store/colorStore";
+import { useDenoiseStore } from "@/store/denoiseStore";
 import { useGeometryOpticsStore } from "@/store/geometryOpticsStore";
 import { useLightStore } from "@/store/lightStore";
 import { useSharpeningStore } from "@/store/sharpeningStore";
@@ -71,6 +72,7 @@ export function ExportTool({
   const toneCurve = useToneCurveStore((state) => state.toneCurve);
   const preset = usePresetStore((state) => state.preset);
   const sharpening = useSharpeningStore((state) => state.sharpening);
+  const denoise = useDenoiseStore((state) => state.denoise);
   const geometryOptics = useGeometryOpticsStore((state) => state.settings);
   const healingOps = useHealingStore((state) => state.healingOps);
 
@@ -122,6 +124,7 @@ export function ExportTool({
           sharpening,
           geometryOptics,
           healingOps,
+          denoise,
         );
 
 

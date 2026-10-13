@@ -7,6 +7,7 @@ import type { HealingOp } from "@/store/healingStore";
 
 import type {
   ColorAdjustments,
+  DenoiseSettings,
   LightAdjustments,
   SharpeningSettings,
   ToneCurveSettings,
@@ -107,6 +108,7 @@ export function renderCommittedImageToOffscreenCanvas(
   sharpening?: SharpeningSettings,
   geometryOptics?: import("@/store/geometryOpticsStore").GeometryOpticsSettings,
   healingOps?: HealingOp[],
+  denoise?: DenoiseSettings,
 ): HTMLCanvasElement | null {
   // NOTE: Crop is handled by the caller (see ExportTool) so that export can bake
   // crop first and then run the same adjustment pipeline on the cropped pixels.
@@ -189,6 +191,7 @@ export function renderCommittedImageToOffscreenCanvas(
     toneCurve,
     colorAdjustments,
     sharpening,
+    denoise,
     healingOps: projectedHealingOps,
   });
 
