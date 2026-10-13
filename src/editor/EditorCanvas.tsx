@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { drawImageWithRotation } from "@/export-download";
+import { getCropDrawTransform } from "@/editor/cropCommitted";
 
 import {
   createDefaultPipeline,
@@ -73,27 +74,33 @@ function renderImageToCanvas(
 
   const shouldProcessPixels = cache != null;
 
-  if (!shouldProcessPixels) {
-    ctx.save();
+  const draw = cropCommit
+    ? getCropDrawTransform(cropCommit, zoomLevel, offset)
+    : { zoomLevel, offset, rotationDegrees: rotation };
 
+  function drawBase(target: CanvasRenderingContext2D) {
+    target.save();
     if (cropCommit) {
-      drawImageWithRotation(
-        ctx,
-        imageRef,
-        1,
-        cropCommit.bakedOffset,
-        cropCommit.rotationDegrees,
+      target.beginPath();
+      target.rect(
+        offset.x,
+        offset.y,
+        cropCommit.outputWidth * zoomLevel,
+        cropCommit.outputHeight * zoomLevel,
       );
-    } else {
-      drawImageWithRotation(ctx, imageRef, zoomLevel, offset, rotation);
+      target.clip();
     }
+    drawImageWithRotation(target, imageRef, draw.zoomLevel, draw.offset, draw.rotationDegrees);
+    target.restore();
+  }
 
-    ctx.restore();
+  if (!shouldProcessPixels) {
+    drawBase(ctx);
     return;
   }
 
   const baseKey = cropCommit
-    ? `${canvasWidth}x${canvasHeight}:${cropCommit.outputWidth}x${cropCommit.outputHeight}:${cropCommit.bakedOffset.x}:${cropCommit.bakedOffset.y}:${cropCommit.rotationDegrees}`
+    ? `${canvasWidth}x${canvasHeight}:${zoomLevel}:${offset.x}:${offset.y}:${cropCommit.outputWidth}x${cropCommit.outputHeight}:${cropCommit.bakedOffset.x}:${cropCommit.bakedOffset.y}:${cropCommit.rotationDegrees}`
     : `${canvasWidth}x${canvasHeight}:${zoomLevel}:${offset.x}:${offset.y}:${rotation}`;
 
   if (cache.baseImage !== imageRef || cache.baseKey !== baseKey) {
@@ -104,21 +111,7 @@ function renderImageToCanvas(
     if (!baseCtx) return;
 
     baseCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-    baseCtx.save();
-
-    if (cropCommit) {
-      drawImageWithRotation(
-        baseCtx,
-        imageRef,
-        1,
-        cropCommit.bakedOffset,
-        cropCommit.rotationDegrees,
-      );
-    } else {
-      drawImageWithRotation(baseCtx, imageRef, zoomLevel, offset, rotation);
-    }
-
-    baseCtx.restore();
+    drawBase(baseCtx);
 
     const imageData = baseCtx.getImageData(0, 0, canvasWidth, canvasHeight);
 
@@ -136,17 +129,7 @@ function renderImageToCanvas(
        ? projectHealingOpsToCanvas({
            ops: healingOps,
            imageSize: { width: imageRef.width, height: imageRef.height },
-           draw: cropCommit
-             ? {
-                 zoomLevel: 1,
-                 offset: cropCommit.bakedOffset,
-                 rotationDegrees: cropCommit.rotationDegrees,
-               }
-             : {
-                 zoomLevel,
-                 offset,
-                 rotationDegrees: rotation,
-               },
+           draw,
          })
        : undefined;
 
@@ -188,6 +171,7 @@ type Props = {
   zoomLevel: number;
   offset: { x: number; y: number };
   rotation: number;
+  cropMode?: boolean;
   listeners: import("react").ComponentPropsWithoutRef<"canvas">;
   cursor?: string;
   isPickingWhiteBalance: boolean;
@@ -202,6 +186,7 @@ export function EditorCanvas({
   zoomLevel,
   offset,
   rotation,
+  cropMode = false,
   listeners,
   cursor,
   isPickingWhiteBalance,
@@ -264,7 +249,7 @@ export function EditorCanvas({
           zoomLevel,
           offset,
           rotation,
-          cropCommitted ? cropCommit : null,
+          cropCommitted && !cropMode ? cropCommit : null,
           effectiveAdjustments.whiteBalance,
           effectiveAdjustments.light,
           toneCurve,
@@ -280,6 +265,7 @@ export function EditorCanvas({
       canvasRef,
       cropCommit,
       cropCommitted,
+      cropMode,
       denoise,
       effectiveAdjustments.color,
       effectiveAdjustments.light,

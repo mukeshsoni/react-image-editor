@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ChevronLeftIcon,
@@ -20,6 +20,7 @@ import {
   CropToolOverlay,
 } from "@/editor/CropTool";
 import { EditorCanvas } from "@/editor/EditorCanvas";
+import { getCropDrawTransform } from "@/editor/cropCommitted";
 import { ExportTool } from "@/editor/ExportTool";
 import { HealingToolButtons, HealingToolPanel } from "@/editor/HealingTool";
 import { GeometryOpticsPanel } from "@/editor/GeometryOpticsPanel";
@@ -246,7 +247,12 @@ export function ReactImageEditor({
   themeMode = "dark",
   themeScope = "local",
 }: Props) {
-  const [cropMode, setCropMode] = useState(false);
+  const [cropMode, setCropModeState] = useState(false);
+  const cropModeRef = useRef(false);
+  const setCropMode = useCallback((next: boolean) => {
+    cropModeRef.current = next;
+    setCropModeState(next);
+  }, []);
   const [healingModeEnabled, setHealingModeEnabled] = useState(false);
 
   const [isHistoryPaneOpen, setIsHistoryPaneOpen] = useState(true);
@@ -434,6 +440,19 @@ export function ReactImageEditor({
   const imageRef = useRef<HTMLImageElement | null>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
 
+  const getViewImageSize = useCallback(() => {
+    const image = imageRef.current;
+    if (!image) return null;
+    const crop = useCropStore.getState();
+    if (crop.cropCommitted && crop.cropCommit && !cropModeRef.current) {
+      return {
+        width: crop.cropCommit.outputWidth,
+        height: crop.cropCommit.outputHeight,
+      };
+    }
+    return { width: image.width, height: image.height };
+  }, []);
+
   const mobileCanvasViewportRef = useRef<HTMLDivElement | null>(null);
   const mobileTrayRef = useRef<HTMLDivElement | null>(null);
   const mobileTrayScrollRef = useRef<HTMLDivElement | null>(null);
@@ -497,6 +516,7 @@ export function ReactImageEditor({
     listeners,
   } = useCanvasZoomPan(canvasRef, imageRef, {
     enableWheel: true,
+    getImageSize: getViewImageSize,
     onCameraChange: (camera) => {
       liveCameraRef.current = camera;
       if (
@@ -584,9 +604,8 @@ export function ReactImageEditor({
         canvasRef.current.height = viewportHeight;
       }
 
-      if (!imageRef.current) {
-        return;
-      }
+      const imageSize = getViewImageSize();
+      if (!imageSize) return;
 
       if (
         !Number.isFinite(currentCamera.zoomLevel) ||
@@ -598,14 +617,14 @@ export function ReactImageEditor({
       const panBounds = calculatePanBounds(
         viewportWidth,
         viewportHeight,
-        imageRef.current.width,
-        imageRef.current.height,
+        imageSize.width,
+        imageSize.height,
         currentCamera.zoomLevel,
       );
 
       // When the image is smaller than the viewport, default pan bounds lock it centered.
       // For the tray nudge behavior we allow moving the image up until the top margin.
-      const renderedHeight = imageRef.current.height * currentCamera.zoomLevel;
+      const renderedHeight = imageSize.height * currentCamera.zoomLevel;
       if (renderedHeight <= viewportHeight) {
         const centerY = panBounds.minY;
         const topMargin = 20;
@@ -661,7 +680,7 @@ export function ReactImageEditor({
       const nudge = computeMobileTrayNudge({
         offsetY: clamped.y,
         zoomLevel: currentCamera.zoomLevel,
-        imageHeight: imageRef.current.height,
+        imageHeight: imageSize.height,
         viewportHeight,
         trayHeight,
         topMargin: 20,
@@ -725,7 +744,7 @@ export function ReactImageEditor({
         offset: nextClamped,
       };
     };
-  }, [isMobile, setCamera]);
+  }, [getViewImageSize, isMobile, setCamera]);
 
   useEffect(() => {
     if (!isMobile) return;
@@ -822,7 +841,8 @@ export function ReactImageEditor({
         offset.y === lastApplied.offset.y;
 
       if (!isStillAutoApplied) return;
-      if (!canvasRef.current || !imageRef.current) return;
+      const imageSize = getViewImageSize();
+      if (!canvasRef.current || !imageSize) return;
 
       const viewportEl = mobileCanvasViewportRef.current;
       if (!viewportEl) return;
@@ -833,12 +853,12 @@ export function ReactImageEditor({
       const panBounds = calculatePanBounds(
         viewportWidth,
         viewportHeight,
-        imageRef.current.width,
-        imageRef.current.height,
+        imageSize.width,
+        imageSize.height,
         base.zoomLevel,
       );
 
-      const renderedHeight = imageRef.current.height * base.zoomLevel;
+      const renderedHeight = imageSize.height * base.zoomLevel;
       if (renderedHeight <= viewportHeight) {
         const centerY = panBounds.minY;
         const topMargin = 20;
@@ -869,6 +889,7 @@ export function ReactImageEditor({
   }, [
     activeMobileBottomTab,
     activeMobileEditTab,
+    getViewImageSize,
     isMobile,
     isMobileTrayContentOpen,
     offset,
@@ -905,12 +926,8 @@ export function ReactImageEditor({
 
   const getDrawTransform = useMemo(() => {
     return () => {
-      if (cropCommitted && cropCommit) {
-        return {
-          zoomLevel: 1,
-          offset: cropCommit.bakedOffset,
-          rotationDegrees: cropCommit.rotationDegrees,
-        };
+      if (cropCommitted && cropCommit && !cropMode) {
+        return getCropDrawTransform(cropCommit, zoomLevel, offset);
       }
 
       return {
@@ -919,7 +936,7 @@ export function ReactImageEditor({
         rotationDegrees: rotation,
       };
     };
-  }, [cropCommit, cropCommitted, offset, rotation, zoomLevel]);
+  }, [cropCommit, cropCommitted, cropMode, offset, rotation, zoomLevel]);
 
   const canvasPointToImagePoint = useMemo(() => {
     return (point: { x: number; y: number }): Point | null => {
@@ -961,10 +978,7 @@ export function ReactImageEditor({
     };
   }, [getDrawTransform]);
 
-  const drawZoomLevelForCursor = useMemo(() => {
-    const drawZoom = cropCommitted && cropCommit ? 1 : zoomLevel;
-    return drawZoom;
-  }, [cropCommit, cropCommitted, zoomLevel]);
+  const drawZoomLevelForCursor = zoomLevel;
 
   const imagePointToCanvasPoint = useMemo(() => {
     return (point: Point): { x: number; y: number } | null => {
@@ -1106,11 +1120,9 @@ export function ReactImageEditor({
     };
   }, [healingMode, healingModeEnabled, removeHealingOp, selectedSpotId]);
 
-  // Reset zoom when in crop mode
+  // Fit the original while editing a crop, and the cropped output when leaving.
   useEffect(() => {
-    if (cropMode) {
-      resetZoom();
-    }
+    resetZoom();
   }, [cropMode, resetZoom]);
 
   useEffect(() => {
@@ -1288,7 +1300,7 @@ export function ReactImageEditor({
         isInitializingRef.current = false;
       });
     };
-  }, [imageSrc, resetAll, resetHistoryToBaseline, resetZoom]);
+  }, [imageSrc, resetAll, resetHistoryToBaseline, resetZoom, setCropMode]);
 
   useEffect(() => {
     const unsubscribe = subscribeToEdits((nextEdits) => {
@@ -1591,6 +1603,7 @@ export function ReactImageEditor({
           <EditorCanvas
             canvasRef={canvasRef}
             imageRef={imageRef}
+            cropMode={cropMode}
             zoomLevel={zoomLevel}
             offset={offset}
             rotation={rotation}
@@ -2121,6 +2134,7 @@ export function ReactImageEditor({
           <EditorCanvas
             canvasRef={canvasRef}
             imageRef={imageRef}
+            cropMode={cropMode}
             zoomLevel={zoomLevel}
             offset={offset}
             rotation={rotation}
