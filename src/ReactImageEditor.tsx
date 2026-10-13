@@ -1224,15 +1224,16 @@ export function ReactImageEditor({
 
   // On change of imageFile we will try to render the image pointed by that file
   useEffect(() => {
+    let active = true;
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.src = imageSrc;
 
     // when the browser is done loading the image to our Image instance
     // we try to render it to the canvas
     setIsImageLoaded(false);
 
     img.onload = () => {
+      if (!active) return;
       isInitializingRef.current = true;
 
       if (commitCameraTimeoutRef.current) {
@@ -1297,8 +1298,14 @@ export function ReactImageEditor({
 
       // ResetZoom triggers onCameraChange; ignore it during initialization.
       queueMicrotask(() => {
-        isInitializingRef.current = false;
+        if (active) isInitializingRef.current = false;
       });
+    };
+    img.src = imageSrc;
+
+    return () => {
+      active = false;
+      img.onload = null;
     };
   }, [imageSrc, resetAll, resetHistoryToBaseline, resetZoom, setCropMode]);
 
