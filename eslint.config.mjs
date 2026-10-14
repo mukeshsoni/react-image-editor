@@ -11,7 +11,7 @@ import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist/**", "playwright-report/**", "test-results/**", ".e2e-consumers/**", ".e2e-packages/**"] },
+  { ignores: ["dist/**", "demo-dist/**", "playwright-report/**", "test-results/**", ".e2e-consumers/**", ".e2e-packages/**"] },
   eslint.configs.recommended,
   tseslint.configs.recommended,
   {

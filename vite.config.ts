@@ -16,6 +16,7 @@ const __dirname = path.dirname(__filename);
 // https://vite.dev/config/
 export default defineConfig({
   base: basePath,
+  build: { outDir: "demo-dist" },
   plugins: [
     react({
       babel: {
@@ -35,7 +36,6 @@ export default defineConfig({
   test: {
     include: ["src/__tests__/**/*.test.{ts,tsx}"],
     environment: "jsdom",
-    setupFiles: ["./src/__tests__/setup.ts"],
     ...(isCi ? { poolOptions: { threads: { singleThread: true } } } : {}),
   },
 });

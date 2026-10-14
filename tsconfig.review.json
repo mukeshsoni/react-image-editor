@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.e2e.json",
+  "include": ["review-e2e/**/*.ts", "playwright.review.config.ts"]
+}

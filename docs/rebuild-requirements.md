@@ -2,11 +2,12 @@
 
 ## 1. Goal and acceptance contract
 
-Recreate the existing image editor from a blank application on the orphan branch
+Recreate the existing image editor from a blank application on
 `rebuild-from-scratch`. This document was written before replacing the application,
 from the current public API, working UI, source feature definitions, README, and
-Chromium E2E scenarios on `redo-everything` (baseline commit `4e4e77c`, plus the
-E2E suite and related regression fixes).
+Chromium E2E scenarios on `redo-everything`. The original editor, E2E suite, and
+related regression fixes were committed as `57cb7b2` before this implementation
+started.
 
 The product is a browser-based, non-destructive photo editor, distributed as a
 React component and demonstrated in a standalone Vite app. A user can load a photo,
@@ -317,3 +318,66 @@ are roadmap items rather than current functionality.
 7. Inspect the actual desktop and mobile UI in Chromium, including both themes,
    scrolling, custom-ratio focus, crop handles, and error states. Record verified
    results and any remaining limitations in the delivery summary.
+
+## 7. Execution record
+
+The requested order was followed:
+
+1. Preserve the previous uncommitted implementation at
+   `refs/backups/rebuild-before-e2e-commit` (tree `480090a4`).
+2. Restore the saved original work to `redo-everything`, verify it, and commit it as
+   `57cb7b2` — `test: add Chromium E2E coverage and regression fixes`.
+3. Return to the empty `rebuild-from-scratch` orphan branch. Restore the requirements,
+   legal/project tooling, and E2E harness from that committed baseline. Verify that
+   no application source has been brought over.
+4. Write the current implementation from scratch, then run the retained acceptance
+   tests against it and resolve the independent review findings.
+5. For the pull request against `main`, use the saved `57cb7b2` baseline as the
+   parent of the first rebuild commit. This connects the initially orphan working
+   tree to the repository history while preserving the reviewed application files.
+
+### Current implementation
+
+- `src/model/session.ts`: isolated state, explicit actions, notifications, source
+  resets, and camera/tool ownership. `history.ts` preserves Original at capacity.
+- `src/engine/`: linear-light exposure, white balance, curves, color/mixer masks,
+  sharpening, bilateral denoise, repair, perspective/lens mapping, optics, and
+  automatic level estimation. `PhotoRenderer` shares image-space processing and
+  caches between the preview and full-resolution export.
+- `src/hooks/use-canvas-input.ts`: mouse/touch input, pinch, double tap, pan,
+  source picking, and repair gestures with cleanup.
+- `src/components/`: accessible primitives and every editing panel, crop handles,
+  repair pins, resizable desktop panes, and reversible mobile tray positioning.
+- `src/ReactImageEditor.tsx`: public component, theme scope, lifecycle, and shortcuts.
+- `styles.css`: scoped Tailwind tokens shared by library consumers and the demo.
+
+### Verification on 2026-10-13
+
+| Check | Original baseline before commit | Current rebuild |
+| --- | --- | --- |
+| Desktop/mobile Chromium, including stress journeys | 203 passed | 203 passed |
+| Packed React 18.2 / React 19 consumers | 4 passed | 4 passed |
+| Unit tests | 177 passed | 15 passed |
+| ESLint and source/E2E TypeScript | Passed | Passed |
+| Library and declaration builds | Passed | Passed |
+| Demo production build | — | Passed |
+
+The E2E directory, Playwright configurations, E2E TypeScript configuration, and CI
+workflow are identical to the committed baseline. Additional unit tests exercise
+instance/snapshot isolation, cancellation, history retention, crop constraints,
+perspective-aware picking, immutable pixels, linear exposure, deterministic grain,
+denoise, and automatic level estimation. Browser review covered the actual demo,
+theme switching, and an active crop crossing the desktop/mobile breakpoint with
+all eight handles and crop controls accessible.
+
+### Independent review follow-up
+
+The implementation was subsequently reviewed by `azure/gpt-6-sol` with `max`
+reasoning. All 13 reported failure paths and two follow-up transition issues were
+fixed. The same reviewer verified the fixes. Current verification includes 203
+retained E2E cases, 13 added browser regressions, 66 unit tests, 4 packed React
+consumer cases, and CSS checks using React 18/19 consumers without Tailwind.
+
+The public stylesheet is now generated from `styles.source.css`, fully compiled,
+and scoped to editor/portal elements. A host-side Tailwind compiler is not required.
+See [review findings and regression coverage](review-findings.md) for details.

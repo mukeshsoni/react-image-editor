@@ -1,4 +1,3 @@
 export { ReactImageEditor } from "./ReactImageEditor";
-
-export type { ImageEditorEdits } from "./store/edits";
-export type { ThemeMode } from "./lib/theme";
+export type { ReactImageEditorProps } from "./ReactImageEditor";
+export type { ImageEditorEdits, ThemeMode } from "./model/types";

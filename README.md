@@ -1,250 +1,128 @@
 # React Image Editor
 
-A Lightroom-style, non-destructive image editor for React, built on top of the HTML Canvas 2D API.
-
-- Drop-in React component: pass an `imageSrc`
-- Non-destructive pipeline: edits are re-applied from the original for preview + export
-- Crop/straighten, healing, tone/color adjustments, history + undo/redo
-- Export PNG/JPEG (with JPEG quality)
-
-[Link to demo](https://mukeshsoni.github.io/react-image-editor/)
-
-## Demo
-
-
-![Demo](https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/demo.gif)
-
-<p>
-  <img src="https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/01-overview.png" width="840" alt="Editor overview" />
-</p>
-<p>
-  <img src="https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/02-crop.png" width="840" alt="Crop tool" />
-</p>
-<p>
-  <img src="https://raw.githubusercontent.com/mukeshsoni/react-image-editor/main/docs/readme/03-healing.png" width="840" alt="Healing tool" />
-</p>
+A non-destructive Canvas 2D image editor for React 18.2 and React 19.
 
 ## Features
 
-### Viewer (zoom/pan)
+- Pointer-centered zoom, drag/inertial pan, native pinch, and double-tap fit.
+- Eight-handle cropping, preset/custom ratios, rotation, and auto-straighten.
+- White balance, exposure/tone, vibrance/saturation, HSL mixer, and point color.
+- RGB/channel curves, parametric curves, presets, sharpening, and denoise.
+- Perspective, distortion, chromatic-aberration correction, vignette, grain, and dehaze.
+- Spot, heal, and clone tools with adjustable brushes and movable sample pins.
+- Undo/redo and a 50-entry history that always preserves the original.
+- Full-resolution PNG/JPEG export, alpha preservation, and JPEG quality.
+- Resizable desktop panels, mobile tool trays, and local light/dark/system themes.
 
-- Zoom with mouse wheel/trackpad, pinch-to-zoom on touch devices
-- Zoom centers on the cursor/touch point (makes it easy to inspect details)
-- Double-click / double-tap toggles between fit-to-canvas and a closer zoom
-- Drag-to-pan with inertial panning
+Each editor owns its session. Image-space processing is shared between preview and
+export; camera changes do not change the exported image.
 
-### Crop & straighten
-
-- Interactive crop overlay: drag to move, drag handles to resize
-- Aspect ratio presets + custom ratio input, optional aspect lock
-- Rotate/straighten with live preview
-- Apply crop (commits it) or reset crop
-- Auto-straighten estimates a rotation angle from the image
-
-### Adjustments (non-destructive)
-
-- White balance: temperature/tint, presets, and a click-to-pick eyedropper
-- Tone: exposure, contrast, highlights/shadows, whites/blacks
-- Color: vibrance and saturation
-- Presets: built-in presets with adjustable strength (applies into manual sliders)
-- Color mixer: per-color-band HSL tuning + point color picker with a configurable range
-- Tone curve: point curve editing and region/parametric controls
-- Details: sharpening and denoising controls
-
-### Geometry & optics
-
-- Perspective correction (vertical/horizontal/aspect)
-- Lens corrections (distortion + chromatic aberration toggle)
-- Optics: vignette, grain, dehaze
-
-### Healing / clone
-
-- Spot removal, heal brush, and clone brush modes
-- Brush size + feather
-- Clone source selection (Alt/Option + click), plus pan while editing (Space + drag)
-- Select spots and adjust their sample/source point; delete selected spots
-
-### History
-
-- Undo/redo (buttons + shortcuts)
-- History list with time travel (click an entry to jump)
-- Reset back to the original baseline
-
-## Tools & Adjustments
-
-- Crop: aspect ratios, rotation/straighten, constrain crop, apply/reset
-- Zoom & pan: wheel/pinch zoom to cursor, drag-to-pan with inertia, reset zoom
-- Export: PNG/JPEG, JPEG quality
-- Tone: exposure, contrast, highlights, shadows, whites, blacks
-- Color: vibrance, saturation, per-band HSL color mixer, point color
-- Tone curve: point curve + region/parametric
-- Details: sharpening, denoise
-- Geometry: perspective, lens distortion, chromatic aberration
-- Optics: vignette, grain, dehaze
-- Healing: spot/heal/clone with adjustable brush
-- Presets: built-in presets with strength
-
-## Export
-
-- Formats: PNG and JPEG
-- JPEG quality control
-- Export uses the committed crop and ignores the current zoom/pan (view-only)
-- Download is disabled while crop mode is active; apply the crop first
-
-## Known gaps
-
-- The "Auto", "B&W", and "HDR" buttons are currently present but do not apply edits
-- The "Profile" control is present as a placeholder (disabled)
-- "Guided Upright" UI is present, but the guided workflow is not implemented yet
-
-## Install
-
-```bash
-npm install @mukeshsoni/react-image-editor
-```
-
-Peer dependencies:
-
-- `react`
-- `react-dom`
-
-## Quick Start
+## Embed
 
 ```tsx
-import { useMemo, useState } from "react";
 import { ReactImageEditor, type ImageEditorEdits } from "@mukeshsoni/react-image-editor";
 import "@mukeshsoni/react-image-editor/styles.css";
 
-export function MyEditor() {
-  const [file, setFile] = useState<File | null>(null);
-
-  const imageSrc = useMemo(() => {
-    if (!file) return null;
-    return URL.createObjectURL(file);
-  }, [file]);
-
+export function PhotoEditor({ imageSrc }: { imageSrc: string }) {
+  function save(edits: ImageEditorEdits) {
+    console.log(edits);
+  }
   return (
-    <div style={{ height: "100vh" }}>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-      />
-
-      {imageSrc ? (
-        <ReactImageEditor
-          imageSrc={imageSrc}
-          onEditsChange={(edits: ImageEditorEdits) => {
-            // Persist edits in your app, sync to server, etc.
-            console.log(edits);
-          }}
-        />
-      ) : null}
+    <div style={{ height: "80dvh" }}>
+      <ReactImageEditor imageSrc={imageSrc} themeMode="system" onEditsChange={save} />
     </div>
   );
 }
 ```
 
-## Component API
+### Styles
 
-### `ReactImageEditor`
+Import the stylesheet once, as in the example above, or from your own CSS:
 
-Props:
-
-- `imageSrc: string`
-  - URL to load into the editor (e.g. `URL.createObjectURL(file)` or a CDN URL).
-- `onEditsChange?: (edits: ImageEditorEdits) => void`
-  - Called when committed edits change (crop apply/reset, slider commits, healing ops, etc).
-
-### `ImageEditorEdits`
-
-`onEditsChange` emits a serializable snapshot of the editor state.
-
-If you want to inspect the full shape, see `src/store/edits.ts`.
-
-## Keyboard + Interaction Cheatsheet
-
-- Undo / redo: `Cmd+Z`, `Shift+Cmd+Z`
-- Zoom:
-  - Mouse wheel / trackpad pinch over the canvas
-  - Double-click / double-tap toggles fit vs zoomed
-  - Buttons: zoom in/out + reset
-  - Keyboard: `Cmd/Ctrl +`, `Cmd/Ctrl -`, `Cmd/Ctrl 0`
-- Crop:
-  - Rotate: `[` / `]` (hold `Shift` for bigger step)
-  - Reset rotation: `R`
-- Pickers:
-  - Cancel white balance / point color picking: `Esc`
-- Healing:
-  - Pan while healing: hold `Space` + drag
-  - Clone source: hold `Alt/Option` and click (Clone mode)
-  - Delete selected spot: `Delete` / `Backspace`
-
-## Styling / CSS
-
-The editor UI is built with Tailwind CSS v4 + shadcn/ui components.
-
-When consumed as a library, Tailwind CSS is required in the host app (Tailwind v3 or v4).
-
-1. Import the editor styles once in your app entry (Tailwind will compile it):
-
-```ts
-import "@mukeshsoni/react-image-editor/styles.css";
+```css
+@import "@mukeshsoni/react-image-editor/styles.css";
 ```
 
-2. Ensure Tailwind scans the editor package output in `node_modules` so its class names are included in your build. Without this, the UI will look partially unstyled.
+The package ships fully compiled CSS. No Tailwind installation, compiler/plugin,
+or `@source` scan is needed. It works with a regular CSS-capable bundler, or you can
+serve `styles.css` directly with a stylesheet link. Resets, theme variables, and
+utilities are scoped to `.react-image-editor` and `.rie-overlay`, including portal
+menus, dialogs, and their backdrops, so unrelated host elements keep their styles.
 
-Example `tailwind.config.{js,ts}`:
+For package development, edit `styles.source.css` and run `npm run build:css` to
+regenerate `styles.css`. `npm run dev` also watches CSS and component class changes;
+demo/library builds and `npm pack` regenerate the stylesheet automatically.
+Tailwind CSS v4 and PostCSS are build-time development dependencies only.
 
-```ts
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "./node_modules/@mukeshsoni/react-image-editor/dist/**/*.{js,ts,jsx,tsx}",
-  ],
-};
-```
+Run `npm run test:css` for stylesheet regressions. `npm run test:css:package` uses
+`agent-browser` with Chromium to check packed React 18/19 consumers without
+Tailwind; set `RIE_CSS_ARTIFACTS` to an existing directory for its temporary sites
+and screenshots (defaults to the system temporary directory).
 
-## CORS / Tainted Canvas Notes
+React and React DOM are peer dependencies. URLs for remote images must allow
+CORS. Callers own any object URLs passed as `imageSrc` and should revoke them
+when no longer needed.
 
-If `imageSrc` points to a remote image without permissive CORS headers, the canvas can become tainted.
-That breaks features that read pixels (eyedroppers) and can block export.
+| Prop | Type | Default |
+| --- | --- | --- |
+| `imageSrc` | URL, data URL, or object URL string | required |
+| `onEditsChange` | `(edits: ImageEditorEdits) => void` | — |
+| `themeMode` | `"light" \| "dark" \| "system"` | `"dark"` |
+| `themeScope` | `"local" \| "global"` | `"local"` |
 
-Recommendation: use same-origin images, or serve images with `Access-Control-Allow-Origin` and proper CORS configuration.
+Edit snapshots are detached, serializable version-one values. Crop and repair
+coordinates are original-image pixels. A new source resets the session; a parent
+rerender preserves it.
 
-## Limitations
+## Keyboard
 
-- State is managed with Zustand stores; multiple editors on the same page may conflict unless the library is adapted to use per-instance stores.
+- Cmd/Ctrl+Z and Cmd/Ctrl+Shift+Z: undo/redo.
+- Cmd/Ctrl +/−/0: zoom in/out/fit.
+- Crop: `[` / `]` rotates 1° (Shift: 5°); R resets rotation.
+- Escape cancels picking. Sliders support Home/End/arrows and double-click reset.
+- Healing: Alt/Option-click selects a clone source; Space-drag pans; Delete removes
+  the selected spot. A source-picking button also supports touch.
+- Curve points can be added/selected with buttons and moved with arrow keys.
 
-## Local Development (repo)
+## Develop and test
 
-```bash
-npm install
+```sh
+npm ci
 npm run dev
-```
-
-Other useful commands:
-
-```bash
-npm run build
 npm run lint
+npx tsc -p tsconfig.app.json
+npm run typecheck:e2e
 npx vitest run
-```
-
-### Browser E2E tests
-
-```bash
+npm run build
 npm run test:e2e:install
 npm run test:e2e
 npm run test:e2e:package
 ```
 
-The Playwright suite covers desktop/mobile workflows, actual downloaded pixels,
-loading/lifecycle races, history, and packed React 18/19 consumers. See
-[`e2e/README.md`](e2e/README.md) for the browser matrix, focused commands, CI behavior,
-and failure diagnostics.
+The demo build is written to `demo-dist/`. Library and declaration builds write to
+`dist/`. See [`e2e/README.md`](e2e/README.md) for focused Chromium runs, traces, and
+packed React 18/19 consumer tests.
 
-## Roadmap
+Additional review regressions:
 
-See `ROADMAP.md`.
+```sh
+npm run test:review
+npm run typecheck:review
+npm run test:css
+npm run test:css:package
+```
+
+The no-Tailwind package check requires `agent-browser` with Chromium. Review findings,
+fixes, and verification results are recorded in [the independent review](docs/review-findings.md).
+
+## Rebuild baseline
+
+The original editor, E2E suite, and related fixes were committed on `redo-everything`
+as `57cb7b2` **before this implementation began**. The rebuild started with an empty
+application tree and retains that commit's E2E harness. Its first commit uses the
+saved baseline as its parent so it can be reviewed against `main`.
+See the [feature and UI/UX requirements](docs/rebuild-requirements.md).
+
+The requirements document distinguishes working features from the original
+Auto/B&W/HDR, Profile, and Guided Upright placeholders. RAW decoding and metadata/
+color-profile preservation remain future scope.
