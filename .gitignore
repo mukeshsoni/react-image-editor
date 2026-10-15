@@ -9,7 +9,13 @@ lerna-debug.log*
 
 node_modules
 dist
+demo-dist/
 dist-ssr
+playwright-report/
+playwright-transform-cache-*/
+test-results/
+.e2e-consumers/
+.e2e-packages/
 *.local
 
 # Editor directories and files

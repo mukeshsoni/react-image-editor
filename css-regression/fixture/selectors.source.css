@@ -1,0 +1,27 @@
+/* Exercised after the same selector transform as the package, without Tailwind. */
+:root, :host { --rie-css-theme: local; }
+:host(.probe-host) { --rie-css-host: conditional; }
+
+::before, ::after { box-sizing: border-box; margin: 0; }
+.probe {
+  --rie-css-root: matched;
+  animation: rie-css-probe 1s linear -0.5s paused;
+  &::before { content: "scoped-before"; }
+  @media (min-width: 1px) {
+    & > .probe-child[data-label="a,b"] { --rie-css-nested: matched; }
+    @supports (display: grid) {
+      & + .probe-escape { --rie-css-escaped: wrong; }
+    }
+  }
+}
+.probe::after { content: "scoped-after"; }
+
+@property --rie-css-progress {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@keyframes rie-css-probe {
+  from { opacity: 0.2; --rie-css-progress: 0; }
+  to { opacity: 0.8; --rie-css-progress: 10; }
+}

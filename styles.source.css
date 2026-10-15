@@ -1,0 +1,104 @@
+/* Build input only. Consumers import the generated styles.css. */
+@layer rie-properties, rie-theme, rie-base, rie-utilities;
+@import "tailwindcss/theme.css" layer(rie-theme);
+@import "tailwindcss/utilities.css" layer(rie-utilities) source(none);
+@source "./src/ReactImageEditor.tsx";
+@source "./src/components";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-rie-background: var(--rie-background);
+  --color-rie-panel: var(--rie-panel);
+  --color-rie-foreground: var(--rie-foreground);
+  --color-rie-muted: var(--rie-muted);
+  --color-rie-accent: var(--rie-accent);
+  --color-rie-on-accent: var(--rie-on-accent);
+  --color-rie-border: var(--rie-border);
+  --color-rie-soft: var(--rie-soft);
+}
+
+/* The build scopes this local reset, including root elements and pseudo-elements.
+   Keep it in a lower layer than utilities, just like the original Preflight. */
+@layer rie-base {
+  *, ::before, ::after, ::backdrop, ::file-selector-button {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
+  h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+  button, input, select, optgroup, textarea, ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
+  }
+  button, input:where([type="button"], [type="reset"], [type="submit"]), ::file-selector-button { appearance: button; }
+  ol, ul, menu { list-style: none; }
+  summary { display: list-item; }
+  img, svg, video, canvas, audio, iframe, embed, object { display: block; vertical-align: middle; }
+  img, video { max-width: 100%; height: auto; }
+  [hidden]:where(:not([hidden="until-found"])) { display: none !important; }
+}
+
+.react-image-editor, .rie-overlay {
+  --rie-background: #f4f4f5;
+  --rie-panel: #ffffff;
+  --rie-foreground: #18181b;
+  --rie-muted: #52525b;
+  --rie-accent: #15803d;
+  --rie-on-accent: #ffffff;
+  --rie-border: #d4d4d8;
+  --rie-soft: #e4e4e7;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  tab-size: 4;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  color-scheme: light;
+}
+
+.react-image-editor.dark, .rie-overlay.dark {
+  --rie-background: #09090b;
+  --rie-panel: #18181b;
+  --rie-foreground: #f4f4f5;
+  --rie-muted: #a1a1aa;
+  --rie-accent: #4ade80;
+  --rie-on-accent: #052e16;
+  --rie-border: #3f3f46;
+  --rie-soft: #27272a;
+  color-scheme: dark;
+}
+
+.react-image-editor button, .rie-overlay button { cursor: pointer; }
+.react-image-editor button:disabled, .rie-overlay button:disabled { opacity: 0.45; cursor: default; }
+.rie-action { min-height: 2.25rem; white-space: nowrap; }
+.react-image-editor :focus-visible, .rie-overlay :focus-visible { outline: 2px solid var(--rie-accent); outline-offset: 2px; }
+.react-image-editor input[type="range"] { min-height: 1.5rem; accent-color: var(--rie-accent); cursor: pointer; }
+.react-image-editor input[type="checkbox"] { width: 1rem; height: 1rem; accent-color: var(--rie-accent); }
+.react-image-editor input:disabled { opacity: 0.45; }
+.rie-number { display: block; border: 1px solid var(--rie-border); border-radius: 0.375rem; background: var(--rie-background); min-height: 2.75rem; padding: 0.5rem 0.75rem; }
+.rie-dialog { width: min(24rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; }
+.rie-tabs [role="tab"] { min-height: 2.25rem; border-radius: 0.25rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+.rie-tabs [data-state="active"] { background: var(--rie-panel); color: var(--rie-accent); box-shadow: 0 1px 2px #0000000d; }
+.rie-crop { cursor: move; box-shadow: 0 0 0 9999px #00000080; }
+.rie-handle { width: 1.75rem; height: 1.75rem; padding: 0; }
+.rie-divider[data-resize-handle-active] { background: var(--rie-accent); }
+.rie-tray-content { height: min(10rem, 28dvh); }
+.rie-compact-controls { width: 44%; min-width: 10rem; max-width: 12rem; }
+.rie-view-controls { padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px)); }
+
+@media (max-width: 768px) {
+  .rie-action { min-height: 2.75rem; }
+  .react-image-editor input[type="range"] { min-height: 2rem; touch-action: pan-y; }
+  .rie-handle { width: 2.75rem; height: 2.75rem; }
+  .rie-tabs [role="tab"] { min-height: 2.75rem; }
+}

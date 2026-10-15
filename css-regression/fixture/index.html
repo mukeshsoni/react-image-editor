@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Packed editor CSS isolation</title>
+    <style>
+      #root { height: 620px; }
+      #host-heading { font: 31px Georgia, serif; margin: 13px 0; }
+      #host-button { font: 18px Georgia, serif; padding: 7px 13px; border: 3px dotted purple; background: lavender; }
+      #browser-heading::before { content: "Host: "; }
+      #selector-fixture { height: 0; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <h1 id="browser-heading" class="flex text-xs">Browser heading</h1>
+    <button id="browser-button" class="rie-action rounded-md border px-3 text-xs bg-rie-accent">Browser button</button>
+    <h2 id="host-heading" class="flex text-xs">Host heading</h2>
+    <button id="host-button" class="rie-action rounded-md border px-3 text-xs bg-rie-accent">Host button</button>
+    <div id="root"></div>
+    <div id="selector-fixture" aria-hidden="true">
+      <div id="probe-editor" class="react-image-editor probe probe-host">
+        <span id="probe-child" class="probe-child" data-label="a,b"></span>
+      </div>
+      <span id="probe-escape" class="probe-escape"></span>
+      <div id="probe-portal" class="rie-overlay probe probe-host">
+        <span id="probe-portal-child" class="probe-child" data-label="a,b"></span>
+      </div>
+      <div id="probe-outside" class="probe probe-host"></div>
+    </div>
+    <script type="module" src="/main.jsx"></script>
+  </body>
+</html>

@@ -1,254 +1,1043 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
-
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+/* Generated from styles.source.css by npm run build:css. Do not edit. */
+/*! tailwindcss v4.1.8 | MIT License | https://tailwindcss.com */
+@layer rie-properties {
+  @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {
+    *:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *):before, :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *):after, :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *)::backdrop {
+      --tw-translate-x: 0;
+      --tw-translate-y: 0;
+      --tw-translate-z: 0;
+      --tw-space-y-reverse: 0;
+      --tw-border-style: solid;
+      --tw-font-weight: initial;
+      --tw-ordinal: initial;
+      --tw-slashed-zero: initial;
+      --tw-numeric-figure: initial;
+      --tw-numeric-spacing: initial;
+      --tw-numeric-fraction: initial;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-color: initial;
+      --tw-shadow-alpha: 100%;
+      --tw-inset-shadow: 0 0 #0000;
+      --tw-inset-shadow-color: initial;
+      --tw-inset-shadow-alpha: 100%;
+      --tw-ring-color: initial;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-inset-ring-color: initial;
+      --tw-inset-ring-shadow: 0 0 #0000;
+      --tw-ring-inset: initial;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-offset-shadow: 0 0 #0000;
+    }
+  }
 }
 
-.react-image-editor {
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.723 0.219 149.579);
-  --primary-foreground: oklch(0.982 0.018 155.826);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.723 0.219 149.579);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.723 0.219 149.579);
-  --sidebar-primary-foreground: oklch(0.982 0.018 155.826);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.723 0.219 149.579);
+@layer rie-properties;
 
-  /* Editor canvas (tone curve) */
-  --tone-curve-bg: var(--background);
-  --tone-curve-grid: var(--border);
-  --tone-curve-identity: var(--muted-foreground);
-  --tone-curve-curve: var(--foreground);
-  --tone-curve-point-fill: var(--background);
-  --tone-curve-point-stroke: var(--foreground);
+@layer rie-theme {
+  :where(.react-image-editor, .rie-overlay):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *),:where(.react-image-editor, .rie-overlay):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --color-red-600: oklch(57.7% .245 27.325);
+    --color-black: #000;
+    --color-white: #fff;
+    --spacing: .25rem;
+    --container-sm: 24rem;
+    --text-xs: .75rem;
+    --text-xs--line-height: calc(1 / .75);
+    --text-sm: .875rem;
+    --text-sm--line-height: calc(1.25 / .875);
+    --text-lg: 1.125rem;
+    --text-lg--line-height: calc(1.75 / 1.125);
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --radius-sm: .25rem;
+    --radius-md: .375rem;
+    --radius-lg: .5rem;
+  }
 }
 
-.react-image-editor.dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.696 0.17 162.48);
-  --primary-foreground: oklch(0.393 0.095 152.535);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.527 0.154 150.069);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.696 0.17 162.48);
-  --sidebar-primary-foreground: oklch(0.393 0.095 152.535);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.527 0.154 150.069);
+@layer rie-base {
+  *:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *):before, :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *):after, :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *)::backdrop {
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
 
-  /* Editor canvas (tone curve) */
-  --tone-curve-bg: var(--background);
-  --tone-curve-grid: var(--border);
-  --tone-curve-identity: var(--muted-foreground);
-  --tone-curve-curve: var(--foreground);
-  --tone-curve-point-fill: var(--background);
-  --tone-curve-point-stroke: var(--foreground);
+  :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *)::file-selector-button {
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), h2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), h3:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), h4:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), h5:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), h6:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  button:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), input:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), select:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), optgroup:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), textarea:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    opacity: 1;
+    background-color: #0000;
+    border-radius: 0;
+  }
+
+  :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *)::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    opacity: 1;
+    background-color: #0000;
+    border-radius: 0;
+  }
+
+  button:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), input:where([type="button"], [type="reset"], [type="submit"]):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    appearance: button;
+  }
+
+  :where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *)::file-selector-button {
+    appearance: button;
+  }
+
+  ol:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), ul:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), menu:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    list-style: none;
+  }
+
+  summary:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    display: list-item;
+  }
+
+  img:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), svg:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), video:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), canvas:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), audio:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), iframe:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), embed:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), object:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    vertical-align: middle;
+    display: block;
+  }
+
+  img:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), video:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  [hidden]:where(:not([hidden="until-found"])):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    display: none !important;
+  }
 }
 
-.react-image-editor-portal {
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.723 0.219 149.579);
-  --primary-foreground: oklch(0.982 0.018 155.826);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.723 0.219 149.579);
+@layer rie-utilities {
+  .pointer-events-none:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    pointer-events: none;
+  }
 
-  /* Editor canvas (tone curve) */
-  --tone-curve-bg: var(--background);
-  --tone-curve-grid: var(--border);
-  --tone-curve-identity: var(--muted-foreground);
-  --tone-curve-curve: var(--foreground);
-  --tone-curve-point-fill: var(--background);
-  --tone-curve-point-stroke: var(--foreground);
+  .absolute:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    position: absolute;
+  }
+
+  .fixed:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    position: fixed;
+  }
+
+  .relative:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    position: relative;
+  }
+
+  .inset-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    inset: calc(var(--spacing) * 0);
+  }
+
+  .top-1\/2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    top: 50%;
+  }
+
+  .top-2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    top: calc(var(--spacing) * 2);
+  }
+
+  .top-4:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    top: calc(var(--spacing) * 4);
+  }
+
+  .right-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    right: calc(var(--spacing) * 0);
+  }
+
+  .right-1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    right: calc(var(--spacing) * 1);
+  }
+
+  .right-2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    right: calc(var(--spacing) * 2);
+  }
+
+  .bottom-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    bottom: calc(var(--spacing) * 0);
+  }
+
+  .left-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    left: calc(var(--spacing) * 0);
+  }
+
+  .left-1\/2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    left: 50%;
+  }
+
+  .left-4:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    left: calc(var(--spacing) * 4);
+  }
+
+  .z-10:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    z-index: 10;
+  }
+
+  .z-20:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    z-index: 20;
+  }
+
+  .z-30:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    z-index: 30;
+  }
+
+  .z-40:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    z-index: 40;
+  }
+
+  .z-50:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    z-index: 50;
+  }
+
+  .mx-2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    margin-inline: calc(var(--spacing) * 2);
+  }
+
+  .mb-4:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    margin-bottom: calc(var(--spacing) * 4);
+  }
+
+  .flex:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    display: flex;
+  }
+
+  .grid:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    display: grid;
+  }
+
+  .inline-flex:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    display: inline-flex;
+  }
+
+  .table:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    display: table;
+  }
+
+  .size-2\.5:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: calc(var(--spacing) * 2.5);
+    height: calc(var(--spacing) * 2.5);
+  }
+
+  .size-3\.5:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: calc(var(--spacing) * 3.5);
+    height: calc(var(--spacing) * 3.5);
+  }
+
+  .size-4:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: calc(var(--spacing) * 4);
+    height: calc(var(--spacing) * 4);
+  }
+
+  .size-8:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: calc(var(--spacing) * 8);
+    height: calc(var(--spacing) * 8);
+  }
+
+  .size-full:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: 100%;
+    height: 100%;
+  }
+
+  .h-5:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    height: calc(var(--spacing) * 5);
+  }
+
+  .h-48:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    height: calc(var(--spacing) * 48);
+  }
+
+  .h-full:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    height: 100%;
+  }
+
+  .max-h-72:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    max-height: calc(var(--spacing) * 72);
+  }
+
+  .min-h-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    min-height: calc(var(--spacing) * 0);
+  }
+
+  .min-h-8:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    min-height: calc(var(--spacing) * 8);
+  }
+
+  .min-h-9:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    min-height: calc(var(--spacing) * 9);
+  }
+
+  .min-h-11:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    min-height: calc(var(--spacing) * 11);
+  }
+
+  .w-1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: calc(var(--spacing) * 1);
+  }
+
+  .w-32:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: calc(var(--spacing) * 32);
+  }
+
+  .w-full:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: 100%;
+  }
+
+  .max-w-64:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    max-width: calc(var(--spacing) * 64);
+  }
+
+  .max-w-sm:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    max-width: var(--container-sm);
+  }
+
+  .min-w-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    min-width: calc(var(--spacing) * 0);
+  }
+
+  .min-w-12:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    min-width: calc(var(--spacing) * 12);
+  }
+
+  .flex-1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    flex: 1;
+  }
+
+  .shrink-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    flex-shrink: 0;
+  }
+
+  .-translate-x-1\/2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-translate-x: calc(calc(1 / 2 * 100%) * -1);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+
+  .-translate-y-1\/2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-translate-y: calc(calc(1 / 2 * 100%) * -1);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+
+  .rotate-180:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    rotate: 180deg;
+  }
+
+  .cursor-crosshair:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    cursor: crosshair;
+  }
+
+  .cursor-default:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    cursor: default;
+  }
+
+  .cursor-grab:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    cursor: grab;
+  }
+
+  .cursor-pointer:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    cursor: pointer;
+  }
+
+  .touch-none:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    touch-action: none;
+  }
+
+  .list-none:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    list-style-type: none;
+  }
+
+  .grid-cols-2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid-cols-5:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .grid-cols-8:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .flex-col:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    flex-direction: column;
+  }
+
+  .flex-wrap:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    flex-wrap: wrap;
+  }
+
+  .items-center:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    align-items: center;
+  }
+
+  .justify-between:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    justify-content: space-between;
+  }
+
+  .justify-center:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    justify-content: center;
+  }
+
+  .justify-end:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    justify-content: flex-end;
+  }
+
+  .justify-start:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    justify-content: flex-start;
+  }
+
+  .gap-1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    gap: calc(var(--spacing) * 1);
+  }
+
+  .gap-2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .gap-3:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    gap: calc(var(--spacing) * 3);
+  }
+
+  .gap-4:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    gap: calc(var(--spacing) * 4);
+  }
+
+  :where(.space-y-1 > :not(:last-child)):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 1) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 1) * calc(1 - var(--tw-space-y-reverse)));
+  }
+
+  :where(.space-y-2 > :not(:last-child)):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)));
+  }
+
+  :where(.space-y-3 > :not(:last-child)):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 3) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 3) * calc(1 - var(--tw-space-y-reverse)));
+  }
+
+  :where(.space-y-4 > :not(:last-child)):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 4) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 4) * calc(1 - var(--tw-space-y-reverse)));
+  }
+
+  :where(.space-y-6 > :not(:last-child)):where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 6) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 6) * calc(1 - var(--tw-space-y-reverse)));
+  }
+
+  .overflow-hidden:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    overflow: hidden;
+  }
+
+  .overflow-y-auto:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    overflow-y: auto;
+  }
+
+  .overscroll-contain:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    overscroll-behavior: contain;
+  }
+
+  .rounded-full:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-radius: 3.40282e38px;
+  }
+
+  .rounded-lg:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-radius: var(--radius-lg);
+  }
+
+  .rounded-md:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-radius: var(--radius-md);
+  }
+
+  .rounded-sm:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-radius: var(--radius-sm);
+  }
+
+  .border:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+  }
+
+  .border-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-style: var(--tw-border-style);
+    border-width: 0;
+  }
+
+  .border-2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-style: var(--tw-border-style);
+    border-width: 2px;
+  }
+
+  .border-t:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-top-style: var(--tw-border-style);
+    border-top-width: 1px;
+  }
+
+  .border-r:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-right-style: var(--tw-border-style);
+    border-right-width: 1px;
+  }
+
+  .border-b:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-bottom-style: var(--tw-border-style);
+    border-bottom-width: 1px;
+  }
+
+  .border-l:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-left-style: var(--tw-border-style);
+    border-left-width: 1px;
+  }
+
+  .border-black\/50:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-color: #00000080;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .border-black\/50:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+      border-color: color-mix(in oklab, var(--color-black) 50%, transparent);
+    }
+  }
+
+  .border-rie-border:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-color: var(--rie-border);
+  }
+
+  .border-rie-foreground:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-color: var(--rie-foreground);
+  }
+
+  .border-transparent:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-color: #0000;
+  }
+
+  .border-white:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    border-color: var(--color-white);
+  }
+
+  .bg-black\/50:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: #00000080;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-black\/50:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+      background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
+    }
+  }
+
+  .bg-rie-accent:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: var(--rie-accent);
+  }
+
+  .bg-rie-background:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: var(--rie-background);
+  }
+
+  .bg-rie-border:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: var(--rie-border);
+  }
+
+  .bg-rie-panel:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: var(--rie-panel);
+  }
+
+  .bg-rie-soft:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: var(--rie-soft);
+  }
+
+  .bg-transparent:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: #0000;
+  }
+
+  .bg-white:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: var(--color-white);
+  }
+
+  .p-0:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding: calc(var(--spacing) * 0);
+  }
+
+  .p-1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding: calc(var(--spacing) * 1);
+  }
+
+  .p-3:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding: calc(var(--spacing) * 3);
+  }
+
+  .p-4:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding: calc(var(--spacing) * 4);
+  }
+
+  .p-6:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding: calc(var(--spacing) * 6);
+  }
+
+  .px-1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-inline: calc(var(--spacing) * 1);
+  }
+
+  .px-2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-inline: calc(var(--spacing) * 2);
+  }
+
+  .px-3:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-inline: calc(var(--spacing) * 3);
+  }
+
+  .px-4:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-inline: calc(var(--spacing) * 4);
+  }
+
+  .py-1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-block: calc(var(--spacing) * 1);
+  }
+
+  .py-2:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-block: calc(var(--spacing) * 2);
+  }
+
+  .py-3:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-block: calc(var(--spacing) * 3);
+  }
+
+  .pt-1:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-top: calc(var(--spacing) * 1);
+  }
+
+  .pr-7:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-right: calc(var(--spacing) * 7);
+  }
+
+  .pb-5:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-bottom: calc(var(--spacing) * 5);
+  }
+
+  .pl-3:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    padding-left: calc(var(--spacing) * 3);
+  }
+
+  .text-center:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    text-align: center;
+  }
+
+  .text-left:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    text-align: left;
+  }
+
+  .text-right:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    text-align: right;
+  }
+
+  .text-lg:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+  }
+
+  .text-sm:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+  }
+
+  .text-xs:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+  }
+
+  .font-medium:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .font-semibold:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .text-balance:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    text-wrap: balance;
+  }
+
+  .text-pretty:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    text-wrap: pretty;
+  }
+
+  .whitespace-normal:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    white-space: normal;
+  }
+
+  .text-red-600:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    color: var(--color-red-600);
+  }
+
+  .text-rie-accent:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    color: var(--rie-accent);
+  }
+
+  .text-rie-foreground:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    color: var(--rie-foreground);
+  }
+
+  .text-rie-muted:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    color: var(--rie-muted);
+  }
+
+  .text-rie-on-accent:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    color: var(--rie-on-accent);
+  }
+
+  .capitalize:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    text-transform: capitalize;
+  }
+
+  .tabular-nums:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-numeric-spacing: tabular-nums;
+    font-variant-numeric: var(--tw-ordinal, ) var(--tw-slashed-zero, ) var(--tw-numeric-figure, ) var(--tw-numeric-spacing, ) var(--tw-numeric-fraction, );
+  }
+
+  .shadow-lg:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, #0000001a), 0 4px 6px -4px var(--tw-shadow-color, #0000001a);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .shadow-md:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-shadow: 0 4px 6px -1px var(--tw-shadow-color, #0000001a), 0 2px 4px -2px var(--tw-shadow-color, #0000001a);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .shadow-sm:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, #0000001a), 0 1px 2px -1px var(--tw-shadow-color, #0000001a);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .outline-none:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+
+  .select-none:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  @media (hover: hover) {
+    .hover\:bg-rie-soft:hover:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+      background-color: var(--rie-soft);
+    }
+  }
+
+  .active\:cursor-grabbing:active:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    cursor: grabbing;
+  }
+
+  .data-highlighted\:bg-rie-soft[data-highlighted]:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    background-color: var(--rie-soft);
+  }
 }
 
-.react-image-editor-portal.dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.696 0.17 162.48);
-  --primary-foreground: oklch(0.393 0.095 152.535);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.527 0.154 150.069);
-
-  /* Editor canvas (tone curve) */
-  --tone-curve-bg: var(--background);
-  --tone-curve-grid: var(--border);
-  --tone-curve-identity: var(--muted-foreground);
-  --tone-curve-curve: var(--foreground);
-  --tone-curve-point-fill: var(--background);
-  --tone-curve-point-stroke: var(--foreground);
+.react-image-editor:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), .rie-overlay:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  --rie-background: #f4f4f5;
+  --rie-panel: #fff;
+  --rie-foreground: #18181b;
+  --rie-muted: #52525b;
+  --rie-accent: #15803d;
+  --rie-on-accent: #fff;
+  --rie-border: #d4d4d8;
+  --rie-soft: #e4e4e7;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  tab-size: 4;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  color-scheme: light;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-@layer base {
-  .react-image-editor,
-  .react-image-editor * {
-    @apply border-border outline-ring/50;
+.react-image-editor.dark:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), .rie-overlay.dark:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  --rie-background: #09090b;
+  --rie-panel: #18181b;
+  --rie-foreground: #f4f4f5;
+  --rie-muted: #a1a1aa;
+  --rie-accent: #4ade80;
+  --rie-on-accent: #052e16;
+  --rie-border: #3f3f46;
+  --rie-soft: #27272a;
+  color-scheme: dark;
+}
+
+.react-image-editor button:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), .rie-overlay button:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  cursor: pointer;
+}
+
+.react-image-editor button:disabled:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), .rie-overlay button:disabled:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  opacity: .45;
+  cursor: default;
+}
+
+.rie-action:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  white-space: nowrap;
+  min-height: 2.25rem;
+}
+
+.react-image-editor :focus-visible:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *), .rie-overlay :focus-visible:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  outline: 2px solid var(--rie-accent);
+  outline-offset: 2px;
+}
+
+.react-image-editor input[type="range"]:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  min-height: 1.5rem;
+  accent-color: var(--rie-accent);
+  cursor: pointer;
+}
+
+.react-image-editor input[type="checkbox"]:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--rie-accent);
+}
+
+.react-image-editor input:disabled:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  opacity: .45;
+}
+
+.rie-number:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  border: 1px solid var(--rie-border);
+  background: var(--rie-background);
+  border-radius: .375rem;
+  min-height: 2.75rem;
+  padding: .5rem .75rem;
+  display: block;
+}
+
+.rie-dialog:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  width: min(24rem, 100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+
+.rie-tabs [role="tab"]:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  border-radius: .25rem;
+  min-height: 2.25rem;
+  padding: .25rem .5rem;
+  font-size: .75rem;
+}
+
+.rie-tabs [data-state="active"]:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  background: var(--rie-panel);
+  color: var(--rie-accent);
+  box-shadow: 0 1px 2px #0000000d;
+}
+
+.rie-crop:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  cursor: move;
+  box-shadow: 0 0 0 9999px #00000080;
+}
+
+.rie-handle:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+}
+
+.rie-divider[data-resize-handle-active]:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  background: var(--rie-accent);
+}
+
+.rie-tray-content:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  height: min(10rem, 28dvh);
+}
+
+.rie-compact-controls:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  width: 44%;
+  min-width: 10rem;
+  max-width: 12rem;
+}
+
+.rie-view-controls:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+  padding-bottom: max(.25rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 768px) {
+  .rie-action:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    min-height: 2.75rem;
   }
 
-  .react-image-editor {
-    @apply bg-background text-foreground;
+  .react-image-editor input[type="range"]:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    touch-action: pan-y;
+    min-height: 2rem;
   }
 
-  .react-image-editor input[type="range"] {
-    --range-progress: 0%;
-    -webkit-appearance: none;
-    appearance: none;
-    height: 10px;
-    background: transparent;
-    accent-color: var(--primary);
+  .rie-handle:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    width: 2.75rem;
+    height: 2.75rem;
   }
 
-  .react-image-editor input[type="range"]::-webkit-slider-runnable-track {
-    height: 3px;
-    border-radius: 9999px;
-    background: linear-gradient(
-      to right,
-      var(--primary) 0%,
-      var(--primary) var(--range-progress),
-      var(--border) var(--range-progress),
-      var(--border) 100%
-    );
+  .rie-tabs [role="tab"]:where(.react-image-editor, .react-image-editor *, .rie-overlay, .rie-overlay *) {
+    min-height: 2.75rem;
   }
+}
 
-  .react-image-editor input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    height: 10px;
-    width: 10px;
-    margin-top: -3.5px;
-    border-radius: 9999px;
-    background: var(--background);
-    border: 2px solid var(--primary);
-  }
+@property --tw-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
 
-  .react-image-editor input[type="range"]::-moz-range-track {
-    height: 3px;
-    border-radius: 9999px;
-    background: var(--border);
-  }
+@property --tw-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
 
-  .react-image-editor input[type="range"]::-moz-range-thumb {
-    height: 10px;
-    width: 10px;
-    border-radius: 9999px;
-    background: var(--background);
-    border: 2px solid var(--primary);
-  }
+@property --tw-translate-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
 
-  .react-image-editor input[type="range"]::-moz-range-progress {
-    height: 3px;
-    border-radius: 9999px;
-    background: var(--primary);
-  }
+@property --tw-space-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
 
-  .react-image-editor input[type="range"]:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+
+@property --tw-font-weight {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-ordinal {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-slashed-zero {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-numeric-figure {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-numeric-spacing {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-numeric-fraction {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-shadow-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --tw-inset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-inset-shadow-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-inset-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --tw-ring-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-inset-ring-color {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-inset-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --tw-ring-inset {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-ring-offset-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-ring-offset-color {
+  syntax: "*";
+  inherits: false;
+  initial-value: #fff;
+}
+
+@property --tw-ring-offset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
 }

@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-const reactCompilerConfig = {};
+const reactCompilerConfig = { target: "18" };
 const isCi = process.env.CI === "true";
 const basePath = process.env.VITE_BASE_PATH ?? "/";
 
@@ -16,6 +16,7 @@ const __dirname = path.dirname(__filename);
 // https://vite.dev/config/
 export default defineConfig({
   base: basePath,
+  build: { outDir: "demo-dist" },
   plugins: [
     react({
       babel: {
@@ -33,8 +34,8 @@ export default defineConfig({
     host: "0.0.0.0",
   },
   test: {
+    include: ["src/__tests__/**/*.test.{ts,tsx}"],
     environment: "jsdom",
-    setupFiles: ["./src/__tests__/setup.ts"],
     ...(isCi ? { poolOptions: { threads: { singleThread: true } } } : {}),
   },
 });
